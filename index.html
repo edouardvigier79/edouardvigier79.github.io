@@ -141,6 +141,8 @@
   .chips .chip.stPA.on{background:var(--pa); border-color:var(--pa); color:#fff}
   .chips .chip.stAC.on{background:var(--ac); border-color:var(--ac); color:#fff}
   .hint{font-size:12.5px; color:var(--ink2); margin-top:4px}
+  .elem-group{margin-bottom:11px}
+  .elem-group-label{font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); margin:0 0 5px}
   .aibtn.busy{opacity:.6; pointer-events:none}
 
   .empty{text-align:center; color:var(--ink2); padding:44px 20px; line-height:1.6}
@@ -226,8 +228,10 @@
 <div class="addsheet" id="addSheet">
   <b>Ajouter des clichés</b>
   <div class="btnrow">
-    <button class="btn primary block" id="btnPickGallery">🖼 Importer depuis la galerie (Timestamp Camera)</button>
-    <button class="btn block" id="btnPickCamera">📷 Prendre une photo directe</button>
+    <button class="btn primary block" id="btnOpenTimestamp">📷 Ouvrir Timestamp Camera (prise de vue)</button>
+    <div class="hint" style="margin:-4px 4px 2px">Prenez vos clichés horodatés, revenez ici, puis importez-les.</div>
+    <button class="btn block" id="btnPickGallery">🖼 Importer depuis la galerie</button>
+    <button class="btn ghost block" id="btnPickCamera">Appareil photo simple (sans horodatage)</button>
     <button class="btn ghost block" id="btnAddCancel">Annuler</button>
   </div>
   <input type="file" id="fileGallery" accept="image/*" multiple hidden>
@@ -263,7 +267,7 @@
 
     <div class="field">
       <label>Élément(s) VRD concerné(s)</label>
-      <div class="chips" id="elemChips"></div>
+      <div id="elemChips"></div>
     </div>
 
     <div class="field">
@@ -393,15 +397,32 @@ function blobToBase64(blob){
   });
 }
 
-/* =============== catégories VRD =============== */
-const VRD_ELEMENTS = [
-  "Chaussée", "Trottoir", "Bordure", "Caniveau",
-  "Tampon / regard de voirie", "Assainissement (EU / EP)",
-  "Réseaux secs (AEP / SLT / télécom)", "Éclairage public",
-  "Mobilier urbain", "Signalisation / marquage",
-  "Espaces verts / fosses", "Matériaux / stockage",
-  "Terrassement / fond de forme", "Ouvrage / génie civil"
+/* =============== catégories VRD (nomenclature stricte) =============== */
+const VRD_GROUPS = [
+  { label: "Voirie & surfaces", items: [
+    "Chaussée", "Revêtement", "Structure de chaussée",
+    "Trottoir", "Structure de trottoir",
+    "Bordure", "Caniveau", "Signalisation / marquage",
+    "Mobilier urbain", "Espaces verts / fosses"
+  ]},
+  { label: "Réseaux humides", items: [
+    "AEP", "GAZ", "CU (Chauffage urbain)", "Bouche à clé", "P.E.I. (hydrant)"
+  ]},
+  { label: "Assainissement", items: [
+    "ASS EP (Eaux Pluviales)", "ASS EU (Eaux Usées)"
+  ]},
+  { label: "Réseaux secs", items: [
+    "CFO", "CFA", "SLT", "Télécom", "Fourreaux",
+    "BT", "HT", "Éclairage", "Candélabres", "Armoires",
+    "Regard / Chambre", "Grille / avaloir (EP)", "Signalisation de chantier",
+    "Tranchée", "Poste (Transformateur)", "Câbles", "Canalisation"
+  ]},
+  { label: "Travaux & divers", items: [
+    "Tampon de voirie", "Terrassement / fond de forme",
+    "Ouvrage / génie civil", "Matériaux / stockage"
+  ]}
 ];
+const VRD_ELEMENTS = VRD_GROUPS.flatMap(g => g.items);
 
 /* =============== réglages =============== */
 const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[] };
@@ -430,13 +451,20 @@ function saveSettings(s){ localStorage.setItem("settings", JSON.stringify(s)); }
 let db;
 function openDB(){
   return new Promise((res, rej) => {
-    const rq = indexedDB.open("chantier-notes", 1);
+    const rq = indexedDB.open("chantier-notes", 2);
     rq.onupgradeneeded = e => {
       const d = e.target.result;
-      const v = d.createObjectStore("visits", {keyPath:"id", autoIncrement:true});
-      v.createIndex("date","date");
-      const p = d.createObjectStore("photos", {keyPath:"id", autoIncrement:true});
-      p.createIndex("visitId","visitId");
+      if (!d.objectStoreNames.contains("visits")){
+        const v = d.createObjectStore("visits", {keyPath:"id", autoIncrement:true});
+        v.createIndex("date","date");
+      }
+      if (!d.objectStoreNames.contains("photos")){
+        const p = d.createObjectStore("photos", {keyPath:"id", autoIncrement:true});
+        p.createIndex("visitId","visitId");
+      }
+      if (!d.objectStoreNames.contains("inbox")){
+        d.createObjectStore("inbox", {keyPath:"id", autoIncrement:true});
+      }
     };
     rq.onsuccess = () => res(rq.result);
     rq.onerror = () => rej(rq.error);
@@ -598,7 +626,37 @@ async function submitPin(){
     else { pinMode = "new"; $("#pinInput").value = ""; msg.textContent = "Les codes ne correspondent pas."; $("#lockText").textContent = "Nouveau code (4 à 8 chiffres)."; $("#btnUnlock").textContent = "Continuer"; }
   }
 }
-function unlock(){ $("#scrLock").classList.remove("on"); showHome(); }
+function unlock(){ $("#scrLock").classList.remove("on"); showHome().then(processInbox); }
+
+/* =============== boîte d'arrivée : photos reçues via « Partager » =============== */
+function todayIso(){
+  const t = new Date();
+  return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+}
+async function processInbox(){
+  try{
+    const items = await idbAll("inbox");
+    if (!items.length) return;
+    const iso = todayIso();
+    let visit = (await idbAll("visits")).find(v => v.date === iso);
+    if (!visit){
+      const id = await new Promise((res, rej) => {
+        const t = db.transaction("visits","readwrite");
+        const rq = t.objectStore("visits").add({date: iso, createdAt: Date.now()});
+        rq.onsuccess = () => res(rq.result);
+        t.onerror = () => rej(t.error);
+      });
+      visit = {id, date: iso};
+    }
+    await showVisit(visit.id);
+    const files = items.map(i => new File([i.blob], i.name || "photo.jpg", {type: i.type || "image/jpeg"}));
+    await importFiles(files);
+    for (const i of items) await tx("inbox","readwrite", s => s.delete(i.id));
+    toast(`${items.length} cliché${items.length>1?"s":""} reçu${items.length>1?"s":""} par partage — importé${items.length>1?"s":""} dans la visite du jour`, true);
+  }catch(err){
+    toast("Import partagé : " + (err && err.message || err), true);
+  }
+}
 let hiddenAt = null;
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) hiddenAt = Date.now();
@@ -696,6 +754,22 @@ async function renderPhotos(){
 function openAddSheet(){ $("#addSheet").classList.add("on"); $("#scrim").classList.add("on"); }
 function closeAddSheet(){ $("#addSheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
 
+/* GPS → adresse via la Base Adresse Nationale (service public, sans clé).
+   Hors-ligne ou en échec : renvoie "" et la zone reste à saisir. */
+async function reverseGeocode(lat, lon){
+  try{
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`, {signal: ctl.signal});
+    clearTimeout(timer);
+    if (!r.ok) return "";
+    const j = await r.json();
+    const p = j.features && j.features[0] && j.features[0].properties;
+    if (!p) return "";
+    return p.name && p.city ? `${p.name}, ${p.city}` : (p.label || "");
+  }catch{ return ""; }
+}
+
 async function importFiles(files){
   if (!files.length || !curVisit) return;
   closeAddSheet();
@@ -706,18 +780,20 @@ async function importFiles(files){
     let exif = {};
     try{ exif = parseExif(await f.arrayBuffer()); }catch{}
     num++;
+    let zone = "";
+    if (exif.lat != null && exif.lon != null) zone = await reverseGeocode(exif.lat, exif.lon);
     const rec = {
       visitId: curVisit.id, num,
       blob: f, name: f.name || "",
       takenAt: exif.takenAt || null,
       lat: exif.lat ?? null, lon: exif.lon ?? null,
-      statut: "", titre: "", element: [], zone: "", entreprise: "", description: "", suite: "",
+      statut: "", titre: "", element: [], zone, entreprise: "", description: "", suite: "",
       createdAt: Date.now()
     };
     await tx("photos","readwrite", s => s.add(rec));
   }
   await renderPhotos();
-  toast(`${files.length} cliché${files.length>1?"s":""} ajouté${files.length>1?"s":""} — commentaire auto généré`);
+  toast(`${files.length} cliché${files.length>1?"s":""} ajouté${files.length>1?"s":""} — date, GPS et adresse remplis`);
 }
 
 /* =============== éditeur =============== */
@@ -751,8 +827,11 @@ async function openEditor(id){
 }
 function buildElemChips(selected){
   const box = $("#elemChips");
-  box.innerHTML = VRD_ELEMENTS.map(e =>
-    `<button class="chip${selected.includes(e) ? " on" : ""}" data-e="${esc(e)}">${esc(e)}</button>`).join("");
+  box.innerHTML = VRD_GROUPS.map(g =>
+    `<div class="elem-group"><div class="elem-group-label">${esc(g.label)}</div><div class="chips">` +
+    g.items.map(e =>
+      `<button class="chip${selected.includes(e) ? " on" : ""}" data-e="${esc(e)}">${esc(e)}</button>`).join("") +
+    `</div></div>`).join("");
   box.querySelectorAll(".chip").forEach(c =>
     c.addEventListener("click", () => c.classList.toggle("on")));
 }
@@ -1173,7 +1252,12 @@ const AI_SCHEMA = {
 function aiSystem(settings){
   return `Tu es un ingénieur AMOE spécialiste VRD (voirie et réseaux divers) qui rédige des constats de visite de chantier en français, style rapport technique factuel et télégraphique.
 
-ANALYSE UNIQUEMENT les éléments du métier VRD visibles sur la photo : type de chaussée et revêtement, trottoir, bordures (type, matériau : Comblanchien, granit, béton…), caniveaux, tampons et regards de voirie (réseau concerné), assainissement EU/EP, réseaux secs (AEP, SLT, télécom), éclairage public, mobilier urbain, signalisation et marquage, espaces verts et fosses de plantation, matériaux et stockage, terrassement et fond de forme, ouvrages de génie civil, balisage et installations de chantier.
+ANALYSE UNIQUEMENT les éléments du métier VRD visibles sur la photo, selon cette nomenclature stricte :
+- Voirie et surfaces : chaussée, revêtement, structure de chaussée, trottoir, structure de trottoir, bordures (type et matériau : Comblanchien, granit, béton…), caniveaux, signalisation et marquage, mobilier urbain, espaces verts et fosses de plantation.
+- Réseaux humides (à isoler) : AEP, GAZ, CU (chauffage urbain), bouches à clé, P.E.I. (hydrants).
+- Assainissement (distinguer impérativement) : ASS EP (eaux pluviales) et ASS EU (eaux usées).
+- Réseaux secs (à sous-détailler) : CFO, CFA, SLT, télécom, fourreaux, BT, HT, éclairage, candélabres, armoires, regards et chambres de tirage, grilles et avaloirs (EP), poste transformateur, câbles, canalisations, tranchées.
+- Travaux : tampons de voirie, terrassement et fond de forme, ouvrages de génie civil, matériaux et stockage, balisage et installations de chantier.
 
 INTERDICTION ABSOLUE : ne jamais décrire, mentionner ni identifier les personnes, animaux ou véhicules (aucune plaque d'immatriculation, aucune marque, aucune description physique). Ignore-les totalement. Seule exception : un usage de voirie manifestement non conforme (ex. circulation sur voie réservée) peut être signalé de façon strictement anonyme.
 
@@ -1297,6 +1381,11 @@ async function main(){
   $("#btnAdd").addEventListener("click", openAddSheet);
   $("#scrim").addEventListener("click", closeAddSheet);
   $("#btnAddCancel").addEventListener("click", closeAddSheet);
+  $("#btnOpenTimestamp").addEventListener("click", () => {
+    // lance l'application Timestamp Camera Pro (Android) ; à défaut, ouvre sa fiche Play Store
+    location.href = "intent:#Intent;package=com.jeyluta.timestampcamera;S.browser_fallback_url=" +
+      encodeURIComponent("https://play.google.com/store/apps/details?id=com.jeyluta.timestampcamera") + ";end";
+  });
   $("#btnPickGallery").addEventListener("click", () => $("#fileGallery").click());
   $("#btnPickCamera").addEventListener("click", () => $("#fileCamera").click());
   $("#fileGallery").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
