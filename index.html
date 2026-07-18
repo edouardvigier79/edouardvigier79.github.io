@@ -188,6 +188,7 @@
       <input class="pinfield mono" id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Code PIN">
       <div class="lockmsg" id="lockMsg"></div>
       <button class="btn primary" id="btnUnlock" style="min-width:200px">Ouvrir</button>
+      <div class="hint" id="verTag" style="margin-top:26px"></div>
     </div>
   </div>
 </section>
@@ -369,6 +370,7 @@
 
 <script>
 "use strict";
+const APP_VERSION = "1.5";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -789,6 +791,7 @@ async function importFiles(files){
   const existing = await idbAll("photos","visitId",curVisit.id);
   let num = existing.reduce((m,p) => Math.max(m, p.num || 0), 0);
   let devPos, devPosAsked = false; // position du téléphone, demandée une seule fois par import
+  const diag = new Set(); // raisons d'échec du remplissage de l'adresse
   for (const f of files){
     let exif = {};
     try{ exif = parseExif(await f.arrayBuffer()); }catch{}
@@ -798,13 +801,21 @@ async function importFiles(files){
       // Android supprime souvent le GPS des photos transmises aux applis web ;
       // repli : position actuelle du téléphone, si le cliché date de moins d'une heure
       const fresh = exif.takenAt && (Date.now() - new Date(exif.takenAt).getTime()) < 60 * 60 * 1000;
-      if (fresh){
+      if (!exif.takenAt){
+        diag.add("cliché sans date EXIF");
+      } else if (!fresh){
+        diag.add("cliché de plus d'1 h : position du téléphone non utilisée (garde-fou)");
+      } else {
         if (!devPosAsked){ devPosAsked = true; devPos = await devicePosition(); }
         if (devPos){ lat = devPos.lat; lon = devPos.lon; gpsApprox = true; }
+        else diag.add("position du téléphone indisponible — vérifiez l'autorisation Localisation et le GPS");
       }
     }
     let zone = "";
-    if (lat != null && lon != null) zone = await reverseGeocode(lat, lon);
+    if (lat != null && lon != null){
+      zone = await reverseGeocode(lat, lon);
+      if (!zone) diag.add("adresse introuvable — vérifiez la connexion réseau");
+    }
     const rec = {
       visitId: curVisit.id, num,
       blob: f, name: f.name || "",
@@ -816,7 +827,11 @@ async function importFiles(files){
     await tx("photos","readwrite", s => s.add(rec));
   }
   await renderPhotos();
-  toast(`${files.length} cliché${files.length>1?"s":""} ajouté${files.length>1?"s":""} — date, GPS et adresse remplis`);
+  if (diag.size){
+    toast(`Import fait, mais adresse non remplie : ${[...diag].join(" · ")}`, true);
+  } else {
+    toast(`${files.length} cliché${files.length>1?"s":""} ajouté${files.length>1?"s":""} — date, GPS et adresse remplis`);
+  }
 }
 
 /* =============== éditeur =============== */
@@ -1380,6 +1395,7 @@ function saveSettingsUI(){
 async function main(){
   db = await openDB();
   applyHeader(getSettings());
+  $("#verTag").textContent = "Version " + APP_VERSION;
 
   $("#btnUnlock").addEventListener("click", submitPin);
   $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
