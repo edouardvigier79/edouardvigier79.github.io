@@ -1,0 +1,1369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Notes de Chantier — Constats VRD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#161310">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#F5F3EE; --card:#FFFFFF; --ink:#241F19; --ink2:#776D5F; --line:#E4DFD5;
+    --accent:#D96A0B; --accent-ink:#FFFFFF; --chip:#EFEBE2; --chip-on:#241F19; --chip-on-ink:#F5F3EE;
+    --c:#2E7D45; --nc:#C0392B; --pa:#A87407; --ac:#3D6E9E;
+    --shadow:0 1px 3px rgba(36,31,25,.10), 0 4px 16px rgba(36,31,25,.06);
+    --danger:#C0392B;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#161310; --card:#201C17; --ink:#EDE7DC; --ink2:#A79C8C; --line:#352F27;
+      --accent:#F07E1A; --accent-ink:#1B140C; --chip:#2A251E; --chip-on:#EDE7DC; --chip-on-ink:#161310;
+      --c:#5CB47C; --nc:#E06052; --pa:#DCA425; --ac:#7AA6CE;
+      --shadow:0 1px 3px rgba(0,0,0,.4);
+      --danger:#E06052;
+    }
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size:15px; line-height:1.45;
+    min-height:100dvh;
+  }
+  .wrap{max-width:640px; margin:0 auto; padding:0 14px 96px}
+  .mono{font-family:ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-variant-numeric:tabular-nums}
+
+  header.top{position:sticky; top:0; z-index:20; background:var(--bg)}
+  .top-inner{max-width:640px; margin:0 auto; padding:12px 14px 10px; display:flex; align-items:center; gap:10px}
+  .top-id{flex:1; min-width:0}
+  .eyebrow{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink2)}
+  .top-title{font-size:17px; font-weight:800; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .hazard{height:5px; background:repeating-linear-gradient(-45deg, var(--accent) 0 11px, var(--ink) 11px 22px); opacity:.92}
+  .iconbtn{
+    flex:none; width:40px; height:40px; border-radius:10px; border:1px solid var(--line);
+    background:var(--card); color:var(--ink); font-size:17px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .iconbtn:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border:none; border-radius:11px; padding:12px 16px;
+    font:inherit; font-weight:700; cursor:pointer;
+    background:var(--chip); color:var(--ink);
+  }
+  .btn.primary{background:var(--accent); color:var(--accent-ink)}
+  .btn.ghost{background:transparent; border:1px solid var(--line)}
+  .btn.danger{background:transparent; border:1px solid var(--danger); color:var(--danger)}
+  .btn.block{width:100%}
+  .btn:disabled{opacity:.5; cursor:default}
+  .btnrow{display:flex; flex-direction:column; gap:10px; margin:14px 0}
+
+  section.screen{display:none}
+  section.screen.on{display:block}
+
+  .lockbox{min-height:78dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:24px 10px}
+  .lockbox .glyph{font-size:34px}
+  .lockbox h1{font-size:20px; margin:4px 0 0; letter-spacing:-.01em}
+  .lockbox p{color:var(--ink2); margin:2px 0 14px; max-width:34ch}
+  .pinfield{font-size:26px; letter-spacing:.45em; text-align:center; width:200px; padding:10px 6px 10px 16px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); color:var(--ink)}
+  .lockmsg{min-height:22px; font-size:13.5px; color:var(--danger); font-weight:600; margin-top:10px}
+
+  .sect-label{font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink2); margin:20px 2px 8px}
+  .visit-card{
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+    background:var(--card); border:1px solid var(--line); border-radius:13px;
+    padding:13px 14px; margin-bottom:9px; cursor:pointer; font:inherit; color:var(--ink);
+    box-shadow:var(--shadow);
+  }
+  .visit-date{flex:1}
+  .visit-date b{font-size:16px}
+  .visit-date small{display:block; color:var(--ink2); margin-top:1px}
+  .visit-counts{display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end}
+
+  .pill{display:inline-flex; align-items:center; border-radius:99px; padding:2.5px 9px; font-size:11.5px; font-weight:800; letter-spacing:.03em; color:#fff}
+  .pill.C{background:var(--c)} .pill.NC{background:var(--nc)}
+  .pill.PA{background:var(--pa)} .pill.AC{background:var(--ac)}
+  .pill.none{background:var(--chip); color:var(--ink2)}
+
+  .photo-card{background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow)}
+  .photo-card img.shot{width:100%; display:block; max-height:64dvh; object-fit:contain; background:#111}
+  .caption{padding:12px 14px 13px}
+  .cap-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .cap-num{font-weight:800; font-size:15px}
+  .cap-meta{font-size:12.5px; color:var(--ink2); margin-top:3px}
+  .cap-meta a{color:var(--ac); text-decoration:none; font-weight:600}
+  .cap-title{font-weight:700; font-size:15.5px; margin-top:8px}
+  .cap-field{margin-top:7px; font-size:14px}
+  .cap-field .k{font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); display:block; margin-bottom:1px}
+  .cap-actions{display:flex; gap:8px; margin-top:12px}
+  .cap-actions .btn{padding:9px 13px; font-size:13.5px}
+
+  .fab{
+    position:fixed; right:16px; bottom:18px; z-index:25;
+    width:58px; height:58px; border-radius:16px; border:none; cursor:pointer;
+    background:var(--accent); color:var(--accent-ink); font-size:27px; font-weight:700;
+    box-shadow:0 6px 20px rgba(0,0,0,.28);
+  }
+  .addsheet{
+    position:fixed; inset:auto 0 0 0; z-index:30; display:none;
+    background:var(--card); border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0; padding:16px 16px calc(18px + env(safe-area-inset-bottom));
+  }
+  .addsheet.on{display:block}
+  .addsheet .btnrow{margin:8px 0 0}
+  .scrim{position:fixed; inset:0; z-index:28; background:rgba(0,0,0,.45); display:none}
+  .scrim.on{display:block}
+
+  .modal{position:fixed; inset:0; z-index:40; display:none; overflow-y:auto; background:var(--bg)}
+  .modal.on{display:block}
+  .modal .wrap{padding-bottom:40px}
+  .modal-top{position:sticky; top:0; background:var(--bg); z-index:5; display:flex; align-items:center; gap:10px; padding:12px 0 10px}
+  .modal-top b{flex:1; font-size:16px}
+  .field{margin-bottom:13px}
+  .field label{display:block; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); margin-bottom:5px}
+  .field input[type=text], .field input[type=password], .field textarea, .field select{
+    width:100%; font:inherit; color:var(--ink); background:var(--card);
+    border:1.5px solid var(--line); border-radius:11px; padding:10px 12px;
+  }
+  .field textarea{min-height:84px; resize:vertical}
+  .chips{display:flex; gap:7px; flex-wrap:wrap}
+  .chips .chip{
+    border:1px solid var(--line); background:var(--chip); color:var(--ink);
+    border-radius:99px; padding:7px 13px; font:inherit; font-size:13.5px; font-weight:600; cursor:pointer;
+  }
+  .chips .chip.on{background:var(--chip-on); color:var(--chip-on-ink); border-color:var(--chip-on)}
+  .chips .chip.stC.on{background:var(--c); border-color:var(--c); color:#fff}
+  .chips .chip.stNC.on{background:var(--nc); border-color:var(--nc); color:#fff}
+  .chips .chip.stPA.on{background:var(--pa); border-color:var(--pa); color:#fff}
+  .chips .chip.stAC.on{background:var(--ac); border-color:var(--ac); color:#fff}
+  .hint{font-size:12.5px; color:var(--ink2); margin-top:4px}
+  .aibtn.busy{opacity:.6; pointer-events:none}
+
+  .empty{text-align:center; color:var(--ink2); padding:44px 20px; line-height:1.6}
+  .empty .glyph{font-size:30px; display:block; margin-bottom:8px}
+  .toast{
+    position:fixed; left:50%; bottom:88px; transform:translateX(-50%);
+    background:var(--ink); color:var(--bg); font-weight:600; font-size:14px;
+    padding:10px 18px; border-radius:99px; z-index:60; display:none;
+    max-width:88vw; text-align:center;
+  }
+  .toast.on{display:block}
+  .backlink{display:inline-flex; align-items:center; gap:6px; margin:14px 0 2px; background:none; border:none; font:inherit; font-weight:700; color:var(--ink); cursor:pointer; padding:4px 2px}
+  .settings-block{background:var(--card); border:1px solid var(--line); border-radius:13px; padding:14px; margin-bottom:12px}
+  .settings-block h3{margin:0 0 8px; font-size:14.5px}
+  .settings-block p{margin:0 0 10px; color:var(--ink2); font-size:13.5px}
+  @media (prefers-reduced-motion: no-preference){
+    .photo-card{animation:pop .18s ease-out}
+    @keyframes pop{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="top-id">
+      <div class="eyebrow" id="projSub">Suivi de chantier</div>
+      <div class="top-title" id="projTitle">Mon chantier</div>
+    </div>
+    <button class="iconbtn" id="btnSettings" title="Réglages" aria-label="Réglages">⚙</button>
+    <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller">🔒</button>
+  </div>
+  <div class="hazard"></div>
+</header>
+
+<!-- ================= VERROUILLAGE ================= -->
+<section class="screen" id="scrLock">
+  <div class="wrap">
+    <div class="lockbox">
+      <div class="glyph">🔒</div>
+      <h1 id="lockTitle">Notes de chantier</h1>
+      <p id="lockText">Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone.</p>
+      <input class="pinfield mono" id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Code PIN">
+      <div class="lockmsg" id="lockMsg"></div>
+      <button class="btn primary" id="btnUnlock" style="min-width:200px">Ouvrir</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ACCUEIL : VISITES ================= -->
+<section class="screen" id="scrHome">
+  <div class="wrap">
+    <div class="sect-label">Visites de chantier</div>
+    <div id="visitList"></div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnNewVisit">+ Nouvelle visite</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DÉTAIL VISITE ================= -->
+<section class="screen" id="scrVisit">
+  <div class="wrap">
+    <button class="backlink" id="btnBack">← Visites</button>
+    <div class="sect-label" id="visitLabel">Visite</div>
+    <div id="photoList"></div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnPdf">📄 Rapport PDF</button>
+      <button class="btn block" id="btnDocx">📝 Rapport Word (.docx)</button>
+      <button class="btn ghost block" id="btnSharePhotos">🖼 Partager les photos renommées</button>
+      <div class="hint" style="margin:-2px 4px 0">
+        Les rapports se génèrent sur le téléphone puis s'ouvrent dans la feuille de partage :
+        Gmail, Outlook, WhatsApp… Sans réseau, ils sont enregistrés dans Téléchargements.
+      </div>
+      <button class="btn danger block" id="btnDelVisit">Supprimer cette visite</button>
+    </div>
+  </div>
+  <button class="fab" id="btnAdd" aria-label="Ajouter des photos">+</button>
+</section>
+
+<!-- feuille d'ajout -->
+<div class="scrim" id="scrim"></div>
+<div class="addsheet" id="addSheet">
+  <b>Ajouter des clichés</b>
+  <div class="btnrow">
+    <button class="btn primary block" id="btnPickGallery">🖼 Importer depuis la galerie (Timestamp Camera)</button>
+    <button class="btn block" id="btnPickCamera">📷 Prendre une photo directe</button>
+    <button class="btn ghost block" id="btnAddCancel">Annuler</button>
+  </div>
+  <input type="file" id="fileGallery" accept="image/*" multiple hidden>
+  <input type="file" id="fileCamera" accept="image/*" capture="environment" hidden>
+</div>
+
+<!-- ================= ÉDITEUR DE COMMENTAIRE ================= -->
+<div class="modal" id="editModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnEditClose" aria-label="Fermer">←</button>
+      <b id="editTitle">Commentaire du cliché</b>
+      <button class="btn primary" id="btnEditSave">Enregistrer</button>
+    </div>
+    <img id="editImg" alt="" style="width:100%; border-radius:12px; max-height:38dvh; object-fit:contain; background:#111">
+    <p class="cap-meta mono" id="editMeta" style="margin:8px 2px 10px"></p>
+
+    <button class="btn block aibtn" id="btnAI" hidden>✨ Décrire le cliché (IA — éléments VRD uniquement)</button>
+    <div class="hint" id="aiHint" hidden style="margin:-6px 4px 12px">
+      L'IA analyse chaussée, bordures, tampons, réseaux, éclairage, mobilier…
+      Elle ignore personnes, animaux et véhicules. Relisez toujours avant d'enregistrer.
+    </div>
+
+    <div class="field">
+      <label>Statut du constat</label>
+      <div class="chips" id="statutChips">
+        <button class="chip stC" data-v="C">C · Conforme</button>
+        <button class="chip stNC" data-v="NC">NC · Non-conforme</button>
+        <button class="chip stPA" data-v="PA">PA · Point d'attention</button>
+        <button class="chip stAC" data-v="AC">AC · À confirmer</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Élément(s) VRD concerné(s)</label>
+      <div class="chips" id="elemChips"></div>
+    </div>
+
+    <div class="field">
+      <label for="fTitre">Titre du constat (sert au nom du fichier photo)</label>
+      <input type="text" id="fTitre" placeholder="Ex. : Épaufrure bordure Comblanchien">
+    </div>
+
+    <div class="field">
+      <label for="fZone">Localisation / zone</label>
+      <input type="text" id="fZone" list="zonesList" placeholder="Ex. : Carrefour av. du Château / av. de Paris">
+      <datalist id="zonesList"></datalist>
+      <div class="chips" id="zoneChips" style="margin-top:7px"></div>
+    </div>
+
+    <div class="field">
+      <label for="fEnt">Entreprise / lot concerné</label>
+      <input type="text" id="fEnt" placeholder="Ex. : Colas (mandataire)">
+      <div class="chips" id="entChips" style="margin-top:7px"></div>
+    </div>
+
+    <div class="field">
+      <label for="fDesc">Description factuelle</label>
+      <textarea id="fDesc" placeholder="Ce qui est constaté sur le cliché…"></textarea>
+      <div class="hint">Astuce : le micro du clavier (Gboard) fonctionne dans ce champ.</div>
+    </div>
+
+    <div class="field">
+      <label for="fSuite">Suite à donner</label>
+      <textarea id="fSuite" placeholder="Action attendue, registre, relance…"></textarea>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn danger block" id="btnDelPhoto">Supprimer ce cliché</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= RÉGLAGES ================= -->
+<div class="modal" id="setModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnSetClose" aria-label="Fermer">←</button>
+      <b>Réglages</b>
+    </div>
+
+    <div class="settings-block">
+      <h3>Chantier en cours</h3>
+      <p>L'application est générique : renseignez ici le chantier suivi. Ces valeurs alimentent l'en-tête, les raccourcis de saisie et les rapports.</p>
+      <div class="field">
+        <label for="sProj">Nom du chantier</label>
+        <input type="text" id="sProj" placeholder="Ex. : RD120 · Château de Vincennes">
+      </div>
+      <div class="field">
+        <label for="sSub">Sous-titre (société / mission)</label>
+        <input type="text" id="sSub" placeholder="Ex. : PCM Ingénierie — AMOE">
+      </div>
+      <div class="field">
+        <label for="sRedac">Rédacteur (apparaît sur les rapports)</label>
+        <input type="text" id="sRedac" placeholder="Ex. : E. Vigier (PCM Ingénierie, AMOE)">
+      </div>
+      <div class="field">
+        <label for="sZones">Zones proposées (une par ligne)</label>
+        <textarea id="sZones" style="min-height:110px"></textarea>
+      </div>
+      <div class="field">
+        <label for="sEnts">Entreprises proposées (une par ligne)</label>
+        <textarea id="sEnts" style="min-height:90px"></textarea>
+      </div>
+      <button class="btn primary block" id="btnSetSave">Enregistrer les réglages</button>
+      <button class="btn ghost block" id="btnLoadExample" style="margin-top:8px">Pré-remplir avec l'exemple RD120 Vincennes</button>
+    </div>
+
+    <div class="settings-block">
+      <h3>Description par IA (optionnel)</h3>
+      <p>Avec une clé API Anthropic, le bouton « Décrire le cliché » rédige automatiquement le constat VRD.
+      La photo est alors envoyée au service Anthropic (coût ≈ 2 centimes par photo). Sans clé, tout le reste fonctionne normalement.</p>
+      <div class="field">
+        <label for="sKey">Clé API Anthropic (sk-ant-…)</label>
+        <input type="password" id="sKey" autocomplete="off" placeholder="Collez votre clé ici">
+      </div>
+      <div class="hint">La clé reste stockée uniquement sur ce téléphone. Créez-la sur console.anthropic.com.</div>
+    </div>
+
+    <div class="settings-block">
+      <h3>Code de verrouillage</h3>
+      <p>Le code protège l'ouverture du carnet sur ce téléphone.</p>
+      <button class="btn block" id="btnChangePin">Changer le code</button>
+    </div>
+
+    <div class="settings-block">
+      <h3>Sauvegarde</h3>
+      <p>Les notes et photos sont stockées uniquement dans ce téléphone. Générez le rapport de chaque visite : c'est votre sauvegarde.</p>
+      <button class="btn block" id="btnBackupJson">⬇ Exporter toutes les notes (.json, sans photos)</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =============== utilitaires =============== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const escXml = esc;
+let toastT;
+function toast(msg, long){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("on"), long ? 5200 : 2800);
+}
+function pad(n){ return String(n).padStart(2,"0"); }
+function frDate(iso){ const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; }
+function frDayName(iso){
+  const days = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  return days[new Date(iso+"T12:00:00").getDay()];
+}
+function shortDate(iso){ const [y,m,d]=iso.split("-"); return `${d}.${m}.${y.slice(2)}`; }
+function sanitizeFilename(s){
+  return String(s).replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g," ").trim().slice(0,120);
+}
+function blobToBase64(blob){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(",")[1]);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+/* =============== catégories VRD =============== */
+const VRD_ELEMENTS = [
+  "Chaussée", "Trottoir", "Bordure", "Caniveau",
+  "Tampon / regard de voirie", "Assainissement (EU / EP)",
+  "Réseaux secs (AEP / SLT / télécom)", "Éclairage public",
+  "Mobilier urbain", "Signalisation / marquage",
+  "Espaces verts / fosses", "Matériaux / stockage",
+  "Terrassement / fond de forme", "Ouvrage / génie civil"
+];
+
+/* =============== réglages =============== */
+const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[] };
+const EXAMPLE = {
+  proj:"RD120 · Château de Vincennes",
+  sub:"PCM Ingénierie — AMOE",
+  redac:"E. Vigier (PCM Ingénierie, AMOE)",
+  zones:["Base-vie, avenue Carnot","Avenue de Paris n°16-18-30","Carrefour av. du Château / av. de Paris","Cours Marigny","Secteur D120"],
+  ents:["Colas (mandataire)","SATP (Groupe Alves)","Direct Signa (balisage/marquage)","Satelec (SLT)"]
+};
+function getSettings(){
+  try{
+    const s = JSON.parse(localStorage.getItem("settings") || "{}");
+    return {
+      proj: s.proj || DEFAULTS.proj,
+      sub: s.sub || DEFAULTS.sub,
+      redac: s.redac || "",
+      zones: Array.isArray(s.zones) ? s.zones : [],
+      ents: Array.isArray(s.ents) ? s.ents : []
+    };
+  }catch{ return {...DEFAULTS}; }
+}
+function saveSettings(s){ localStorage.setItem("settings", JSON.stringify(s)); }
+
+/* =============== base locale (IndexedDB) =============== */
+let db;
+function openDB(){
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open("chantier-notes", 1);
+    rq.onupgradeneeded = e => {
+      const d = e.target.result;
+      const v = d.createObjectStore("visits", {keyPath:"id", autoIncrement:true});
+      v.createIndex("date","date");
+      const p = d.createObjectStore("photos", {keyPath:"id", autoIncrement:true});
+      p.createIndex("visitId","visitId");
+    };
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+function tx(store, mode, fn){
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, mode);
+    fn(t.objectStore(store));
+    t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+  });
+}
+function idbAll(store, indexName, key){
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, "readonly");
+    let src = t.objectStore(store);
+    if (indexName) src = src.index(indexName);
+    const rq = key !== undefined ? src.getAll(key) : src.getAll();
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+
+/* =============== EXIF (date + GPS) =============== */
+function parseExif(buf){
+  try{
+    const v = new DataView(buf);
+    if (v.getUint16(0) !== 0xFFD8) return {};
+    let off = 2;
+    while (off < v.byteLength - 4){
+      if (v.getUint8(off) !== 0xFF) break;
+      const marker = v.getUint8(off + 1);
+      const size = v.getUint16(off + 2);
+      if (marker === 0xE1 && size >= 8 && v.getUint32(off + 4) === 0x45786966){
+        return parseTiff(v, off + 10);
+      }
+      if (marker === 0xDA) break;
+      off += 2 + size;
+    }
+  }catch{}
+  return {};
+}
+function parseTiff(v, base){
+  const le = v.getUint16(base) === 0x4949;
+  const g16 = o => v.getUint16(base + o, le);
+  const g32 = o => v.getUint32(base + o, le);
+  const TYPE_SIZE = {1:1,2:1,3:2,4:4,5:8,7:1,9:4,10:8};
+  const entries = off => {
+    const map = {};
+    let n;
+    try{ n = g16(off); }catch{ return map; }
+    for (let i = 0; i < n; i++){
+      const e = off + 2 + i * 12;
+      try{ map[g16(e)] = e; }catch{}
+    }
+    return map;
+  };
+  const valOff = e => {
+    const type = g16(e + 2), cnt = g32(e + 4);
+    const bytes = (TYPE_SIZE[type] || 1) * cnt;
+    return bytes <= 4 ? e + 8 : g32(e + 8);
+  };
+  const ascii = e => {
+    const cnt = g32(e + 4), o = valOff(e);
+    let s = "";
+    for (let i = 0; i < cnt; i++){
+      const c = v.getUint8(base + o + i);
+      if (c === 0) break;
+      s += String.fromCharCode(c);
+    }
+    return s.trim();
+  };
+  const rationals = (e, n) => {
+    const o = valOff(e), r = [];
+    for (let i = 0; i < n; i++){
+      const den = g32(o + i * 8 + 4);
+      r.push(den ? g32(o + i * 8) / den : 0);
+    }
+    return r;
+  };
+  const out = {};
+  try{
+    const ifd0 = entries(g32(4));
+    if (ifd0[0x8769]){
+      const ex = entries(g32(valOff(ifd0[0x8769])));
+      const dt = ex[0x9003] || ex[0x9004];
+      if (dt){
+        const s = ascii(dt);
+        const m = s.match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2})/);
+        if (m) out.takenAt = `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
+      }
+    }
+    if (ifd0[0x8825]){
+      const g = entries(g32(valOff(ifd0[0x8825])));
+      if (g[0x0002] && g[0x0004]){
+        const latRef = g[0x0001] ? ascii(g[0x0001]) : "N";
+        const lonRef = g[0x0003] ? ascii(g[0x0003]) : "E";
+        const [d1,m1,s1] = rationals(g[0x0002], 3);
+        const [d2,m2,s2] = rationals(g[0x0004], 3);
+        let lat = d1 + (m1||0)/60 + (s1||0)/3600;
+        let lon = d2 + (m2||0)/60 + (s2||0)/3600;
+        if (/S/i.test(latRef)) lat = -lat;
+        if (/W/i.test(lonRef)) lon = -lon;
+        if (lat || lon){ out.lat = lat; out.lon = lon; }
+      }
+    }
+  }catch{}
+  return out;
+}
+
+/* =============== PIN =============== */
+async function hashPin(pin){
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("chantier:" + pin));
+  return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2,"0")).join("");
+}
+let pinMode = "enter", pinTemp = "";
+function showLock(){
+  document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
+  $("#scrLock").classList.add("on");
+  $("#editModal").classList.remove("on");
+  $("#setModal").classList.remove("on");
+  closeAddSheet();
+  const has = !!localStorage.getItem("pinHash");
+  pinMode = has ? "enter" : "create";
+  $("#lockTitle").textContent = has ? "Notes de chantier" : "Bienvenue";
+  $("#lockText").textContent = has
+    ? "Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone."
+    : "Choisissez un code (4 à 8 chiffres) qui protégera votre carnet sur ce téléphone.";
+  $("#btnUnlock").textContent = has ? "Ouvrir" : "Définir le code";
+  $("#pinInput").value = ""; $("#lockMsg").textContent = "";
+  setTimeout(()=>$("#pinInput").focus(), 60);
+}
+async function submitPin(){
+  const val = $("#pinInput").value.trim();
+  const msg = $("#lockMsg");
+  if (!/^\d{4,8}$/.test(val)){ msg.textContent = "Code : 4 à 8 chiffres."; return; }
+  const h = await hashPin(val);
+  if (pinMode === "enter"){
+    if (h === localStorage.getItem("pinHash")) unlock();
+    else { msg.textContent = "Code incorrect."; $("#pinInput").value = ""; }
+  } else if (pinMode === "create"){
+    pinTemp = h; pinMode = "confirm";
+    $("#lockText").textContent = "Confirmez le code.";
+    $("#btnUnlock").textContent = "Confirmer";
+    $("#pinInput").value = ""; msg.textContent = "";
+  } else if (pinMode === "confirm"){
+    if (h === pinTemp){ localStorage.setItem("pinHash", h); toast("Code enregistré"); unlock(); }
+    else { pinMode = "create"; $("#pinInput").value = ""; msg.textContent = "Les codes ne correspondent pas. Recommencez."; $("#lockText").textContent = "Choisissez un code (4 à 8 chiffres)."; $("#btnUnlock").textContent = "Définir le code"; }
+  } else if (pinMode === "current"){
+    if (h === localStorage.getItem("pinHash")){
+      pinMode = "new"; $("#lockText").textContent = "Nouveau code (4 à 8 chiffres)."; $("#btnUnlock").textContent = "Continuer"; $("#pinInput").value = ""; msg.textContent = "";
+    } else { msg.textContent = "Code actuel incorrect."; $("#pinInput").value = ""; }
+  } else if (pinMode === "new"){
+    pinTemp = h; pinMode = "newconfirm";
+    $("#lockText").textContent = "Confirmez le nouveau code."; $("#btnUnlock").textContent = "Confirmer"; $("#pinInput").value = ""; msg.textContent = "";
+  } else if (pinMode === "newconfirm"){
+    if (h === pinTemp){ localStorage.setItem("pinHash", h); toast("Code modifié"); unlock(); }
+    else { pinMode = "new"; $("#pinInput").value = ""; msg.textContent = "Les codes ne correspondent pas."; $("#lockText").textContent = "Nouveau code (4 à 8 chiffres)."; $("#btnUnlock").textContent = "Continuer"; }
+  }
+}
+function unlock(){ $("#scrLock").classList.remove("on"); showHome(); }
+let hiddenAt = null;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000) showLock();
+});
+
+/* =============== vues =============== */
+let curVisit = null, curEdit = null;
+const objectURLs = [];
+function freeURLs(){ while(objectURLs.length) URL.revokeObjectURL(objectURLs.pop()); }
+function mkURL(blob){ const u = URL.createObjectURL(blob); objectURLs.push(u); return u; }
+
+async function showHome(){
+  document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
+  $("#scrHome").classList.add("on");
+  freeURLs();
+  const visits = (await idbAll("visits")).sort((a,b) => b.date.localeCompare(a.date));
+  const photos = await idbAll("photos");
+  const byVisit = {};
+  photos.forEach(p => { (byVisit[p.visitId] = byVisit[p.visitId] || []).push(p); });
+  const list = $("#visitList");
+  if (!visits.length){
+    list.innerHTML = `<div class="empty"><span class="glyph">🚧</span>Aucune visite pour l'instant.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
+    return;
+  }
+  list.innerHTML = visits.map(v => {
+    const ph = byVisit[v.id] || [];
+    const counts = {NC:0, PA:0, AC:0, C:0};
+    ph.forEach(p => { if (counts[p.statut] !== undefined) counts[p.statut]++; });
+    const pills = ["NC","PA","AC","C"].filter(k => counts[k])
+      .map(k => `<span class="pill ${k}">${counts[k]} ${k}</span>`).join("");
+    return `<button class="visit-card" data-id="${v.id}">
+      <div class="visit-date"><b>Visite du ${esc(frDate(v.date))}</b>
+      <small>${esc(frDayName(v.date))} · ${ph.length} cliché${ph.length>1?"s":""}</small></div>
+      <div class="visit-counts">${pills || `<span class="pill none">vide</span>`}</div>
+    </button>`;
+  }).join("");
+  list.querySelectorAll(".visit-card").forEach(b =>
+    b.addEventListener("click", () => showVisit(Number(b.dataset.id))));
+}
+
+async function showVisit(id){
+  const visits = await idbAll("visits");
+  curVisit = visits.find(v => v.id === id);
+  if (!curVisit) return showHome();
+  document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
+  $("#scrVisit").classList.add("on");
+  $("#visitLabel").textContent = `Visite du ${frDate(curVisit.date)} — ${frDayName(curVisit.date)}`;
+  await renderPhotos();
+  window.scrollTo(0,0);
+}
+
+async function renderPhotos(){
+  freeURLs();
+  const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+  const list = $("#photoList");
+  if (!photos.length){
+    list.innerHTML = `<div class="empty"><span class="glyph">📷</span>Aucun cliché.<br>Prenez vos photos avec Timestamp Camera,<br>puis ajoutez-les avec le bouton +.</div>`;
+    return;
+  }
+  list.innerHTML = photos.map(p => {
+    const meta = [];
+    if (p.takenAt){ const [d, t] = p.takenAt.split("T"); meta.push(`${frDate(d)} ${t}`); }
+    if (p.lat != null){
+      meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
+    }
+    const elems = Array.isArray(p.element) ? p.element : [];
+    const fields = [];
+    if (elems.length) fields.push(`<div class="cap-field"><span class="k">Élément VRD</span>${esc(elems.join(", "))}</div>`);
+    if (p.zone) fields.push(`<div class="cap-field"><span class="k">Localisation</span>${esc(p.zone)}</div>`);
+    if (p.entreprise) fields.push(`<div class="cap-field"><span class="k">Entreprise / lot</span>${esc(p.entreprise)}</div>`);
+    if (p.description) fields.push(`<div class="cap-field"><span class="k">Description factuelle</span>${esc(p.description)}</div>`);
+    if (p.suite) fields.push(`<div class="cap-field"><span class="k">Suite à donner</span>${esc(p.suite)}</div>`);
+    return `<article class="photo-card" data-id="${p.id}">
+      <img class="shot" src="${mkURL(p.blob)}" alt="Cliché n°${p.num}" loading="lazy">
+      <div class="caption">
+        <div class="cap-head">
+          <span class="cap-num">Cliché n°${p.num}</span>
+          <span class="pill ${p.statut || "none"}">${p.statut || "à qualifier"}</span>
+        </div>
+        <div class="cap-meta mono">${meta.join(" · ") || "métadonnées non trouvées"}</div>
+        ${p.titre ? `<div class="cap-title">${esc(p.titre)}</div>` : ""}
+        ${fields.join("")}
+        <div class="cap-actions">
+          <button class="btn" data-act="edit">✎ Commentaire</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+  list.querySelectorAll("[data-act=edit]").forEach(b =>
+    b.addEventListener("click", e => openEditor(Number(e.target.closest(".photo-card").dataset.id))));
+}
+
+/* =============== ajout de photos =============== */
+function openAddSheet(){ $("#addSheet").classList.add("on"); $("#scrim").classList.add("on"); }
+function closeAddSheet(){ $("#addSheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
+
+async function importFiles(files){
+  if (!files.length || !curVisit) return;
+  closeAddSheet();
+  toast(`Import de ${files.length} cliché${files.length>1?"s":""}…`);
+  const existing = await idbAll("photos","visitId",curVisit.id);
+  let num = existing.reduce((m,p) => Math.max(m, p.num || 0), 0);
+  for (const f of files){
+    let exif = {};
+    try{ exif = parseExif(await f.arrayBuffer()); }catch{}
+    num++;
+    const rec = {
+      visitId: curVisit.id, num,
+      blob: f, name: f.name || "",
+      takenAt: exif.takenAt || null,
+      lat: exif.lat ?? null, lon: exif.lon ?? null,
+      statut: "", titre: "", element: [], zone: "", entreprise: "", description: "", suite: "",
+      createdAt: Date.now()
+    };
+    await tx("photos","readwrite", s => s.add(rec));
+  }
+  await renderPhotos();
+  toast(`${files.length} cliché${files.length>1?"s":""} ajouté${files.length>1?"s":""} — commentaire auto généré`);
+}
+
+/* =============== éditeur =============== */
+let editURL = null;
+async function openEditor(id){
+  const photos = await idbAll("photos","visitId",curVisit.id);
+  curEdit = photos.find(p => p.id === id);
+  if (!curEdit) return;
+  $("#editModal").classList.add("on");
+  $("#editTitle").textContent = `Cliché n°${curEdit.num}`;
+  if (editURL) URL.revokeObjectURL(editURL);
+  editURL = URL.createObjectURL(curEdit.blob);
+  $("#editImg").src = editURL;
+  const meta = [];
+  if (curEdit.takenAt){ const [d,t] = curEdit.takenAt.split("T"); meta.push(`Pris le ${frDate(d)} à ${t}`); }
+  if (curEdit.lat != null) meta.push(`GPS ${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
+  $("#editMeta").textContent = meta.join(" — ") || "Pas de métadonnées EXIF trouvées";
+  $("#fTitre").value = curEdit.titre || "";
+  $("#fZone").value = curEdit.zone || "";
+  $("#fEnt").value = curEdit.entreprise || "";
+  $("#fDesc").value = curEdit.description || "";
+  $("#fSuite").value = curEdit.suite || "";
+  document.querySelectorAll("#statutChips .chip").forEach(c =>
+    c.classList.toggle("on", c.dataset.v === curEdit.statut));
+  buildElemChips(Array.isArray(curEdit.element) ? curEdit.element : []);
+  buildQuickChips();
+  const hasKey = !!localStorage.getItem("apiKey");
+  $("#btnAI").hidden = !hasKey;
+  $("#aiHint").hidden = !hasKey;
+  window.scrollTo(0,0);
+}
+function buildElemChips(selected){
+  const box = $("#elemChips");
+  box.innerHTML = VRD_ELEMENTS.map(e =>
+    `<button class="chip${selected.includes(e) ? " on" : ""}" data-e="${esc(e)}">${esc(e)}</button>`).join("");
+  box.querySelectorAll(".chip").forEach(c =>
+    c.addEventListener("click", () => c.classList.toggle("on")));
+}
+function selectedElems(){
+  return [...document.querySelectorAll("#elemChips .chip.on")].map(c => c.dataset.e);
+}
+function buildQuickChips(){
+  const s = getSettings();
+  $("#zonesList").innerHTML = s.zones.map(z => `<option value="${esc(z)}">`).join("");
+  $("#zoneChips").innerHTML = s.zones.slice(0,7).map(z => `<button class="chip">${esc(z)}</button>`).join("");
+  $("#zoneChips").querySelectorAll(".chip").forEach(c =>
+    c.addEventListener("click", () => { $("#fZone").value = c.textContent; }));
+  $("#entChips").innerHTML = s.ents.map(z => `<button class="chip">${esc(z)}</button>`).join("");
+  $("#entChips").querySelectorAll(".chip").forEach(c =>
+    c.addEventListener("click", () => { $("#fEnt").value = c.textContent; }));
+}
+async function saveEdit(){
+  if (!curEdit) return;
+  const on = document.querySelector("#statutChips .chip.on");
+  curEdit.statut = on ? on.dataset.v : "";
+  curEdit.titre = $("#fTitre").value.trim();
+  curEdit.element = selectedElems();
+  curEdit.zone = $("#fZone").value.trim();
+  curEdit.entreprise = $("#fEnt").value.trim();
+  curEdit.description = $("#fDesc").value.trim();
+  curEdit.suite = $("#fSuite").value.trim();
+  await tx("photos","readwrite", s => s.put(curEdit));
+  $("#editModal").classList.remove("on");
+  await renderPhotos();
+  toast("Commentaire enregistré");
+}
+
+/* =============== image → JPEG normalisé =============== */
+async function normalizeJpeg(blob, maxDim, q){
+  const bmp = await createImageBitmap(blob);
+  const scale = Math.min(1, (maxDim || 1600) / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w; canvas.height = h;
+  canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+  bmp.close();
+  const out = await new Promise(res => canvas.toBlob(res, "image/jpeg", q || 0.85));
+  return { blob: out, bytes: new Uint8Array(await out.arrayBuffer()), w, h };
+}
+
+/* =============== partage / téléchargement =============== */
+function downloadBlob(blob, filename){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+async function shareOrDownload(files, title){
+  if (navigator.canShare && navigator.canShare({files})){
+    try{ await navigator.share({files, title}); return "shared"; }
+    catch(e){ if (e && e.name === "AbortError") return "cancelled"; }
+  }
+  for (const f of files) downloadBlob(f, f.name);
+  return "downloaded";
+}
+
+/* =============== texte encodage PDF (WinAnsi) =============== */
+const W1252 = {0x20AC:128,0x201A:130,0x0192:131,0x201E:132,0x2026:133,0x2020:134,0x2021:135,
+  0x02C6:136,0x2030:137,0x0160:138,0x2039:139,0x0152:140,0x017D:142,0x2018:145,0x2019:146,
+  0x201C:147,0x201D:148,0x2022:149,0x2013:150,0x2014:151,0x02DC:152,0x2122:153,0x0161:154,
+  0x203A:155,0x0153:156,0x017E:158,0x0178:159};
+function winAnsi(str){
+  const out = [];
+  for (const ch of String(str).normalize("NFC")){
+    const c = ch.codePointAt(0);
+    if (c <= 255) out.push(c);
+    else if (W1252[c]) out.push(W1252[c]);
+    else out.push(63);
+  }
+  return out;
+}
+function pdfEscape(bytes){
+  const out = [];
+  for (const b of bytes){
+    if (b === 0x28 || b === 0x29 || b === 0x5C) out.push(0x5C);
+    out.push(b);
+  }
+  return out;
+}
+function wrapText(text, maxChars){
+  const words = String(text).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+  for (const w of words){
+    if ((line + " " + w).trim().length > maxChars){
+      if (line) lines.push(line);
+      line = w;
+    } else line = (line ? line + " " : "") + w;
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [""];
+}
+
+/* =============== générateur PDF =============== */
+function buildPdf(pages){
+  // pages : [{image:{bytes,w,h,x,y,dw,dh}|null, texts:[{x,y,size,font:"F1"|"F2",color:"r g b",text}]}]
+  const enc = new TextEncoder();
+  const chunks = [];
+  let pos = 0;
+  const push = x => { const u = typeof x === "string" ? enc.encode(x) : x; chunks.push(u); pos += u.length; };
+  const offsets = {};
+  let objNum = 4; // 1 Catalog, 2 Pages, 3 F1, 4 F2 réservés
+  const plan = pages.map(p => {
+    const o = {};
+    if (p.image) o.img = ++objNum;
+    o.content = ++objNum;
+    o.page = ++objNum;
+    return o;
+  });
+  const kids = plan.map(o => `${o.page} 0 R`).join(" ");
+
+  push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  const beginObj = n => { offsets[n] = pos; push(`${n} 0 obj\n`); };
+  const endObj = () => push("endobj\n");
+
+  beginObj(1); push(`<< /Type /Catalog /Pages 2 0 R >>\n`); endObj();
+  beginObj(2); push(`<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>\n`); endObj();
+  beginObj(3); push(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\n`); endObj();
+  beginObj(4); push(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\n`); endObj();
+
+  pages.forEach((p, i) => {
+    const o = plan[i];
+    if (p.image){
+      beginObj(o.img);
+      push(`<< /Type /XObject /Subtype /Image /Width ${p.image.w} /Height ${p.image.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.image.bytes.length} >>\nstream\n`);
+      push(p.image.bytes);
+      push("\nendstream\n"); endObj();
+    }
+    // contenu
+    const parts = [];
+    const put = s => parts.push(enc.encode(s));
+    if (p.image){
+      put(`q ${p.image.dw.toFixed(2)} 0 0 ${p.image.dh.toFixed(2)} ${p.image.x.toFixed(2)} ${p.image.y.toFixed(2)} cm /Im0 Do Q\n`);
+    }
+    for (const t of p.texts){
+      put(`BT /${t.font} ${t.size} Tf ${t.color || "0 0 0"} rg 1 0 0 1 ${t.x.toFixed(2)} ${t.y.toFixed(2)} Tm (`);
+      parts.push(new Uint8Array(pdfEscape(winAnsi(t.text))));
+      put(`) Tj ET\n`);
+    }
+    let clen = 0; parts.forEach(u => clen += u.length);
+    beginObj(o.content);
+    push(`<< /Length ${clen} >>\nstream\n`);
+    parts.forEach(u => push(u));
+    push("\nendstream\n"); endObj();
+    // page
+    beginObj(o.page);
+    const xobj = p.image ? ` /XObject << /Im0 ${o.img} 0 R >>` : "";
+    push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xobj} >> /Contents ${o.content} 0 R >>\n`);
+    endObj();
+  });
+
+  const xrefPos = pos;
+  const total = objNum + 1;
+  push(`xref\n0 ${total}\n0000000000 65535 f \n`);
+  for (let n = 1; n < total; n++){
+    push(String(offsets[n]).padStart(10, "0") + " 00000 n \n");
+  }
+  push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xrefPos}\nEOF`.replace("EOF", "%%EOF\n"));
+  return new Blob(chunks, {type:"application/pdf"});
+}
+
+function pdfCaptionTexts(p, startY){
+  // renvoie {texts, y} — bloc de légende sous la photo
+  const texts = [];
+  let y = startY;
+  const label = `Cliché n°${p.num}${p.statut ? ` — [${p.statut}]` : ""}${p.titre ? " " + p.titre : ""}`;
+  for (const l of wrapText(label, 70)){ texts.push({x:40, y, size:12, font:"F2", text:l}); y -= 15; }
+  const meta = [];
+  if (p.takenAt){ const [d,t] = p.takenAt.split("T"); meta.push(`Prise de vue : ${frDate(d)} à ${t}`); }
+  if (p.lat != null) meta.push(`GPS ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`);
+  if (meta.length){ texts.push({x:40, y, size:9, font:"F1", color:"0.45 0.42 0.38", text:meta.join("   ·   ")}); y -= 14; }
+  y -= 3;
+  const fields = [];
+  const elems = Array.isArray(p.element) ? p.element : [];
+  if (elems.length) fields.push(["ÉLÉMENT(S) VRD", elems.join(", ")]);
+  if (p.zone) fields.push(["LOCALISATION / ZONE", p.zone]);
+  if (p.entreprise) fields.push(["ENTREPRISE / LOT", p.entreprise]);
+  if (p.description) fields.push(["DESCRIPTION FACTUELLE", p.description]);
+  if (p.suite) fields.push(["SUITE À DONNER", p.suite]);
+  for (const [k, vtxt] of fields){
+    if (y < 60) break;
+    texts.push({x:40, y, size:8, font:"F2", color:"0.45 0.42 0.38", text:k}); y -= 12;
+    for (const l of wrapText(vtxt, 92)){
+      if (y < 50){ texts.push({x:40, y, size:10, font:"F1", text:"…"}); y -= 13; break; }
+      texts.push({x:40, y, size:10, font:"F1", text:l}); y -= 13;
+    }
+    y -= 5;
+  }
+  return {texts, y};
+}
+
+async function pdfForVisit(visit, photos, settings){
+  const pages = [];
+  // page de garde
+  const counts = {NC:0, PA:0, AC:0, C:0};
+  photos.forEach(p => { if (counts[p.statut] !== undefined) counts[p.statut]++; });
+  const cover = [];
+  let y = 760;
+  cover.push({x:40, y, size:20, font:"F2", text:settings.proj}); y -= 24;
+  if (settings.sub){ cover.push({x:40, y, size:11, font:"F1", color:"0.45 0.42 0.38", text:settings.sub}); y -= 22; }
+  cover.push({x:40, y, size:14, font:"F2", text:`Rapport de visite du ${frDate(visit.date)} (${frDayName(visit.date)})`}); y -= 20;
+  if (settings.redac){ cover.push({x:40, y, size:10, font:"F1", text:`Rédacteur : ${settings.redac}`}); y -= 16; }
+  cover.push({x:40, y, size:10, font:"F1", text:`${photos.length} cliché(s) horodaté(s) et géolocalisé(s) — constats photographiques et techniques.`}); y -= 16;
+  cover.push({x:40, y, size:10, font:"F2", text:`Bilan : ${counts.NC} NC / ${counts.PA} PA / ${counts.AC} AC / ${counts.C} C`}); y -= 22;
+  cover.push({x:40, y, size:9, font:"F1", color:"0.45 0.42 0.38", text:"Légende : C conforme · NC non-conforme · PA point d'attention · AC à confirmer"}); y -= 14;
+  cover.push({x:40, y, size:9, font:"F1", color:"0.45 0.42 0.38", text:"Document généré depuis l'application Notes de Chantier — à vérifier avant diffusion."});
+  pages.push({image:null, texts:cover});
+
+  // une page par cliché
+  for (let i = 0; i < photos.length; i++){
+    const p = photos[i];
+    toast(`PDF : cliché ${i+1}/${photos.length}…`);
+    const im = await normalizeJpeg(p.blob, 1400, 0.8);
+    const maxW = 515, maxH = 440;
+    const sc = Math.min(maxW / im.w, maxH / im.h);
+    const dw = im.w * sc, dh = im.h * sc;
+    const x = 40 + (maxW - dw) / 2;
+    const yImg = 801 - dh; // haut de page (841.89 - 40 marge)
+    const cap = pdfCaptionTexts(p, yImg - 26);
+    pages.push({image:{bytes:im.bytes, w:im.w, h:im.h, x, y:yImg, dw, dh}, texts:cap.texts});
+  }
+  return buildPdf(pages);
+}
+
+/* =============== générateur DOCX =============== */
+const CRC_T = (() => {
+  const t = new Int32Array(256);
+  for (let n = 0; n < 256; n++){
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c;
+  }
+  return t;
+})();
+function crc32(u8){
+  let c = ~0;
+  for (let i = 0; i < u8.length; i++) c = (c >>> 8) ^ CRC_T[(c ^ u8[i]) & 255];
+  return (~c) >>> 0;
+}
+function makeZip(entries, mime){
+  const enc = new TextEncoder();
+  const chunks = [], central = [];
+  let offset = 0;
+  for (const e of entries){
+    const data = typeof e.data === "string" ? enc.encode(e.data) : e.data;
+    const nameB = enc.encode(e.name);
+    const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, 0, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint16(26, nameB.length, true);
+    chunks.push(new Uint8Array(lh.buffer), nameB, data);
+    central.push({nameB, crc, size:data.length, offset});
+    offset += 30 + nameB.length + data.length;
+  }
+  const cd = [];
+  let cdSize = 0;
+  for (const c of central){
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true);
+    ch.setUint32(16, c.crc, true); ch.setUint32(20, c.size, true); ch.setUint32(24, c.size, true);
+    ch.setUint16(28, c.nameB.length, true);
+    ch.setUint32(42, c.offset, true);
+    cd.push(new Uint8Array(ch.buffer), c.nameB);
+    cdSize += 46 + c.nameB.length;
+  }
+  const eocd = new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0, 0x06054b50, true);
+  eocd.setUint16(8, central.length, true); eocd.setUint16(10, central.length, true);
+  eocd.setUint32(12, cdSize, true); eocd.setUint32(16, offset, true);
+  return new Blob([...chunks, ...cd, new Uint8Array(eocd.buffer)], {type:mime});
+}
+const wR = (t, rPr) => `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ""}<w:t xml:space="preserve">${escXml(t)}</w:t></w:r>`;
+const wP = (runs, pPr) => `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ""}${runs}</w:p>`;
+function wImg(rid, cx, cy, id){
+  return `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Photo${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Photo${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+}
+async function docxForVisit(visit, photos, settings){
+  const counts = {NC:0, PA:0, AC:0, C:0};
+  photos.forEach(p => { if (counts[p.statut] !== undefined) counts[p.statut]++; });
+  const body = [];
+  body.push(wP(wR(settings.proj, `<w:b/><w:sz w:val="36"/>`)));
+  if (settings.sub) body.push(wP(wR(settings.sub, `<w:color w:val="777777"/><w:sz w:val="20"/>`)));
+  body.push(wP(wR(`Rapport de visite du ${frDate(visit.date)} (${frDayName(visit.date)})`, `<w:b/><w:sz w:val="28"/>`)));
+  if (settings.redac) body.push(wP(wR(`Rédacteur : ${settings.redac}`, `<w:sz w:val="20"/>`)));
+  body.push(wP(wR(`${photos.length} cliché(s) horodaté(s) et géolocalisé(s) — Bilan : ${counts.NC} NC / ${counts.PA} PA / ${counts.AC} AC / ${counts.C} C`, `<w:b/><w:sz w:val="20"/>`)));
+  body.push(wP(wR("Légende : C conforme · NC non-conforme · PA point d'attention · AC à confirmer", `<w:color w:val="777777"/><w:sz w:val="18"/>`)));
+  body.push(wP(""));
+
+  const media = [], rels = [];
+  for (let i = 0; i < photos.length; i++){
+    const p = photos[i];
+    toast(`Word : cliché ${i+1}/${photos.length}…`);
+    const im = await normalizeJpeg(p.blob, 1400, 0.8);
+    const rid = `rIdImg${i+1}`;
+    media.push({name:`word/media/image${i+1}.jpg`, data:im.bytes});
+    rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${i+1}.jpg"/>`);
+    const maxCx = 5760720; // 16 cm
+    let cx = im.w * 9525, cy = im.h * 9525;
+    if (cx > maxCx){ cy = Math.round(cy * maxCx / cx); cx = maxCx; }
+
+    body.push(wP(wR(`Cliché n°${p.num}${p.statut ? ` — [${p.statut}]` : ""}${p.titre ? " " + p.titre : ""}`, `<w:b/><w:sz w:val="24"/>`), `<w:keepNext/><w:spacing w:before="240"/>`));
+    body.push(wImg(rid, cx, cy, i + 1));
+    const meta = [];
+    if (p.takenAt){ const [d,t] = p.takenAt.split("T"); meta.push(`Prise de vue : ${frDate(d)} à ${t}`); }
+    if (p.lat != null) meta.push(`GPS ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`);
+    if (meta.length) body.push(wP(wR(meta.join("   ·   "), `<w:i/><w:color w:val="777777"/><w:sz w:val="18"/>`)));
+    const fields = [];
+    const elems = Array.isArray(p.element) ? p.element : [];
+    if (elems.length) fields.push(["Élément(s) VRD : ", elems.join(", ")]);
+    if (p.zone) fields.push(["Localisation / zone : ", p.zone]);
+    if (p.entreprise) fields.push(["Entreprise / lot : ", p.entreprise]);
+    if (p.description) fields.push(["Description factuelle : ", p.description]);
+    if (p.suite) fields.push(["Suite à donner : ", p.suite]);
+    for (const [k, vtxt] of fields){
+      body.push(wP(wR(k, `<w:b/><w:sz w:val="20"/>`) + wR(vtxt, `<w:sz w:val="20"/>`)));
+    }
+  }
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body.join("")}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`;
+
+  const relsRoot = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+
+  const relsDoc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels.join("")}</Relationships>`;
+
+  return makeZip([
+    {name:"[Content_Types].xml", data:contentTypes},
+    {name:"_rels/.rels", data:relsRoot},
+    {name:"word/document.xml", data:documentXml},
+    {name:"word/_rels/document.xml.rels", data:relsDoc},
+    ...media
+  ], "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+
+/* =============== exports =============== */
+function photoFilename(p){
+  const base = p.titre ? sanitizeFilename(p.titre) : `Cliche n°${p.num}`;
+  const pref = p.statut ? p.statut + " " : "";
+  return `${p.num} ${pref}${base}.jpg`;
+}
+async function exportPdf(){
+  if (!curVisit) return;
+  const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+  if (!photos.length){ toast("Aucun cliché dans cette visite."); return; }
+  const settings = getSettings();
+  try{
+    toast("Génération du PDF…");
+    const blob = await pdfForVisit(curVisit, photos, settings);
+    const name = `Rapport visite ${shortDate(curVisit.date)} — ${sanitizeFilename(settings.proj)}.pdf`;
+    const r = await shareOrDownload([new File([blob], name, {type:"application/pdf"})], name);
+    toast(r === "shared" ? "Rapport PDF partagé ✔" : r === "downloaded" ? "PDF enregistré dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur PDF : " + (err && err.message || err), true); }
+}
+async function exportDocx(){
+  if (!curVisit) return;
+  const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+  if (!photos.length){ toast("Aucun cliché dans cette visite."); return; }
+  const settings = getSettings();
+  try{
+    toast("Génération du document Word…");
+    const blob = await docxForVisit(curVisit, photos, settings);
+    const name = `Rapport visite ${shortDate(curVisit.date)} — ${sanitizeFilename(settings.proj)}.docx`;
+    const r = await shareOrDownload([new File([blob], name, {type:blob.type})], name);
+    toast(r === "shared" ? "Rapport Word partagé ✔" : r === "downloaded" ? "Word enregistré dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur Word : " + (err && err.message || err), true); }
+}
+async function sharePhotos(){
+  if (!curVisit) return;
+  const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+  if (!photos.length){ toast("Aucun cliché."); return; }
+  const files = photos.map(p => new File([p.blob], photoFilename(p), {type:"image/jpeg"}));
+  const r = await shareOrDownload(files, `Photos visite du ${frDate(curVisit.date)}`);
+  toast(r === "shared" ? "Photos partagées ✔" : r === "downloaded" ? "Photos enregistrées dans Téléchargements ✔" : "Partage annulé");
+}
+async function backupJson(){
+  const visits = await idbAll("visits");
+  const photos = await idbAll("photos");
+  const data = {
+    exportedAt: new Date().toISOString(),
+    settings: getSettings(),
+    visits,
+    photos: photos.map(({blob, ...rest}) => rest)
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  downloadBlob(blob, "notes-chantier.json");
+  toast("Sauvegarde des notes exportée ✔");
+}
+
+/* =============== IA : description VRD =============== */
+const AI_SCHEMA = {
+  type:"object",
+  properties:{
+    statut:{type:"string", enum:["C","NC","PA","AC"]},
+    titre:{type:"string"},
+    elements:{type:"array", items:{type:"string", enum:VRD_ELEMENTS}},
+    localisation:{type:"string"},
+    description:{type:"string"},
+    suite:{type:"string"}
+  },
+  required:["statut","titre","elements","localisation","description","suite"],
+  additionalProperties:false
+};
+function aiSystem(settings){
+  return `Tu es un ingénieur AMOE spécialiste VRD (voirie et réseaux divers) qui rédige des constats de visite de chantier en français, style rapport technique factuel et télégraphique.
+
+ANALYSE UNIQUEMENT les éléments du métier VRD visibles sur la photo : type de chaussée et revêtement, trottoir, bordures (type, matériau : Comblanchien, granit, béton…), caniveaux, tampons et regards de voirie (réseau concerné), assainissement EU/EP, réseaux secs (AEP, SLT, télécom), éclairage public, mobilier urbain, signalisation et marquage, espaces verts et fosses de plantation, matériaux et stockage, terrassement et fond de forme, ouvrages de génie civil, balisage et installations de chantier.
+
+INTERDICTION ABSOLUE : ne jamais décrire, mentionner ni identifier les personnes, animaux ou véhicules (aucune plaque d'immatriculation, aucune marque, aucune description physique). Ignore-les totalement. Seule exception : un usage de voirie manifestement non conforme (ex. circulation sur voie réservée) peut être signalé de façon strictement anonyme.
+
+L'horodatage, les coordonnées et l'adresse incrustés sur la photo (Timestamp Camera) peuvent être lus pour situer le constat. Chantier : ${settings.proj}.${settings.zones.length ? " Zones connues : " + settings.zones.join(" ; ") + "." : ""}
+
+Champs à produire : statut (C conforme / NC non-conforme / PA point d'attention / AC à confirmer — choisis le plus plausible), titre (court, style nom de fichier, ex. "Épaufrure bordure Comblanchien"), elements (catégories VRD concernées), localisation (rue/carrefour lu sur la photo ou déduit), description (factuelle, 2 à 4 phrases), suite (action concrète attendue ; "" si aucune).`;
+}
+async function describeAI(){
+  if (!curEdit) return;
+  const key = localStorage.getItem("apiKey");
+  if (!key){ toast("Ajoutez votre clé API dans les réglages."); return; }
+  const btn = $("#btnAI");
+  btn.classList.add("busy"); btn.textContent = "⏳ Analyse du cliché en cours…";
+  try{
+    const settings = getSettings();
+    const im = await normalizeJpeg(curEdit.blob, 1568, 0.85);
+    const b64 = await blobToBase64(im.blob);
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key":key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model:"claude-opus-4-8",
+        max_tokens:1500,
+        system:aiSystem(settings),
+        output_config:{format:{type:"json_schema", schema:AI_SCHEMA}},
+        messages:[{role:"user", content:[
+          {type:"image", source:{type:"base64", media_type:"image/jpeg", data:b64}},
+          {type:"text", text:"Rédige le constat VRD de ce cliché de visite de chantier."}
+        ]}]
+      })
+    });
+    if (!resp.ok){
+      const errBody = await resp.json().catch(() => null);
+      const m = errBody && errBody.error && errBody.error.message || `HTTP ${resp.status}`;
+      throw new Error(resp.status === 401 ? "Clé API invalide ou expirée." : m);
+    }
+    const data = await resp.json();
+    if (data.stop_reason === "refusal") throw new Error("Analyse refusée par le service.");
+    const txt = (data.content || []).find(b => b.type === "text");
+    if (!txt) throw new Error("Réponse vide.");
+    const out = JSON.parse(txt.text);
+    // pré-remplit le formulaire — l'utilisateur relit et enregistre
+    document.querySelectorAll("#statutChips .chip").forEach(c =>
+      c.classList.toggle("on", c.dataset.v === out.statut));
+    buildElemChips((out.elements || []).filter(e => VRD_ELEMENTS.includes(e)));
+    if (out.titre) $("#fTitre").value = out.titre;
+    if (out.localisation) $("#fZone").value = out.localisation;
+    if (out.description) $("#fDesc").value = out.description;
+    if (out.suite) $("#fSuite").value = out.suite;
+    toast("Constat proposé — relisez puis Enregistrer", true);
+  }catch(err){
+    toast("IA : " + (err && err.message || err), true);
+  }finally{
+    btn.classList.remove("busy");
+    btn.textContent = "✨ Décrire le cliché (IA — éléments VRD uniquement)";
+  }
+}
+
+/* =============== réglages =============== */
+function applyHeader(s){
+  $("#projTitle").textContent = s.proj;
+  $("#projSub").textContent = s.sub || DEFAULTS.sub;
+}
+function openSettings(){
+  const s = getSettings();
+  $("#sProj").value = s.proj;
+  $("#sSub").value = s.sub;
+  $("#sRedac").value = s.redac;
+  $("#sZones").value = s.zones.join("\n");
+  $("#sEnts").value = s.ents.join("\n");
+  $("#sKey").value = localStorage.getItem("apiKey") || "";
+  $("#setModal").classList.add("on");
+}
+function saveSettingsUI(){
+  const s = {
+    proj: $("#sProj").value.trim() || DEFAULTS.proj,
+    sub: $("#sSub").value.trim() || DEFAULTS.sub,
+    redac: $("#sRedac").value.trim(),
+    zones: $("#sZones").value.split("\n").map(x => x.trim()).filter(Boolean),
+    ents: $("#sEnts").value.split("\n").map(x => x.trim()).filter(Boolean)
+  };
+  saveSettings(s);
+  const key = $("#sKey").value.trim();
+  if (key) localStorage.setItem("apiKey", key);
+  else localStorage.removeItem("apiKey");
+  applyHeader(s);
+  $("#setModal").classList.remove("on");
+  toast("Réglages enregistrés");
+}
+
+/* =============== branchements =============== */
+async function main(){
+  db = await openDB();
+  applyHeader(getSettings());
+
+  $("#btnUnlock").addEventListener("click", submitPin);
+  $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
+  $("#btnLock").addEventListener("click", showLock);
+
+  $("#btnNewVisit").addEventListener("click", async () => {
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+    const visits = await idbAll("visits");
+    const existing = visits.find(v => v.date === iso);
+    if (existing){ showVisit(existing.id); return; }
+    const id = await new Promise((res, rej) => {
+      const t = db.transaction("visits","readwrite");
+      const rq = t.objectStore("visits").add({date: iso, createdAt: Date.now()});
+      rq.onsuccess = () => res(rq.result);
+      t.onerror = () => rej(t.error);
+    });
+    showVisit(id);
+  });
+  $("#btnBack").addEventListener("click", showHome);
+
+  $("#btnAdd").addEventListener("click", openAddSheet);
+  $("#scrim").addEventListener("click", closeAddSheet);
+  $("#btnAddCancel").addEventListener("click", closeAddSheet);
+  $("#btnPickGallery").addEventListener("click", () => $("#fileGallery").click());
+  $("#btnPickCamera").addEventListener("click", () => $("#fileCamera").click());
+  $("#fileGallery").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
+  $("#fileCamera").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
+
+  $("#btnEditClose").addEventListener("click", () => $("#editModal").classList.remove("on"));
+  $("#btnEditSave").addEventListener("click", saveEdit);
+  $("#btnAI").addEventListener("click", describeAI);
+  document.querySelectorAll("#statutChips .chip").forEach(c =>
+    c.addEventListener("click", () => {
+      const was = c.classList.contains("on");
+      document.querySelectorAll("#statutChips .chip").forEach(x => x.classList.remove("on"));
+      if (!was) c.classList.add("on");
+    }));
+  $("#btnDelPhoto").addEventListener("click", async () => {
+    if (!curEdit) return;
+    if (!confirm(`Supprimer définitivement le cliché n°${curEdit.num} ?`)) return;
+    await tx("photos","readwrite", s => s.delete(curEdit.id));
+    $("#editModal").classList.remove("on");
+    await renderPhotos();
+    toast("Cliché supprimé");
+  });
+
+  $("#btnPdf").addEventListener("click", exportPdf);
+  $("#btnDocx").addEventListener("click", exportDocx);
+  $("#btnSharePhotos").addEventListener("click", sharePhotos);
+  $("#btnDelVisit").addEventListener("click", async () => {
+    if (!curVisit) return;
+    const photos = await idbAll("photos","visitId",curVisit.id);
+    if (!confirm(`Supprimer la visite du ${frDate(curVisit.date)} et ses ${photos.length} cliché(s) ? Cette action est définitive.`)) return;
+    for (const p of photos) await tx("photos","readwrite", s => s.delete(p.id));
+    await tx("visits","readwrite", s => s.delete(curVisit.id));
+    toast("Visite supprimée");
+    showHome();
+  });
+
+  $("#btnSettings").addEventListener("click", openSettings);
+  $("#btnSetClose").addEventListener("click", () => $("#setModal").classList.remove("on"));
+  $("#btnSetSave").addEventListener("click", saveSettingsUI);
+  $("#btnChangePin").addEventListener("click", () => {
+    $("#setModal").classList.remove("on");
+    showLock();
+    pinMode = "current";
+    $("#lockTitle").textContent = "Changer le code";
+    $("#lockText").textContent = "Saisissez d'abord le code actuel.";
+    $("#btnUnlock").textContent = "Continuer";
+  });
+  $("#btnBackupJson").addEventListener("click", backupJson);
+  $("#btnLoadExample").addEventListener("click", () => {
+    $("#sProj").value = EXAMPLE.proj;
+    $("#sSub").value = EXAMPLE.sub;
+    $("#sRedac").value = EXAMPLE.redac;
+    $("#sZones").value = EXAMPLE.zones.join("\n");
+    $("#sEnts").value = EXAMPLE.ents.join("\n");
+    toast("Exemple chargé — appuyez sur Enregistrer pour l'appliquer");
+  });
+
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+
+  showLock();
+}
+main().catch(err => {
+  document.body.insertAdjacentHTML("beforeend",
+    `<div class="empty">Erreur d'initialisation : ${esc(err && err.message || err)}</div>`);
+});
+</script>
+</body>
+</html>

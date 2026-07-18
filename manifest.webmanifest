@@ -1,0 +1,16 @@
+{
+  "name": "Notes de Chantier — Constats VRD",
+  "short_name": "Chantier",
+  "description": "Carnet de notes de chantier sécurisé : photos horodatées, constats VRD structurés, rapports PDF/Word partageables.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161310",
+  "theme_color": "#161310",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
