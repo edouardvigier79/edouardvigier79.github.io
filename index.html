@@ -721,7 +721,7 @@ async function renderPhotos(){
     const meta = [];
     if (p.takenAt){ const [d, t] = p.takenAt.split("T"); meta.push(`${frDate(d)} ${t}`); }
     if (p.lat != null){
-      meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
+      meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.gpsApprox ? "≈ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
     }
     const elems = Array.isArray(p.element) ? p.element : [];
     const fields = [];
@@ -754,6 +754,18 @@ async function renderPhotos(){
 function openAddSheet(){ $("#addSheet").classList.add("on"); $("#scrim").classList.add("on"); }
 function closeAddSheet(){ $("#addSheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
 
+/* Position actuelle du téléphone (repli quand Android a supprimé le GPS de la photo). */
+function devicePosition(){
+  return new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(
+      p => res({lat: p.coords.latitude, lon: p.coords.longitude}),
+      () => res(null),
+      {enableHighAccuracy: true, timeout: 8000, maximumAge: 120000}
+    );
+  });
+}
+
 /* GPS → adresse via la Base Adresse Nationale (service public, sans clé).
    Hors-ligne ou en échec : renvoie "" et la zone reste à saisir. */
 async function reverseGeocode(lat, lon){
@@ -776,17 +788,28 @@ async function importFiles(files){
   toast(`Import de ${files.length} cliché${files.length>1?"s":""}…`);
   const existing = await idbAll("photos","visitId",curVisit.id);
   let num = existing.reduce((m,p) => Math.max(m, p.num || 0), 0);
+  let devPos, devPosAsked = false; // position du téléphone, demandée une seule fois par import
   for (const f of files){
     let exif = {};
     try{ exif = parseExif(await f.arrayBuffer()); }catch{}
     num++;
+    let lat = exif.lat ?? null, lon = exif.lon ?? null, gpsApprox = false;
+    if (lat == null){
+      // Android supprime souvent le GPS des photos transmises aux applis web ;
+      // repli : position actuelle du téléphone, si le cliché date de moins d'une heure
+      const fresh = exif.takenAt && (Date.now() - new Date(exif.takenAt).getTime()) < 60 * 60 * 1000;
+      if (fresh){
+        if (!devPosAsked){ devPosAsked = true; devPos = await devicePosition(); }
+        if (devPos){ lat = devPos.lat; lon = devPos.lon; gpsApprox = true; }
+      }
+    }
     let zone = "";
-    if (exif.lat != null && exif.lon != null) zone = await reverseGeocode(exif.lat, exif.lon);
+    if (lat != null && lon != null) zone = await reverseGeocode(lat, lon);
     const rec = {
       visitId: curVisit.id, num,
       blob: f, name: f.name || "",
       takenAt: exif.takenAt || null,
-      lat: exif.lat ?? null, lon: exif.lon ?? null,
+      lat, lon, gpsApprox,
       statut: "", titre: "", element: [], zone, entreprise: "", description: "", suite: "",
       createdAt: Date.now()
     };
@@ -809,7 +832,7 @@ async function openEditor(id){
   $("#editImg").src = editURL;
   const meta = [];
   if (curEdit.takenAt){ const [d,t] = curEdit.takenAt.split("T"); meta.push(`Pris le ${frDate(d)} à ${t}`); }
-  if (curEdit.lat != null) meta.push(`GPS ${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
+  if (curEdit.lat != null) meta.push(`GPS ${curEdit.gpsApprox ? "≈ (position à l'import) " : ""}${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
   $("#editMeta").textContent = meta.join(" — ") || "Pas de métadonnées EXIF trouvées";
   $("#fTitre").value = curEdit.titre || "";
   $("#fZone").value = curEdit.zone || "";
