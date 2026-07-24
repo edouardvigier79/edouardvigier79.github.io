@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
-/* Application version 1.9 */
-const CACHE = "chantier-v9";
+/* Application version 2.0 */
+const CACHE = "chantier-v10";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

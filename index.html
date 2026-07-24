@@ -80,6 +80,25 @@
   .lockmsg{min-height:22px; font-size:13.5px; color:var(--danger); font-weight:600; margin-top:10px}
 
   .sect-label{font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink2); margin:20px 2px 8px}
+  .home-project{display:flex; gap:8px; align-items:center; margin:14px 0 2px}
+  .proj-chip{flex:1; display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:11px 14px; font:inherit; cursor:pointer; color:var(--ink); box-shadow:var(--shadow); min-width:0}
+  .proj-name{font-weight:800; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; text-align:left}
+  .proj-caret{color:var(--accent); font-size:12px; flex:none}
+  .reg-chip{flex:none; background:var(--chip); border:1px solid var(--line); border-radius:14px; padding:11px 13px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; color:var(--ink)}
+  .reg-chip b{color:var(--nc)}
+  .proj-row{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:13px; padding:12px 14px; margin-bottom:8px; font:inherit; color:var(--ink); cursor:pointer}
+  .proj-row.active{border-color:var(--accent); border-width:2px}
+  .proj-row b{flex:1}
+  .reg-card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:10px; box-shadow:var(--shadow)}
+  .reg-card.solde{opacity:.62}
+  .reg-head{display:flex; align-items:center; gap:9px; margin-bottom:5px}
+  .reg-num{width:30px; height:30px; border-radius:9px; background:var(--grad); color:#fff; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex:none}
+  .reg-obj{flex:1; font-weight:700; font-size:14.5px}
+  .reg-state{font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; cursor:pointer}
+  .reg-state.encours{background:#FBE3C7; color:#9a5a12}
+  .reg-state.solde-b{background:#D7EEDD; color:#256b39}
+  @media (prefers-color-scheme: dark){.reg-state.encours{background:#4a3418; color:#f0c48a}.reg-state.solde-b{background:#1f3f2b; color:#7fd39a}}
+  .reg-meta{font-size:12.5px; color:var(--ink2)}
   .visit-card{
     display:flex; align-items:center; gap:12px; width:100%; text-align:left;
     background:var(--card); border:1px solid var(--line); border-radius:17px;
@@ -215,6 +234,7 @@
 <!-- ================= ACCUEIL : VISITES ================= -->
 <section class="screen" id="scrHome">
   <div class="wrap">
+    <div class="home-project" id="homeProject"></div>
     <div class="sect-label">Visites de chantier</div>
     <div id="visitList"></div>
     <div class="btnrow">
@@ -222,6 +242,28 @@
     </div>
   </div>
 </section>
+
+<!-- ================= REGISTRE DES RÉSERVES ================= -->
+<section class="screen" id="scrRegister">
+  <div class="wrap">
+    <button class="backlink" id="btnRegBack">← Visites</button>
+    <div class="sect-label">Registre des réserves — <span id="regProjName"></span></div>
+    <div id="regList"></div>
+    <div class="btnrow">
+      <button class="btn block" id="btnRegAdd">+ Réserve manuelle</button>
+    </div>
+  </div>
+</section>
+
+<!-- feuille de bascule des chantiers -->
+<div class="addsheet" id="projSheet">
+  <b>Changer de chantier</b>
+  <div id="projList" style="margin:10px 0"></div>
+  <div class="btnrow">
+    <button class="btn primary block" id="btnNewProject">+ Nouveau chantier</button>
+    <button class="btn ghost block" id="btnProjCancel">Fermer</button>
+  </div>
+</div>
 
 <!-- ================= DÉTAIL VISITE ================= -->
 <section class="screen" id="scrVisit">
@@ -322,6 +364,12 @@
       <textarea id="fSuite" placeholder="Action attendue, registre, relance…"></textarea>
     </div>
 
+    <div class="field" id="reserveField">
+      <label for="fReserve">Réserve au registre (constats NC / PA)</label>
+      <select id="fReserve"></select>
+      <div class="hint">Rattache ce constat à une réserve numérotée, suivie de visite en visite jusqu'à son solde.</div>
+    </div>
+
     <div class="btnrow">
       <button class="btn danger block" id="btnDelPhoto">Supprimer ce cliché</button>
     </div>
@@ -337,8 +385,17 @@
     </div>
 
     <div class="settings-block">
-      <h3>Chantier en cours</h3>
-      <p>L'application est générique : renseignez ici le chantier suivi. Ces valeurs alimentent l'en-tête, les raccourcis de saisie et les rapports.</p>
+      <h3>Chantiers</h3>
+      <p>Chaque chantier a ses propres réglages, contacts, logos, plan et registre. Les visites sont classées par chantier.</p>
+      <div class="btnrow" style="margin:0">
+        <button class="btn block" id="btnManageSwitch">🔀 Changer / créer un chantier</button>
+        <button class="btn danger block" id="btnDeleteProject">Supprimer le chantier courant</button>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <h3>Réglages du chantier courant</h3>
+      <p>Ces valeurs alimentent l'en-tête, les raccourcis de saisie et les rapports du chantier sélectionné.</p>
       <div class="field">
         <label for="sProj">Nom du chantier</label>
         <input type="text" id="sProj" placeholder="Ex. : RD120 · Château de Vincennes">
@@ -437,7 +494,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -519,46 +576,40 @@ const EXAMPLE = {
     "AMOE ; M. Edouard Vigier ; 06 03 07 37 05 ; e.vigier@pcm-ingenierie.fr"
   ]
 };
-function getSettings(){
-  try{
-    const s = JSON.parse(localStorage.getItem("settings") || "{}");
-    return {
-      proj: s.proj || DEFAULTS.proj,
-      sub: s.sub || DEFAULTS.sub,
-      redac: s.redac || "",
-      zones: Array.isArray(s.zones) ? s.zones : [],
-      ents: Array.isArray(s.ents) ? s.ents : [],
-      cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
-      contacts: Array.isArray(s.contacts) ? s.contacts : [],
-      planZoom: s.planZoom || "17",
-      planMode: s.planMode || "auto"
-    };
-  }catch{ return {...DEFAULTS}; }
+function blankSettings(){
+  return { proj:DEFAULTS.proj, sub:DEFAULTS.sub, redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"17", planMode:"auto" };
 }
-function saveSettings(s){ localStorage.setItem("settings", JSON.stringify(s)); }
+function normSettings(s){
+  s = s || {};
+  return {
+    proj: s.proj || DEFAULTS.proj,
+    sub: s.sub || DEFAULTS.sub,
+    redac: s.redac || "",
+    zones: Array.isArray(s.zones) ? s.zones : [],
+    ents: Array.isArray(s.ents) ? s.ents : [],
+    cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
+    contacts: Array.isArray(s.contacts) ? s.contacts : [],
+    planZoom: s.planZoom || "17",
+    planMode: s.planMode || "auto"
+  };
+}
 
-/* logos de page de garde : stockés en JPEG (fond blanc) dans le téléphone */
-function getLogo(key){
-  try{ const l = JSON.parse(localStorage.getItem(key) || "null"); return l && l.d ? l : null; }
-  catch{ return null; }
+/* ===== chantier courant : chaque chantier porte ses réglages, logos, plan ===== */
+let CUR = null; // {id, name, settings, logoL, logoR, planImg, createdAt}
+function getSettings(){ return CUR ? CUR.settings : blankSettings(); }
+async function saveCurrentProject(){ if (CUR) await tx("projects","readwrite", s => s.put(CUR)); }
+function setCurrentProject(p){
+  CUR = p;
+  if (p) localStorage.setItem("currentProjectId", String(p.id));
+  applyHeader(getSettings());
 }
-async function storeLogo(key, file){
-  const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 160 / bmp.height);
-  const w = Math.max(1, Math.round(bmp.width * scale));
-  const h = Math.max(1, Math.round(bmp.height * scale));
-  const cv = document.createElement("canvas");
-  cv.width = w; cv.height = h;
-  const cx = cv.getContext("2d");
-  cx.fillStyle = "#FFFFFF"; cx.fillRect(0, 0, w, h); // fond blanc (transparence PNG)
-  cx.drawImage(bmp, 0, 0, w, h);
-  bmp.close();
-  localStorage.setItem(key, JSON.stringify({d: cv.toDataURL("image/jpeg", 0.92), w, h}));
-}
+
+/* logos & plan de page de garde : stockés en JPEG (fond blanc) DANS le chantier courant */
+function getLogo(key){ return (CUR && CUR[key] && CUR[key].d) ? CUR[key] : null; }
 function logoBytes(l){ return Uint8Array.from(atob(l.d.split(",")[1]), c => c.charCodeAt(0)); }
-async function storePlan(file){
+async function imgToStored(file, maxDim, q){
   const bmp = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const scale = Math.min(1, maxDim / (maxDim === 160 ? bmp.height : Math.max(bmp.width, bmp.height)));
   const w = Math.max(1, Math.round(bmp.width * scale));
   const h = Math.max(1, Math.round(bmp.height * scale));
   const cv = document.createElement("canvas");
@@ -567,8 +618,10 @@ async function storePlan(file){
   cx.fillStyle = "#FFFFFF"; cx.fillRect(0, 0, w, h);
   cx.drawImage(bmp, 0, 0, w, h);
   bmp.close();
-  localStorage.setItem("planImg", JSON.stringify({d: cv.toDataURL("image/jpeg", 0.85), w, h}));
+  return {d: cv.toDataURL("image/jpeg", q), w, h};
 }
+async function storeLogo(key, file){ if (!CUR) return; CUR[key] = await imgToStored(file, 160, 0.92); await saveCurrentProject(); }
+async function storePlan(file){ if (!CUR) return; CUR.planImg = await imgToStored(file, 1600, 0.85); await saveCurrentProject(); }
 function refreshLogoState(){
   const L = getLogo("logoL"), R = getLogo("logoR");
   $("#logoState").textContent = `Logo gauche : ${L ? "défini ✔" : "aucun"} · Logo droit : ${R ? "défini ✔" : "aucun"}`;
@@ -579,7 +632,7 @@ function refreshLogoState(){
 let db;
 function openDB(){
   return new Promise((res, rej) => {
-    const rq = indexedDB.open("chantier-notes", 2);
+    const rq = indexedDB.open("chantier-notes", 3);
     rq.onupgradeneeded = e => {
       const d = e.target.result;
       if (!d.objectStoreNames.contains("visits")){
@@ -593,10 +646,50 @@ function openDB(){
       if (!d.objectStoreNames.contains("inbox")){
         d.createObjectStore("inbox", {keyPath:"id", autoIncrement:true});
       }
+      if (!d.objectStoreNames.contains("projects")){
+        d.createObjectStore("projects", {keyPath:"id", autoIncrement:true});
+      }
+      if (!d.objectStoreNames.contains("reserves")){
+        const r = d.createObjectStore("reserves", {keyPath:"id", autoIncrement:true});
+        r.createIndex("projectId","projectId");
+      }
     };
     rq.onsuccess = () => res(rq.result);
     rq.onerror = () => rej(rq.error);
   });
+}
+function idbAdd(store, rec){
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, "readwrite");
+    const rq = t.objectStore(store).add(rec);
+    rq.onsuccess = () => res(rq.result);
+    t.onerror = () => rej(t.error);
+  });
+}
+
+/* ===== chantiers : création, bascule, migration ===== */
+async function listProjects(){ return (await idbAll("projects")).sort((a,b) => (a.createdAt||0) - (b.createdAt||0)); }
+async function createProject(name, settings){
+  const p = { name: name || "Nouveau chantier", settings: normSettings(settings), logoL:null, logoR:null, planImg:null, createdAt: Date.now() };
+  p.id = await idbAdd("projects", p);
+  return p;
+}
+async function migrateToProjects(){
+  const existing = await listProjects();
+  if (existing.length) return existing;
+  // premier lancement de la v3 : convertir les anciens réglages localStorage en 1er chantier
+  let s = null;
+  try{ s = JSON.parse(localStorage.getItem("settings") || "null"); }catch{}
+  const p = await createProject((s && s.proj) || DEFAULTS.proj, s);
+  const grab = key => { try{ const l = JSON.parse(localStorage.getItem(key) || "null"); return l && l.d ? l : null; }catch{ return null; } };
+  p.logoL = grab("logoL"); p.logoR = grab("logoR"); p.planImg = grab("planImg");
+  await tx("projects","readwrite", st => st.put(p));
+  // rattacher toutes les visites orphelines à ce chantier
+  const visits = await idbAll("visits");
+  for (const v of visits){ if (v.projectId == null){ v.projectId = p.id; await tx("visits","readwrite", st => st.put(v)); } }
+  // nettoyer les anciennes clés localStorage (désormais dans le chantier)
+  ["settings","logoL","logoR","planImg"].forEach(k => localStorage.removeItem(k));
+  return [p];
 }
 function tx(store, mode, fn){
   return new Promise((res, rej) => {
@@ -766,15 +859,11 @@ async function processInbox(){
     const items = await idbAll("inbox");
     if (!items.length) return;
     const iso = todayIso();
-    let visit = (await idbAll("visits")).find(v => v.date === iso);
+    const pid = CUR ? CUR.id : null;
+    let visit = (await idbAll("visits")).find(v => v.date === iso && v.projectId === pid);
     if (!visit){
-      const id = await new Promise((res, rej) => {
-        const t = db.transaction("visits","readwrite");
-        const rq = t.objectStore("visits").add({date: iso, createdAt: Date.now()});
-        rq.onsuccess = () => res(rq.result);
-        t.onerror = () => rej(t.error);
-      });
-      visit = {id, date: iso};
+      const id = await idbAdd("visits", {date: iso, projectId: pid, createdAt: Date.now()});
+      visit = {id, date: iso, projectId: pid};
     }
     await showVisit(visit.id);
     const files = items.map(i => new File([i.blob], i.name || "photo.jpg", {type: i.type || "image/jpeg"}));
@@ -801,13 +890,22 @@ async function showHome(){
   document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
   $("#scrHome").classList.add("on");
   freeURLs();
-  const visits = (await idbAll("visits")).sort((a,b) => b.date.localeCompare(a.date));
+  const pid = CUR ? CUR.id : null;
+  const visits = (await idbAll("visits")).filter(v => v.projectId === pid).sort((a,b) => b.date.localeCompare(a.date));
   const photos = await idbAll("photos");
   const byVisit = {};
   photos.forEach(p => { (byVisit[p.visitId] = byVisit[p.visitId] || []).push(p); });
+  // bandeau du chantier courant + bilan du registre
+  const reserves = (await idbAll("reserves","projectId",pid)) || [];
+  const ouvertes = reserves.filter(r => r.statut !== "Soldé").length;
+  $("#homeProject").innerHTML =
+    `<button class="proj-chip" id="btnSwitchProject"><span class="proj-name">${esc(CUR ? CUR.name : "—")}</span><span class="proj-caret">▾</span></button>` +
+    `<button class="reg-chip" id="btnRegister">Registre · ${reserves.length}${ouvertes ? ` <b>(${ouvertes} en cours)</b>` : ""}</button>`;
+  $("#btnSwitchProject").addEventListener("click", openProjectSheet);
+  $("#btnRegister").addEventListener("click", showRegister);
   const list = $("#visitList");
   if (!visits.length){
-    list.innerHTML = `<div class="empty"><span class="glyph">🚧</span>Aucune visite pour l'instant.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
+    list.innerHTML = `<div class="empty"><span class="glyph">🚧</span>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
     return;
   }
   list.innerHTML = visits.map(v => {
@@ -856,6 +954,125 @@ async function renameVisit(){
   await tx("visits","readwrite", s => s.put(curVisit));
   refreshVisitLabel();
   toast(curVisit.label ? "Visite renommée" : "Nom par défaut rétabli");
+}
+
+/* =============== bascule de chantier =============== */
+async function openProjectSheet(){
+  const projects = await listProjects();
+  $("#projList").innerHTML = projects.map(p =>
+    `<button class="proj-row${CUR && p.id === CUR.id ? " active" : ""}" data-id="${p.id}">
+      <b>${esc(p.name)}</b>${CUR && p.id === CUR.id ? '<span style="color:var(--accent);font-weight:800">✓</span>' : ""}
+    </button>`).join("");
+  $("#projList").querySelectorAll(".proj-row").forEach(b =>
+    b.addEventListener("click", async () => {
+      const p = projects.find(x => x.id === Number(b.dataset.id));
+      if (p){ setCurrentProject(p); closeProjectSheet(); await showHome(); }
+    }));
+  $("#projSheet").classList.add("on"); $("#scrim").classList.add("on");
+}
+function closeProjectSheet(){ $("#projSheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
+async function newProjectFlow(){
+  const name = prompt("Nom du nouveau chantier :", "");
+  if (name === null) return;
+  const useExample = confirm("Pré-remplir avec les intervenants/contacts de l'exemple RD120 Vincennes ?\n\n(OK = exemple, Annuler = chantier vierge — modifiable ensuite dans les réglages)");
+  const p = await createProject(name.trim() || "Nouveau chantier", useExample ? EXAMPLE : null);
+  if (name.trim()) p.settings.proj = name.trim();
+  p.name = p.settings.proj; // garder nom du chantier et en-tête cohérents
+  await tx("projects","readwrite", s => s.put(p));
+  setCurrentProject(p); closeProjectSheet(); await showHome();
+  toast("Chantier créé — pensez à compléter les réglages (⚙)");
+}
+async function deleteCurrentProject(){
+  if (!CUR) return;
+  const projects = await listProjects();
+  if (projects.length <= 1){ toast("Impossible de supprimer le seul chantier."); return; }
+  const visits = (await idbAll("visits")).filter(v => v.projectId === CUR.id);
+  if (!confirm(`Supprimer le chantier « ${CUR.name} » avec ses ${visits.length} visite(s), photos et réserves ? Action définitive.`)) return;
+  for (const v of visits){
+    const ph = await idbAll("photos","visitId",v.id);
+    for (const p of ph) await tx("photos","readwrite", s => s.delete(p.id));
+    await tx("visits","readwrite", s => s.delete(v.id));
+  }
+  const res = await idbAll("reserves","projectId",CUR.id);
+  for (const r of res) await tx("reserves","readwrite", s => s.delete(r.id));
+  await tx("projects","readwrite", s => s.delete(CUR.id));
+  const rest = await listProjects();
+  setCurrentProject(rest[0]);
+  $("#setModal").classList.remove("on");
+  await showHome();
+  toast("Chantier supprimé");
+}
+
+/* =============== registre des réserves =============== */
+async function nextReserveNum(){
+  const res = await idbAll("reserves","projectId",CUR.id);
+  return res.reduce((m, r) => Math.max(m, r.num || 0), 0) + 1;
+}
+async function createReserve({objet, zone, statut}){
+  const rec = { projectId: CUR.id, num: await nextReserveNum(), date: todayIso(),
+    zone: zone || "", objet: objet || "", statut: statut || "En cours", dateSolde: "", createdAt: Date.now() };
+  rec.id = await idbAdd("reserves", rec);
+  return rec;
+}
+async function showRegister(){
+  document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
+  $("#scrRegister").classList.add("on");
+  $("#regProjName").textContent = CUR ? CUR.name : "";
+  await renderRegister();
+  window.scrollTo(0,0);
+}
+async function renderRegister(){
+  const res = (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num);
+  const list = $("#regList");
+  if (!res.length){
+    list.innerHTML = `<div class="empty"><span class="glyph">📋</span>Aucune réserve.<br>Les constats NC / PA peuvent créer une réserve depuis l'éditeur de cliché,<br>ou ajoutez-en une manuellement.</div>`;
+    return;
+  }
+  list.innerHTML = res.map(r => {
+    const solde = r.statut === "Soldé";
+    return `<div class="reg-card${solde ? " solde" : ""}" data-id="${r.id}">
+      <div class="reg-head">
+        <span class="reg-num">${r.num}</span>
+        <span class="reg-obj">${esc(r.objet || "(sans objet)")}</span>
+        <span class="reg-state ${solde ? "solde-b" : "encours"}" data-act="toggle">${solde ? "Soldé" : "En cours"}</span>
+      </div>
+      <div class="reg-meta">Ouverte le ${esc(frDate(r.date))}${r.zone ? " · " + esc(r.zone) : ""}${solde && r.dateSolde ? " · soldée le " + esc(frDate(r.dateSolde)) : ""}</div>
+      <div style="margin-top:8px; display:flex; gap:8px">
+        <button class="btn ghost" data-act="edit" style="padding:7px 12px; font-size:13px">Modifier</button>
+        <button class="btn danger" data-act="del" style="padding:7px 12px; font-size:13px">Supprimer</button>
+      </div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".reg-card").forEach(card => {
+    const id = Number(card.dataset.id);
+    card.querySelector('[data-act=toggle]').addEventListener("click", async () => {
+      const r = res.find(x => x.id === id);
+      r.statut = r.statut === "Soldé" ? "En cours" : "Soldé";
+      r.dateSolde = r.statut === "Soldé" ? todayIso() : "";
+      await tx("reserves","readwrite", s => s.put(r));
+      await renderRegister();
+    });
+    card.querySelector('[data-act=edit]').addEventListener("click", async () => {
+      const r = res.find(x => x.id === id);
+      const objet = prompt("Objet de la réserve :", r.objet); if (objet === null) return;
+      const zone = prompt("Localisation / zone :", r.zone); if (zone === null) return;
+      r.objet = objet.trim(); r.zone = zone.trim();
+      await tx("reserves","readwrite", s => s.put(r));
+      await renderRegister();
+    });
+    card.querySelector('[data-act=del]').addEventListener("click", async () => {
+      if (!confirm("Supprimer cette réserve du registre ?")) return;
+      await tx("reserves","readwrite", s => s.delete(id));
+      await renderRegister();
+    });
+  });
+}
+async function addManualReserve(){
+  const objet = prompt("Objet de la réserve :", ""); if (objet === null) return;
+  const zone = prompt("Localisation / zone (facultatif) :", ""); if (zone === null) return;
+  await createReserve({objet: objet.trim(), zone: zone.trim()});
+  await renderRegister();
+  toast("Réserve ajoutée au registre");
 }
 
 async function renderPhotos(){
@@ -1005,10 +1222,19 @@ async function openEditor(id){
     c.classList.toggle("on", c.dataset.v === curEdit.statut));
   buildElemChips(Array.isArray(curEdit.element) ? curEdit.element : []);
   buildQuickChips();
+  await buildReserveSelect();
   const hasKey = !!localStorage.getItem("apiKey");
   $("#btnAI").hidden = !hasKey;
   $("#aiHint").hidden = !hasKey;
   window.scrollTo(0,0);
+}
+async function buildReserveSelect(){
+  const res = (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num);
+  const opts = [`<option value="">— aucune —</option>`, `<option value="new">➕ Nouvelle réserve (depuis ce constat)</option>`]
+    .concat(res.map(r => `<option value="${r.id}">n°${r.num} — ${esc((r.objet||"").slice(0,48))}${r.statut === "Soldé" ? " (soldée)" : ""}</option>`));
+  const sel = $("#fReserve");
+  sel.innerHTML = opts.join("");
+  sel.value = curEdit.reserveId ? String(curEdit.reserveId) : "";
 }
 function buildElemChips(selected){
   const box = $("#elemChips");
@@ -1043,10 +1269,27 @@ async function saveEdit(){
   curEdit.entreprise = $("#fEnt").value.trim();
   curEdit.description = $("#fDesc").value.trim();
   curEdit.suite = $("#fSuite").value.trim();
+  // rattachement au registre des réserves
+  const rv = $("#fReserve").value;
+  let regMsg = "";
+  if (rv === "new"){
+    const r = await createReserve({
+      objet: curEdit.titre || curEdit.description || `Constat cliché n°${curEdit.num}`,
+      zone: curEdit.zone, statut: "En cours"
+    });
+    curEdit.reserveId = r.id; curEdit.reserveNum = r.num;
+    regMsg = ` — réserve n°${r.num} créée`;
+  } else if (rv){
+    const r = (await idbAll("reserves","projectId",CUR.id)).find(x => x.id === Number(rv));
+    curEdit.reserveId = r ? r.id : null; curEdit.reserveNum = r ? r.num : null;
+    if (r) regMsg = ` — rattaché à la réserve n°${r.num}`;
+  } else {
+    curEdit.reserveId = null; curEdit.reserveNum = null;
+  }
   await tx("photos","readwrite", s => s.put(curEdit));
   $("#editModal").classList.remove("on");
   await renderPhotos();
-  toast("Commentaire enregistré");
+  toast("Commentaire enregistré" + regMsg);
 }
 
 /* =============== image → JPEG normalisé =============== */
@@ -1443,11 +1686,16 @@ async function pdfForVisit(visit, photos, settings){
       ensure(rowH);
       ims.forEach((o, k) => {
         const x0 = 40 + k * (cellW + gap);
-        cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:x0 + (cellW - dims[k].dw) / 2, y:y - dims[k].dh, dw:dims[k].dw, dh:dims[k].dh});
-        cur.texts.push({x:x0 + (cellW - dims[k].dw) / 2, y:y - dims[k].dh - 9, size:6.8, font:"F2", color:PDF_GREY,
+        const cxImg = x0 + (cellW - dims[k].dw) / 2;
+        cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:cxImg, y:y - dims[k].dh, dw:dims[k].dw, dh:dims[k].dh});
+        cur.texts.push({x:cxImg, y:y - dims[k].dh - 9, size:6.8, font:"F2", color:PDF_GREY,
           text:`n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}`});
+        if (o.p.lat != null){
+          cur.texts.push({x:cxImg, y:y - dims[k].dh - 16, size:5.6, font:"F1", color:PDF_GREY,
+            text:`${o.p.gpsApprox ? "~" : ""}${o.p.lat.toFixed(5)}, ${o.p.lon.toFixed(5)}`});
+        }
       });
-      y -= rowH + 8;
+      y -= rowH + 14;
     }
     // tableau récapitulatif unique de la zone
     const CX = [[40, 26], [66, 36], [102, 268], [370, 185]]; // N° / Statut / Constat / Suite
@@ -1482,6 +1730,44 @@ async function pdfForVisit(visit, photos, settings){
     }
     y -= 14;
   }
+
+  /* ---- registre des réserves (cumulatif du chantier) ---- */
+  const reserves = CUR ? (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num) : [];
+  if (reserves.length){
+    const nOuv = reserves.filter(r => r.statut !== "Soldé").length;
+    band("REGISTRE DE SUIVI DES ACTIONS ET RÉSERVES", 22, 10.5);
+    cur.texts.push({x:40, y, size:8, font:"F1", color:PDF_GREY, text:`Registre cumulatif, mis à jour à chaque visite jusqu'au solde de chaque réserve. ${reserves.length} réserve(s), ${nOuv} en cours.`});
+    y -= 16;
+    const RX = [[40, 24], [64, 200], [264, 150], [414, 70], [484, 71]]; // N° / Objet / Zone / Ouverture / Statut
+    ensure(15);
+    cur.rects.push({x:40, y:y-12, w:515.28, h:12, color:PDF_BAND});
+    ["N°","OBJET DE LA RÉSERVE","LOCALISATION","OUVERTURE","STATUT"].forEach((h, k) =>
+      cur.texts.push({x:RX[k][0]+3, y:y-8.5, size:7, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 15;
+    for (const r of reserves){
+      const objLines = wrapText(r.objet || "—", 46);
+      const zoneLines = wrapText(r.zone || "—", 34);
+      const rowH = Math.max(objLines.length, zoneLines.length) * 9.4 + 7;
+      ensure(rowH);
+      cur.texts.push({x:RX[0][0]+3, y:y-8, size:8.5, font:"F2", text:String(r.num)});
+      let oy = y - 8; for (const l of objLines){ cur.texts.push({x:RX[1][0]+3, y:oy, size:8, font:"F1", text:l}); oy -= 9.4; }
+      let zy = y - 8; for (const l of zoneLines){ cur.texts.push({x:RX[2][0]+3, y:zy, size:8, font:"F1", color:PDF_GREY, text:l}); zy -= 9.4; }
+      cur.texts.push({x:RX[3][0]+3, y:y-8, size:7.6, font:"F1", color:PDF_GREY, text:frDate(r.date)});
+      const solde = r.statut === "Soldé";
+      cur.texts.push({x:RX[4][0]+3, y:y-8, size:8, font:"F2", color:solde ? PDF_STATUT.C : PDF_STATUT.PA, text:solde ? "Soldé" : "En cours"});
+      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.6, color:"0.85 0.87 0.9"});
+      y -= rowH;
+    }
+    y -= 10;
+  }
+
+  /* ---- signature ---- */
+  ensure(60);
+  y -= 10;
+  cur.rects.push({x:355, y:y-52, w:200, h:52, color:PDF_LABEL});
+  cur.texts.push({x:362, y:y-12, size:8, font:"F2", color:PDF_NAVY, text:"Rédacteur / Visa"});
+  if (settings.redac) cur.texts.push({x:362, y:y-26, size:8.5, font:"F1", text:settings.redac.slice(0, 34)});
+  cur.texts.push({x:362, y:y-44, size:7.5, font:"F1", color:PDF_GREY, text:`Le ${frDate(visit.date)}`});
 
   /* ---- en-tête et pied de page (ligne pêche, texte bleu clair) ---- */
   pages.forEach((pg, i) => {
@@ -1656,9 +1942,11 @@ async function docxForVisit(visit, photos, settings){
       const sc = Math.min(1, 1170000 / cx, 1680000 / cy); // ≈ 3,25 x 4,65 cm max
       cx = Math.round(cx * sc); cy = Math.round(cy * sc);
       const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
+      const gps = p.lat != null ? `${p.gpsApprox ? "~" : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "";
       cells.push(wTc(1927,
         `<w:p><w:pPr><w:spacing w:after="20"/><w:jc w:val="center"/></w:pPr>${wPhoto(rid, cx, cy, imgId)}</w:p>` +
-        wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="40"/><w:jc w:val="center"/>`)));
+        wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
+        (gps ? wP(wR(gps, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="11"/>`), `<w:spacing w:after="40"/><w:jc w:val="center"/>`) : wP("", `<w:spacing w:after="40"/>`))));
     }
     const gridRows = [];
     for (let i = 0; i < cells.length; i += 5){
@@ -1690,6 +1978,24 @@ async function docxForVisit(visit, photos, settings){
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="900"/><w:gridCol w:w="5038"/><w:gridCol w:w="3000"/></w:tblGrid>${recRows.join("")}</w:tbl>`);
     body.push(wP("", `<w:spacing w:after="160"/>`));
   }
+
+  /* ---- registre des réserves (cumulatif du chantier) ---- */
+  const reserves = CUR ? (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num) : [];
+  if (reserves.length){
+    const nOuv = reserves.filter(r => r.statut !== "Soldé").length;
+    body.push(wP(wR("REGISTRE DE SUIVI DES ACTIONS ET RÉSERVES", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="60"/><w:ind w:left="113"/>`));
+    body.push(wP(wR(`Registre cumulatif, mis à jour à chaque visite jusqu'au solde de chaque réserve. ${reserves.length} réserve(s), ${nOuv} en cours.`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="80"/>`));
+    const regHead = `<w:tr>${wTc(700, wP(wR("N°", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(4200, wP(wR("Objet de la réserve", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2738, wP(wR("Localisation", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(1000, wP(wR("Ouverture", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(1000, wP(wR("Statut", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`;
+    const regRows = reserves.map(r => {
+      const solde = r.statut === "Soldé";
+      return `<w:tr>${wTc(700, wP(wR(String(r.num), `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`))}${wTc(4200, wP(wR(r.objet || "—", `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2738, wP(wR(r.zone || "—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}${wTc(1000, wP(wR(frDate(r.date), `<w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`))}${wTc(1000, wP(wR(solde ? "Soldé" : "En cours", `<w:b/><w:color w:val="${solde ? DOCX_STATUT.C : DOCX_STATUT.PA}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`;
+    }).join("");
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="4200"/><w:gridCol w:w="2738"/><w:gridCol w:w="1000"/><w:gridCol w:w="1000"/></w:tblGrid>${regHead}${regRows}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  /* ---- signature ---- */
+  body.push(`<w:tbl><w:tblPr><w:tblW w:w="4000" w:type="dxa"/><w:jc w:val="right"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid><w:tr>${wTc(4000, wP(wR("Rédacteur / Visa", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr><w:tr>${wTc(4000, wP(wR(settings.redac || " ", `<w:sz w:val="18"/>`), `<w:spacing w:after="0" w:before="60"/>`) + wP(wR(`Le ${frDate(visit.date)}`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="240" w:after="60"/>`))}</w:tr></w:tbl>`);
 
   const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${DOCX_PEACH}"/></w:pBdr><w:jc w:val="right"/><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">${escXml(settings.proj.toUpperCase())} — </w:t></w:r><w:r><w:rPr><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t>RAPPORT DE VISITE DE CHANTIER</w:t></w:r></w:p></w:hdr>`;
@@ -1889,7 +2195,7 @@ function openSettings(){
   refreshLogoState();
   $("#setModal").classList.add("on");
 }
-function saveSettingsUI(){
+async function saveSettingsUI(){
   const s = {
     proj: $("#sProj").value.trim() || DEFAULTS.proj,
     sub: $("#sSub").value.trim() || DEFAULTS.sub,
@@ -1901,7 +2207,7 @@ function saveSettingsUI(){
     planZoom: $("#sPlanZoom").value,
     planMode: $("#sPlanMode").value
   };
-  saveSettings(s);
+  if (CUR){ CUR.settings = s; CUR.name = s.proj; await saveCurrentProject(); }
   const key = $("#sKey").value.trim();
   if (key) localStorage.setItem("apiKey", key);
   else localStorage.removeItem("apiKey");
@@ -1913,7 +2219,9 @@ function saveSettingsUI(){
 /* =============== branchements =============== */
 async function main(){
   db = await openDB();
-  applyHeader(getSettings());
+  const projects = await migrateToProjects();
+  const savedId = Number(localStorage.getItem("currentProjectId"));
+  setCurrentProject(projects.find(p => p.id === savedId) || projects[0]);
   $("#verTag").textContent = "Version " + APP_VERSION;
 
   $("#btnUnlock").addEventListener("click", submitPin);
@@ -1921,21 +2229,19 @@ async function main(){
   $("#btnLock").addEventListener("click", showLock);
 
   $("#btnNewVisit").addEventListener("click", async () => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
-    const visits = await idbAll("visits");
-    const existing = visits.find(v => v.date === iso);
+    const iso = todayIso();
+    const pid = CUR ? CUR.id : null;
+    const existing = (await idbAll("visits")).find(v => v.date === iso && v.projectId === pid);
     if (existing){ showVisit(existing.id); return; }
-    const id = await new Promise((res, rej) => {
-      const t = db.transaction("visits","readwrite");
-      const rq = t.objectStore("visits").add({date: iso, createdAt: Date.now()});
-      rq.onsuccess = () => res(rq.result);
-      t.onerror = () => rej(t.error);
-    });
+    const id = await idbAdd("visits", {date: iso, projectId: pid, createdAt: Date.now()});
     showVisit(id);
   });
   $("#btnBack").addEventListener("click", showHome);
   $("#btnRenameVisit").addEventListener("click", renameVisit);
+  $("#btnRegBack").addEventListener("click", showHome);
+  $("#btnRegAdd").addEventListener("click", addManualReserve);
+  $("#btnNewProject").addEventListener("click", newProjectFlow);
+  $("#btnProjCancel").addEventListener("click", closeProjectSheet);
 
   $("#btnAdd").addEventListener("click", openAddSheet);
   $("#scrim").addEventListener("click", closeAddSheet);
@@ -1984,6 +2290,8 @@ async function main(){
   $("#btnSettings").addEventListener("click", openSettings);
   $("#btnSetClose").addEventListener("click", () => $("#setModal").classList.remove("on"));
   $("#btnSetSave").addEventListener("click", saveSettingsUI);
+  $("#btnManageSwitch").addEventListener("click", () => { $("#setModal").classList.remove("on"); openProjectSheet(); });
+  $("#btnDeleteProject").addEventListener("click", deleteCurrentProject);
   $("#btnChangePin").addEventListener("click", () => {
     $("#setModal").classList.remove("on");
     showLock();
