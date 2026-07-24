@@ -369,6 +369,18 @@
         <div class="hint" id="planState"></div>
         <input type="file" id="filePlan" accept="image/*" hidden>
       </div>
+      <div class="field">
+        <label for="sPlanZoom">Échelle du plan automatique</label>
+        <select id="sPlanZoom">
+          <option value="19">Très rapproché (≈ 150 m de large)</option>
+          <option value="18">Rapproché (≈ 300 m)</option>
+          <option value="17">Standard (≈ 600 m)</option>
+          <option value="16">Large (≈ 1,2 km)</option>
+          <option value="15">Très large (≈ 2,5 km)</option>
+        </select>
+        <div class="hint">Sans plan chargé, le rapport génère automatiquement une vue aérienne IGN centrée
+        sur les clichés GPS, au format bandeau, avec repères de zones et échelle graphique.</div>
+      </div>
       <button class="btn primary block" id="btnSetSave">Enregistrer les réglages</button>
       <button class="btn ghost block" id="btnLoadExample" style="margin-top:8px">Pré-remplir avec l'exemple RD120 Vincennes</button>
     </div>
@@ -402,7 +414,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.7";
+const APP_VERSION = "1.8";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -459,7 +471,7 @@ const VRD_GROUPS = [
 const VRD_ELEMENTS = VRD_GROUPS.flatMap(g => g.items);
 
 /* =============== réglages =============== */
-const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[], cartouche:[], contacts:[] };
+const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"17" };
 const EXAMPLE = {
   proj:"RD120 Avenue de Paris - Château de Vincennes",
   sub:"PCM Ingénierie — AMOE",
@@ -494,7 +506,8 @@ function getSettings(){
       zones: Array.isArray(s.zones) ? s.zones : [],
       ents: Array.isArray(s.ents) ? s.ents : [],
       cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
-      contacts: Array.isArray(s.contacts) ? s.contacts : []
+      contacts: Array.isArray(s.contacts) ? s.contacts : [],
+      planZoom: s.planZoom || "17"
     };
   }catch{ return {...DEFAULTS}; }
 }
@@ -1061,6 +1074,78 @@ function zoneLabel(cluster, n){
   return `Zone ${n}${top ? " — " + top[0] : ""}`;
 }
 
+/* =============== plan de situation automatique (IGN, format bandeau 3,44:1) =============== */
+async function buildAutoPlan(clusters, zoom){
+  const pts = clusters.filter(c => !c.noGps);
+  if (!pts.length) return null;
+  const lat = pts.reduce((s, c) => s + c.lat, 0) / pts.length;
+  const lon = pts.reduce((s, c) => s + c.lon, 0) / pts.length;
+  const z = parseInt(zoom) || 17;
+  const W = 1240, H = 360; // même format que le plan du document modèle
+  const n = Math.pow(2, z);
+  const latR = lat * Math.PI / 180;
+  const cx = (lon + 180) / 360 * n * 256;
+  const cy = (1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n * 256;
+  const px0 = cx - W / 2, py0 = cy - H / 2;
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#dfe8ee"; ctx.fillRect(0, 0, W, H);
+  const jobs = [];
+  for (let tx = Math.floor(px0 / 256); tx <= Math.floor((px0 + W) / 256); tx++){
+    for (let ty = Math.floor(py0 / 256); ty <= Math.floor((py0 + H) / 256); ty++){
+      const url = `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX=${z}&TILEROW=${ty}&TILECOL=${tx}`;
+      jobs.push(new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        let settled = false;
+        const done = ok => { if (!settled){ settled = true; res(ok ? {img, tx, ty} : null); } };
+        img.onload = () => done(true);
+        img.onerror = () => done(false);
+        setTimeout(() => done(false), 9000);
+        img.src = url;
+      }));
+    }
+  }
+  const tiles = (await Promise.all(jobs)).filter(Boolean);
+  if (!tiles.length) return null; // hors-ligne ou service indisponible
+  for (const t of tiles) ctx.drawImage(t.img, Math.round(t.tx * 256 - px0), Math.round(t.ty * 256 - py0));
+  // repères de zones numérotés
+  let zi = 0;
+  for (const c of clusters){
+    zi++;
+    if (c.noGps) continue;
+    const mx = ((c.lon + 180) / 360 * n * 256) - px0;
+    const lr = c.lat * Math.PI / 180;
+    const my = ((1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * n * 256) - py0;
+    if (mx < -20 || mx > W + 20 || my < -20 || my > H + 20) continue;
+    ctx.beginPath(); ctx.arc(mx, my, 14, 0, 7);
+    ctx.fillStyle = "#ED7D31"; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "bold 15px sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(String(zi), mx, my + 1);
+  }
+  // échelle graphique paramétrée par le zoom
+  const mpp = 40075016.686 * Math.cos(latR) / Math.pow(2, z + 8);
+  const L = [25, 50, 100, 200, 500, 1000, 2000].find(v => v / mpp >= 70 && v / mpp <= 190) || 100;
+  const Lpx = L / mpp;
+  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(12, H - 36, Lpx + 26, 26);
+  ctx.fillStyle = "#222"; ctx.fillRect(24, H - 17, Lpx, 4);
+  ctx.font = "bold 12px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillText(L >= 1000 ? (L / 1000) + " km" : L + " m", 24, H - 22);
+  ctx.textAlign = "right"; ctx.font = "11px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(W - 152, H - 20, 152, 20);
+  ctx.fillStyle = "#444"; ctx.fillText("Photo aérienne © IGN", W - 8, H - 6);
+  const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.85));
+  return {bytes: new Uint8Array(await blob.arrayBuffer()), w: W, h: H, auto: true};
+}
+async function getPlanForReport(clusters, settings){
+  const up = getLogo("planImg");
+  if (up) return {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
+  try{ return await buildAutoPlan(clusters, settings.planZoom); }catch{ return null; }
+}
+
 /* =============== partage / téléchargement =============== */
 function downloadBlob(blob, filename){
   const a = document.createElement("a");
@@ -1117,8 +1202,8 @@ function wrapText(text, maxChars){
 
 /* =============== générateur PDF =============== */
 const PDF_NAVY = "0.12 0.22 0.39", PDF_LABEL = "0.93 0.95 0.98", PDF_GREY = "0.42 0.42 0.42";
-const PDF_BAND = "0.678 0.847 0.902";  // fond bandeaux rgb(173,216,230)
-const PDF_PEACH = "1.000 0.800 0.600"; // titre & lignes rgb(255,204,153)
+const PDF_BAND = "0.549 0.725 0.843";  // fond bandeaux — bleu foncé rgb(140,185,215)
+const PDF_PEACH = "0.929 0.490 0.192"; // titre & lignes — orange foncé rgb(237,125,49)
 const PDF_STATUT = { C:"0.18 0.49 0.27", NC:"0.93 0.13 0.09", PA:"0.71 0.46 0.03", AC:"0.18 0.36 0.62" };
 function buildPdf(pages){
   // pages : [{images:[{bytes,w,h,x,y,dw,dh}], rects:[{x,y,w,h,color}], texts:[{x,y,size,font,color,text}]}]
@@ -1279,85 +1364,85 @@ async function pdfForVisit(visit, photos, settings){
   cur.texts.push({x:40, y, size:7.5, font:"F1", color:PDF_GREY, text:"Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion."});
   y -= 14;
 
-  /* ---- plan de situation ---- */
-  const plan = getLogo("planImg");
+  /* ---- plan de situation (chargé, sinon généré automatiquement depuis le GPS) ---- */
+  const clusters = clusterPhotos(photos);
+  toast("Plan de situation…");
+  const plan = await getPlanForReport(clusters, settings);
   if (plan){
-    newPage();
-    band("PLAN DE SITUATION", 22, 10.5);
-    const bytes = logoBytes(plan);
     const sc = Math.min(515 / plan.w, 620 / plan.h);
     const dw = plan.w * sc, dh = plan.h * sc;
-    cur.images.push({bytes, w:plan.w, h:plan.h, x:40 + (515 - dw) / 2, y:y-dh, dw, dh});
-    y -= dh + 12;
+    const bx = 40 + (515 - dw) / 2;
+    ensure(dh + 34);
+    cur.rects.push({x:bx, y:y-20, w:dw, h:20, color:PDF_BAND}); // titre ajusté à la largeur du plan
+    cur.texts.push({x:bx + 8, y:y-14.5, size:9.5, font:"F2", color:PDF_NAVY, text:"PLAN DE SITUATION"});
+    y -= 20;
+    cur.images.push({bytes:plan.bytes, w:plan.w, h:plan.h, x:bx, y:y-dh, dw, dh});
+    y -= dh + 16;
   }
 
   /* ---- constats par zones automatiques ---- */
-  const clusters = clusterPhotos(photos);
   let zn = 0, done = 0;
   for (const c of clusters){
     zn++;
     if (y < 300) newPage();
     band(zoneLabel(c, zn).slice(0, 82), 22, 10.5);
-    // grille de photos : 2 par ligne
-    const cellW = 250, gap = 15;
-    for (let i = 0; i < c.items.length; i += 2){
-      const pair = c.items.slice(i, i + 2);
+    // grille de photos : 5 par ligne, espacées, centrées dans leur case
+    const perRow = 5, gap = 8;
+    const cellW = (515 - gap * (perRow - 1)) / perRow;
+    for (let i = 0; i < c.items.length; i += perRow){
+      const row = c.items.slice(i, i + perRow);
       const ims = [];
-      for (const p of pair){
+      for (const p of row){
         done++;
         toast(`PDF : cliché ${done}/${photos.length}…`);
-        ims.push({p, im: await normalizeJpeg(p.blob, 1100, 0.78)});
+        ims.push({p, im: await normalizeJpeg(p.blob, 900, 0.75)});
       }
       const dims = ims.map(o => {
-        const sc = Math.min(cellW / o.im.w, 195 / o.im.h);
+        const sc = Math.min(cellW / o.im.w, 130 / o.im.h);
         return {dw: o.im.w * sc, dh: o.im.h * sc};
       });
-      const rowH = Math.max(...dims.map(d => d.dh)) + 18;
+      const rowH = Math.max(...dims.map(d => d.dh)) + 14;
       ensure(rowH);
       ims.forEach((o, k) => {
         const x0 = 40 + k * (cellW + gap);
         cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:x0 + (cellW - dims[k].dw) / 2, y:y - dims[k].dh, dw:dims[k].dw, dh:dims[k].dh});
-        cur.texts.push({x:x0, y:y - dims[k].dh - 10, size:8, font:"F2", color:PDF_GREY,
-          text:`Cliché n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}${o.p.takenAt ? " — " + o.p.takenAt.split("T")[1] : ""}`});
+        cur.texts.push({x:x0 + (cellW - dims[k].dw) / 2, y:y - dims[k].dh - 9, size:6.8, font:"F2", color:PDF_GREY,
+          text:`n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}`});
       });
-      y -= rowH + 6;
+      y -= rowH + 8;
     }
-    // fiches des clichés commentés (libellés en colonne étroite)
+    // tableau récapitulatif unique de la zone
+    const CX = [[40, 26], [66, 36], [102, 268], [370, 185]]; // N° / Statut / Constat / Suite
+    ensure(34);
+    cur.rects.push({x:40, y:y-15, w:515.28, h:15, color:PDF_LABEL});
+    cur.texts.push({x:CX[0][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"N°"});
+    cur.texts.push({x:CX[1][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"STATUT"});
+    cur.texts.push({x:CX[2][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"CONSTAT"});
+    cur.texts.push({x:CX[3][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"SUITE À DONNER"});
+    y -= 19;
     for (const p of c.items){
       const elems = Array.isArray(p.element) ? p.element : [];
-      const fields = [];
-      const meta = [];
-      if (p.takenAt){ const [d,t] = p.takenAt.split("T"); meta.push(`${frDate(d)} à ${t}`); }
-      if (p.lat != null) meta.push(`GPS ${p.gpsApprox ? "~ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`);
-      if (meta.length) fields.push(["PRISE DE VUE", meta.join("  ·  ")]);
-      if (elems.length) fields.push(["ÉLÉMENT(S) VRD", elems.join(", ")]);
-      if (p.zone) fields.push(["LOCALISATION", p.zone]);
-      if (p.entreprise) fields.push(["ENTREPRISE / LOT", p.entreprise]);
-      if (p.description) fields.push(["DESCRIPTION", p.description]);
-      if (p.suite) fields.push(["SUITE À DONNER", p.suite]);
-      const hasContent = p.statut || p.titre || elems.length || p.entreprise || p.description || p.suite;
-      if (!hasContent) continue;
-      ensure(18);
-      cur.texts.push({x:40, y, size:9.5, font:"F2", color:PDF_NAVY, text:`Cliché n°${p.num}${p.titre ? " — " + p.titre : ""}`.slice(0, 82)});
-      if (p.statut){
-        cur.rects.push({x:513, y:y-3.5, w:36, h:14, color:PDF_STATUT[p.statut] || PDF_GREY});
-        cur.texts.push({x:p.statut.length === 1 ? 528 : 523.5, y:y-0.5, size:9, font:"F2", color:"1 1 1", text:p.statut});
-      }
-      y -= 15;
-      for (const [k, v] of fields){
-        const lines = wrapText(v, 74);
-        const rowH = lines.length * 11 + 5;
-        ensure(rowH);
-        cur.rects.push({x:40, y:y-rowH+3, w:112, h:rowH, color:PDF_LABEL});
-        cur.texts.push({x:44, y:y-8, size:7, font:"F2", color:PDF_NAVY, text:k});
-        let vy = y - 8;
-        for (const l of lines){ cur.texts.push({x:160, y:vy, size:8.5, font:"F1", text:l}); vy -= 11; }
-        cur.rects.push({x:40, y:y-rowH+2.4, w:515.28, h:0.6, color:"0.88 0.9 0.93"});
-        y -= rowH;
-      }
-      y -= 12;
+      const constat = [];
+      if (p.titre) for (const l of wrapText(p.titre, 58)) constat.push({t:l, b:true});
+      if (p.description) for (const l of wrapText(p.description, 62)) constat.push({t:l});
+      if (elems.length) for (const l of wrapText("Éléments : " + elems.join(", "), 62)) constat.push({t:l, g:true});
+      if (p.entreprise) constat.push({t:"Entreprise : " + p.entreprise, g:true});
+      if (!constat.length) constat.push({t:"—", g:true});
+      const suite = p.suite ? wrapText(p.suite, 42) : ["—"];
+      const nLines = Math.max(constat.length, suite.length, 2);
+      const rowH = nLines * 9.6 + 8;
+      ensure(rowH);
+      cur.texts.push({x:CX[0][0]+3, y:y-8, size:8.5, font:"F2", text:String(p.num)});
+      if (p.takenAt) cur.texts.push({x:CX[0][0]+1, y:y-17.5, size:6.2, font:"F1", color:PDF_GREY, text:p.takenAt.split("T")[1]});
+      if (p.statut) cur.texts.push({x:CX[1][0]+3, y:y-8, size:8.5, font:"F2", color:PDF_STATUT[p.statut] || "0 0 0", text:p.statut});
+      let cyv = y - 8;
+      for (const l of constat){ cur.texts.push({x:CX[2][0]+3, y:cyv, size:l.b ? 8.3 : 8, font:l.b ? "F2" : "F1", color:l.g ? PDF_GREY : "0 0 0", text:l.t}); cyv -= 9.6; }
+      let syv = y - 8;
+      for (const l of suite){ cur.texts.push({x:CX[3][0]+3, y:syv, size:8, font:"F1", text:l}); syv -= 9.6; }
+      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.6, color:"0.85 0.87 0.9"});
+      y -= rowH;
     }
-    y -= 4;
+    y -= 14;
   }
 
   /* ---- en-tête et pied de page (ligne pêche, texte bleu clair) ---- */
@@ -1430,8 +1515,8 @@ function wImg(rid, cx, cy, id){
   return `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Photo${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Photo${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
 }
 const DOCX_NAVY = "1F3864", DOCX_LABEL = "EDF2FB", DOCX_GREY = "6B6B6B";
-const DOCX_BAND = "ADD8E6";  // fond bandeaux rgb(173,216,230)
-const DOCX_PEACH = "FFCC99"; // titre & lignes rgb(255,204,153)
+const DOCX_BAND = "8CB9D7";  // fond bandeaux — bleu foncé rgb(140,185,215)
+const DOCX_PEACH = "ED7D31"; // titre & lignes — orange foncé rgb(237,125,49)
 const DOCX_STATUT = { C:"2E7D45", NC:"EE0000", PA:"B45309", AC:"2E5B9F" };
 const TBL_BORDERS = `<w:tblBorders><w:top w:val="single" w:sz="4" w:color="BFBFBF"/><w:left w:val="single" w:sz="4" w:color="BFBFBF"/><w:bottom w:val="single" w:sz="4" w:color="BFBFBF"/><w:right w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideH w:val="single" w:sz="4" w:color="BFBFBF"/><w:insideV w:val="single" w:sz="4" w:color="BFBFBF"/></w:tblBorders>`;
 function wTc(width, content, opts){
@@ -1498,77 +1583,76 @@ async function docxForVisit(visit, photos, settings){
     `<w:tr>${wTc(1200, wP(wR(code, `<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_STATUT[code]})}${wTc(8438, wP(wR(lib, `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`).join("");
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="8438"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("LÉGENDE", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:2, fill:DOCX_BAND})}</w:tr>${legRows}</w:tbl>`);
 
-  /* ---- plan de situation ---- */
-  const plan = getLogo("planImg");
+  /* ---- plan de situation (chargé, sinon généré automatiquement depuis le GPS) ---- */
+  const clusters = clusterPhotos(photos);
+  toast("Plan de situation…");
+  const plan = await getPlanForReport(clusters, settings);
   if (plan){
-    media.push({name:"word/media/plan.jpg", data:logoBytes(plan)});
+    media.push({name:"word/media/plan.jpg", data:plan.bytes});
     rels.push(`<Relationship Id="rIdPlan" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/plan.jpg"/>`);
     let pcx = plan.w * 9525, pcy = plan.h * 9525;
     const psc = Math.min(1, 5760720 / pcx, 4680000 / pcy); // max 16 x 13 cm
     pcx = Math.round(pcx * psc); pcy = Math.round(pcy * psc);
-    body.push(wP(wR("PLAN DE SITUATION", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="60"/><w:ind w:left="113"/>`));
-    body.push(`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${pcx}" cy="${pcy}"/><wp:docPr id="950" name="Plan"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="950" name="Plan"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdPlan"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${pcx}" cy="${pcy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`);
+    const tw = Math.round(pcx / 635); // titre ajusté à la largeur du plan
+    const planImg = `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${pcx}" cy="${pcy}"/><wp:docPr id="950" name="Plan"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="950" name="Plan"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdPlan"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${pcx}" cy="${pcy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${tw}"/></w:tblGrid><w:tr>${wTc(tw, wP(wR("PLAN DE SITUATION", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="20"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_BAND})}</w:tr><w:tr>${wTc(tw, `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${planImg}</w:p>`)}</w:tr></w:tbl>`);
+    body.push(wP("", `<w:spacing w:before="120" w:after="0"/>`));
   }
   body.push(wP(wR("Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="240"/>`));
   body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
 
   /* ---- constats par zones automatiques (GPS ± 10 m) ---- */
-  const clusters = clusterPhotos(photos);
   let zn = 0, done = 0, imgId = 0;
   const wPhoto = (rid, cx, cy, id) => `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Photo${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Photo${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
   for (const c of clusters){
     zn++;
     body.push(wP(wR(zoneLabel(c, zn), `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="80"/><w:ind w:left="113"/>`));
-    // grille de photos : 2 côte à côte, taille réduite (max 7,5 x 8 cm)
+    // grille de photos : 5 côte à côte, taille réduite, espacées
     const cells = [];
     for (const p of c.items){
       done++; imgId++;
       toast(`Word : cliché ${done}/${photos.length}…`);
-      const im = await normalizeJpeg(p.blob, 1100, 0.78);
+      const im = await normalizeJpeg(p.blob, 700, 0.72);
       const rid = `rIdImg${imgId}`;
       media.push({name:`word/media/image${imgId}.jpg`, data:im.bytes});
       rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${imgId}.jpg"/>`);
       let cx = im.w * 9525, cy = im.h * 9525;
-      const sc = Math.min(1, 2700000 / cx, 2880000 / cy);
+      const sc = Math.min(1, 1120000 / cx, 1530000 / cy); // ≈ 3,1 x 4,2 cm max
       cx = Math.round(cx * sc); cy = Math.round(cy * sc);
-      const cap = `Cliché n°${p.num}${p.statut ? ` [${p.statut}]` : ""}${p.takenAt ? " — " + p.takenAt.split("T")[1] : ""}`;
-      cells.push(wTc(4819,
+      const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
+      cells.push(wTc(1927,
         `<w:p><w:pPr><w:spacing w:after="20"/><w:jc w:val="center"/></w:pPr>${wPhoto(rid, cx, cy, imgId)}</w:p>` +
-        wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="60"/><w:jc w:val="center"/>`)));
+        wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="40"/><w:jc w:val="center"/>`)));
     }
     const gridRows = [];
-    for (let i = 0; i < cells.length; i += 2){
-      gridRows.push(`<w:tr>${cells[i]}${cells[i+1] || wTc(4819, wP(""))}</w:tr>`);
+    for (let i = 0; i < cells.length; i += 5){
+      const row = cells.slice(i, i + 5);
+      while (row.length < 5) row.push(wTc(1927, wP("")));
+      gridRows.push(`<w:tr>${row.join("")}</w:tr>`);
     }
-    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid>${gridRows.join("")}</w:tbl>`);
-    body.push(wP("", `<w:spacing w:after="60"/>`));
-    // fiches des clichés commentés (colonne de libellés étroite : 2000)
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9635" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/></w:tblGrid>${gridRows.join("")}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="40"/>`));
+    // tableau récapitulatif unique de la zone
+    const recRows = [];
+    recRows.push(`<w:tr>${wTc(700, wP(wR("N°", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(900, wP(wR("Statut", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(5038, wP(wR("Constat", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(3000, wP(wR("Suite à donner", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`);
     for (const p of c.items){
       const elems = Array.isArray(p.element) ? p.element : [];
-      const fields = [];
-      const meta = [];
-      if (p.takenAt){ const [d,t] = p.takenAt.split("T"); meta.push(`${frDate(d)} à ${t}`); }
-      if (p.lat != null) meta.push(`GPS ${p.gpsApprox ? "~ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`);
-      if (meta.length) fields.push(["Prise de vue", meta.join("   ·   ")]);
-      if (elems.length) fields.push(["Élément(s) VRD", elems.join(", ")]);
-      if (p.zone) fields.push(["Localisation", p.zone]);
-      if (p.entreprise) fields.push(["Entreprise / lot", p.entreprise]);
-      if (p.description) fields.push(["Description", p.description]);
-      if (p.suite) fields.push(["Suite à donner", p.suite]);
-      const hasContent = p.statut || p.titre || elems.length || p.entreprise || p.description || p.suite;
-      if (!hasContent) continue;
-      const title = `Cliché n°${p.num}${p.titre ? " — " + p.titre : ""}`;
-      const headCells = p.statut
-        ? wTc(8438, wP(wR(title, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="19"/>`), `<w:spacing w:after="0"/>`), {span:2, fill:DOCX_BAND}) +
-          wTc(1200, wP(wR(p.statut, `<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="19"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_STATUT[p.statut] || DOCX_GREY})
-        : wTc(9638, wP(wR(title, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="19"/>`), `<w:spacing w:after="0"/>`), {span:3, fill:DOCX_BAND});
-      const rows = [`<w:tr>${headCells}</w:tr>`];
-      for (const [k, v] of fields){
-        rows.push(`<w:tr>${wTc(2000, wP(wR(k, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(7638, wP(wR(v, `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:2})}</w:tr>`);
-      }
-      body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="6438"/><w:gridCol w:w="1200"/></w:tblGrid>${rows.join("")}</w:tbl>`);
-      body.push(wP("", `<w:spacing w:after="120"/>`));
+      let constat = "";
+      if (p.titre) constat += wP(wR(p.titre, `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
+      if (p.description) constat += wP(wR(p.description, `<w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
+      if (elems.length) constat += wP(wR("Éléments : " + elems.join(", "), `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
+      if (p.entreprise) constat += wP(wR("Entreprise : " + p.entreprise, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
+      if (!constat) constat = wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`);
+      const numCell = wP(wR(String(p.num), `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
+        (p.takenAt ? wP(wR(p.takenAt.split("T")[1], `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="13"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) : "");
+      const statCell = p.statut
+        ? wP(wR(p.statut, `<w:b/><w:color w:val="${DOCX_STATUT[p.statut] || DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`)
+        : wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`);
+      const suiteCell = wP(wR(p.suite || "—", `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`);
+      recRows.push(`<w:tr>${wTc(700, numCell)}${wTc(900, statCell)}${wTc(5038, constat)}${wTc(3000, suiteCell)}</w:tr>`);
     }
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="900"/><w:gridCol w:w="5038"/><w:gridCol w:w="3000"/></w:tblGrid>${recRows.join("")}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="160"/>`));
   }
 
   const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -1579,12 +1663,17 @@ async function docxForVisit(visit, photos, settings){
 
   rels.push(`<Relationship Id="rIdH1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>`);
   rels.push(`<Relationship Id="rIdF1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>`);
+  rels.push(`<Relationship Id="rIdSet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>`);
+
+  // force le recalcul des champs Page X / Y à l'ouverture dans Word
+  const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:updateFields w:val="true"/></w:settings>`;
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body.join("")}<w:sectPr><w:headerReference w:type="default" r:id="rIdH1"/><w:footerReference w:type="default" r:id="rIdF1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 
   const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/></Types>`;
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>`;
 
   const relsRoot = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
@@ -1599,6 +1688,7 @@ async function docxForVisit(visit, photos, settings){
     {name:"word/_rels/document.xml.rels", data:relsDoc},
     {name:"word/header1.xml", data:headerXml},
     {name:"word/footer1.xml", data:footerXml},
+    {name:"word/settings.xml", data:settingsXml},
     ...media
   ], "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 }
@@ -1757,6 +1847,7 @@ function openSettings(){
   $("#sEnts").value = s.ents.join("\n");
   $("#sCartouche").value = s.cartouche.join("\n");
   $("#sContacts").value = s.contacts.join("\n");
+  $("#sPlanZoom").value = s.planZoom;
   $("#sKey").value = localStorage.getItem("apiKey") || "";
   refreshLogoState();
   $("#setModal").classList.add("on");
@@ -1769,7 +1860,8 @@ function saveSettingsUI(){
     zones: $("#sZones").value.split("\n").map(x => x.trim()).filter(Boolean),
     ents: $("#sEnts").value.split("\n").map(x => x.trim()).filter(Boolean),
     cartouche: $("#sCartouche").value.split("\n").map(x => x.trim()).filter(Boolean),
-    contacts: $("#sContacts").value.split("\n").map(x => x.trim()).filter(Boolean)
+    contacts: $("#sContacts").value.split("\n").map(x => x.trim()).filter(Boolean),
+    planZoom: $("#sPlanZoom").value
   };
   saveSettings(s);
   const key = $("#sKey").value.trim();
