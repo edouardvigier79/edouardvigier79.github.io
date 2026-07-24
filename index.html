@@ -452,11 +452,12 @@
       <div class="field">
         <label for="sPlanZoom">Échelle du plan automatique</label>
         <select id="sPlanZoom">
-          <option value="19">Très rapproché (≈ 150 m de large)</option>
-          <option value="18">Rapproché (≈ 300 m)</option>
-          <option value="17">Standard (≈ 600 m)</option>
-          <option value="16">Large (≈ 1,2 km)</option>
-          <option value="15">Très large (≈ 2,5 km)</option>
+          <option value="75">Très rapproché — environ 75 m de large</option>
+          <option value="150">Rapproché — environ 150 m de large</option>
+          <option value="300">Standard — environ 300 m de large</option>
+          <option value="600">Large — environ 600 m de large</option>
+          <option value="1200">Très large — environ 1,2 km de large</option>
+          <option value="2500">Vue d'ensemble — environ 2,5 km de large</option>
         </select>
         <div class="hint">Sans plan chargé, le rapport génère automatiquement une vue aérienne IGN centrée
         sur les clichés GPS, au format bandeau, avec repères de zones et échelle graphique.</div>
@@ -494,7 +495,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.0";
+const APP_VERSION = "2.1";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -551,7 +552,7 @@ const VRD_GROUPS = [
 const VRD_ELEMENTS = VRD_GROUPS.flatMap(g => g.items);
 
 /* =============== réglages =============== */
-const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"17", planMode:"auto" };
+const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"300", planMode:"auto" };
 const EXAMPLE = {
   proj:"RD120 Avenue de Paris - Château de Vincennes",
   sub:"PCM Ingénierie — AMOE",
@@ -577,7 +578,7 @@ const EXAMPLE = {
   ]
 };
 function blankSettings(){
-  return { proj:DEFAULTS.proj, sub:DEFAULTS.sub, redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"17", planMode:"auto" };
+  return { proj:DEFAULTS.proj, sub:DEFAULTS.sub, redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"300", planMode:"auto" };
 }
 function normSettings(s){
   s = s || {};
@@ -589,7 +590,7 @@ function normSettings(s){
     ents: Array.isArray(s.ents) ? s.ents : [],
     cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
     contacts: Array.isArray(s.contacts) ? s.contacts : [],
-    planZoom: s.planZoom || "17",
+    planZoom: s.planZoom || "300",
     planMode: s.planMode || "auto"
   };
 }
@@ -1148,6 +1149,41 @@ async function reverseGeocode(lat, lon){
   }catch{ return ""; }
 }
 
+/* Météo automatique de la visite (Open-Meteo, service gratuit sans clé). */
+const WMO = {0:"Ciel dégagé",1:"Principalement dégagé",2:"Partiellement nuageux",3:"Couvert",
+  45:"Brouillard",48:"Brouillard givrant",51:"Bruine légère",53:"Bruine",55:"Bruine dense",
+  56:"Bruine verglaçante",57:"Bruine verglaçante dense",61:"Pluie faible",63:"Pluie modérée",65:"Pluie forte",
+  66:"Pluie verglaçante",67:"Pluie verglaçante forte",71:"Neige faible",73:"Neige",75:"Neige forte",
+  77:"Grains de neige",80:"Averses faibles",81:"Averses",82:"Averses violentes",85:"Averses de neige",86:"Averses de neige fortes",
+  95:"Orage",96:"Orage avec grêle",99:"Orage de grêle violent"};
+async function fetchWeather(lat, lon, dateIso, hour){
+  try{
+    const h = Math.min(23, Math.max(0, hour || 10));
+    const base = new Date(dateIso + "T12:00:00") <= new Date() ? "https://api.open-meteo.com/v1/forecast" : "https://api.open-meteo.com/v1/forecast";
+    const url = `${base}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&hourly=temperature_2m,weather_code&start_date=${dateIso}&end_date=${dateIso}&timezone=Europe%2FParis`;
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 7000);
+    const r = await fetch(url, {signal: ctl.signal}); clearTimeout(timer);
+    if (!r.ok) return null;
+    const j = await r.json();
+    const H = j.hourly; if (!H || !H.time) return null;
+    let idx = H.time.findIndex(t => t.endsWith(`T${pad(h)}:00`));
+    if (idx < 0) idx = Math.min(10, H.temperature_2m.length - 1);
+    const t = H.temperature_2m[idx], code = H.weather_code[idx];
+    if (t == null) return null;
+    return { tempC: Math.round(t), cond: WMO[code] || "Conditions relevées", code };
+  }catch{ return null; }
+}
+async function ensureWeather(visit, photos){
+  if (visit.weather) return visit.weather;
+  const geo = photos.find(p => p.lat != null);
+  if (!geo) return null;
+  const hour = geo.takenAt ? parseInt(geo.takenAt.split("T")[1]) : 10;
+  const w = await fetchWeather(geo.lat, geo.lon, visit.date, hour);
+  if (w){ visit.weather = w; try{ await tx("visits","readwrite", s => s.put(visit)); }catch{} }
+  return w;
+}
+function weatherText(w){ return w ? `${w.cond}, ${w.tempC >= 0 ? "+" : ""}${w.tempC}°C` : null; }
+
 async function importFiles(files){
   if (!files.length || !curVisit) return;
   closeAddSheet();
@@ -1347,25 +1383,34 @@ function zoneLabel(cluster, n){
 }
 
 /* =============== plan de situation automatique (IGN, format bandeau 3,44:1) =============== */
-async function buildAutoPlan(clusters, zoom){
+async function buildAutoPlan(clusters, widthMeters){
   const pts = clusters.filter(c => !c.noGps);
   if (!pts.length) return null;
   const lat = pts.reduce((s, c) => s + c.lat, 0) / pts.length;
   const lon = pts.reduce((s, c) => s + c.lon, 0) / pts.length;
-  const z = parseInt(zoom) || 17;
-  const W = 1240, H = 360; // même format que le plan du document modèle
-  const n = Math.pow(2, z);
   const latR = lat * Math.PI / 180;
+  let targetW = parseInt(widthMeters);
+  if (!targetW || targetW < 40) targetW = 300; // compat anciens réglages (valeurs de zoom)
+  // niveau de tuiles : IGN ORTHOPHOTOS plafonne à 19 ; on choisit le plus détaillé
+  const mppAt = zz => 40075016.686 * Math.cos(latR) / Math.pow(2, zz + 8);
+  let z = 19; // plafond réel de la couche IGN ORTHOPHOTOS
+  while (z > 12 && targetW / mppAt(z) > 1550) z--;
+  const mpp = mppAt(z);
+  const Wg = Math.max(1, targetW / mpp);                    // largeur "géographique" (px de tuiles)
+  const k = Math.min(4, Math.max(1, Math.round(1150 / Wg))); // sur-échantillonnage pour la netteté d'impression
+  const W = Math.round(Wg * k), H = Math.round(W / 3.44);    // format bandeau du document modèle
+  const n = Math.pow(2, z);
   const cx = (lon + 180) / 360 * n * 256;
   const cy = (1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n * 256;
-  const px0 = cx - W / 2, py0 = cy - H / 2;
+  const px0 = cx - Wg / 2, py0 = cy - (H / k) / 2;           // fenêtre en px de tuiles
   const cv = document.createElement("canvas");
   cv.width = W; cv.height = H;
   const ctx = cv.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
   ctx.fillStyle = "#dfe8ee"; ctx.fillRect(0, 0, W, H);
   const jobs = [];
-  for (let tx = Math.floor(px0 / 256); tx <= Math.floor((px0 + W) / 256); tx++){
-    for (let ty = Math.floor(py0 / 256); ty <= Math.floor((py0 + H) / 256); ty++){
+  for (let tx = Math.floor(px0 / 256); tx <= Math.floor((px0 + Wg) / 256); tx++){
+    for (let ty = Math.floor(py0 / 256); ty <= Math.floor((py0 + H / k) / 256); ty++){
       const url = `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX=${z}&TILEROW=${ty}&TILECOL=${tx}`;
       jobs.push(new Promise(res => {
         const img = new Image();
@@ -1381,34 +1426,48 @@ async function buildAutoPlan(clusters, zoom){
   }
   const tiles = (await Promise.all(jobs)).filter(Boolean);
   if (!tiles.length) return null; // hors-ligne ou service indisponible
-  for (const t of tiles) ctx.drawImage(t.img, Math.round(t.tx * 256 - px0), Math.round(t.ty * 256 - py0));
+  for (const t of tiles) ctx.drawImage(t.img, Math.round((t.tx * 256 - px0) * k), Math.round((t.ty * 256 - py0) * k), 256 * k, 256 * k);
+  const toPx = (plat, plon) => {
+    const lr = plat * Math.PI / 180;
+    return {
+      mx: ((plon + 180) / 360 * n * 256 - px0) * k,
+      my: ((1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * n * 256 - py0) * k
+    };
+  };
   // repères de zones numérotés
   let zi = 0;
   for (const c of clusters){
     zi++;
     if (c.noGps) continue;
-    const mx = ((c.lon + 180) / 360 * n * 256) - px0;
-    const lr = c.lat * Math.PI / 180;
-    const my = ((1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * n * 256) - py0;
-    if (mx < -20 || mx > W + 20 || my < -20 || my > H + 20) continue;
-    ctx.beginPath(); ctx.arc(mx, my, 14, 0, 7);
+    const {mx, my} = toPx(c.lat, c.lon);
+    if (mx < -30 || mx > W + 30 || my < -30 || my > H + 30) continue;
+    const rr = 13 * k;
+    ctx.beginPath(); ctx.arc(mx, my, rr, 0, 7);
     ctx.fillStyle = "#ED7D31"; ctx.fill();
-    ctx.lineWidth = 3; ctx.strokeStyle = "#fff"; ctx.stroke();
-    ctx.fillStyle = "#fff"; ctx.font = "bold 15px sans-serif";
+    ctx.lineWidth = 2.5 * k; ctx.strokeStyle = "#fff"; ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.round(14*k)}px sans-serif`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(String(zi), mx, my + 1);
+    ctx.fillText(String(zi), mx, my + k);
   }
-  // échelle graphique paramétrée par le zoom
-  const mpp = 40075016.686 * Math.cos(latR) / Math.pow(2, z + 8);
-  const L = [25, 50, 100, 200, 500, 1000, 2000].find(v => v / mpp >= 70 && v / mpp <= 190) || 100;
-  const Lpx = L / mpp;
-  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(12, H - 36, Lpx + 26, 26);
-  ctx.fillStyle = "#222"; ctx.fillRect(24, H - 17, Lpx, 4);
-  ctx.font = "bold 12px sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  ctx.fillText(L >= 1000 ? (L / 1000) + " km" : L + " m", 24, H - 22);
-  ctx.textAlign = "right"; ctx.font = "11px sans-serif";
-  ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(W - 152, H - 20, 152, 20);
-  ctx.fillStyle = "#444"; ctx.fillText("Photo aérienne © IGN", W - 8, H - 6);
+  // échelle graphique
+  const L = [10, 25, 50, 100, 200, 500, 1000].reduce((best, v) => {
+    const px = v / mpp * k; const bpx = best ? best / mpp * k : 0;
+    return (px >= W * 0.10 && px <= W * 0.32 && (best === null || Math.abs(px - W*0.2) < Math.abs(bpx - W*0.2))) ? v : best;
+  }, null) || 50;
+  const Lpx = L / mpp * k, F = k;
+  ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(10*F, H - 30*F, Lpx + 22*F, 22*F);
+  ctx.fillStyle = "#222"; ctx.fillRect(20*F, H - 14*F, Lpx, 3.5*F);
+  ctx.font = `bold ${Math.round(11*F)}px sans-serif`; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillText(L >= 1000 ? (L / 1000) + " km" : L + " m", 20*F, H - 18*F);
+  // largeur totale du plan, en clair
+  const wLabel = targetW >= 1000 ? `Largeur ≈ ${(targetW/1000).toFixed(1)} km` : `Largeur ≈ ${targetW} m`;
+  ctx.font = `bold ${Math.round(11*F)}px sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.fillRect(10*F, 9*F, ctx.measureText(wLabel).width + 14*F, 20*F);
+  ctx.fillStyle = "#1F3864"; ctx.fillText(wLabel, 17*F, 23*F);
+  ctx.textAlign = "right"; ctx.font = `${Math.round(10*F)}px sans-serif`;
+  const igLbl = "Photo aérienne © IGN";
+  ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(W - ctx.measureText(igLbl).width - 14*F, H - 18*F, ctx.measureText(igLbl).width + 14*F, 18*F);
+  ctx.fillStyle = "#444"; ctx.fillText(igLbl, W - 7*F, H - 5*F);
   const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.85));
   return {bytes: new Uint8Array(await blob.arrayBuffer()), w: W, h: H, auto: true};
 }
@@ -1587,6 +1646,8 @@ async function pdfForVisit(visit, photos, settings){
   cur.texts.push({x:40, y, size:12.5, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
   cur.texts.push({x:40, y, size:11, font:"F2", text:`${visitTitle(visit)} — ${frDate(visit.date)} (${frDayName(visit.date)})`}); y -= 15;
   if (settings.redac){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Rédacteur : ${settings.redac}`}); y -= 14; }
+  const wtxt = weatherText(await ensureWeather(visit, photos));
+  if (wtxt){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Météo : ${wtxt}`}); y -= 14; }
   cur.texts.push({x:40, y, size:9.5, font:"F1", text:`${photos.length} cliché(s) horodaté(s) et géolocalisé(s)`});
   cur.texts.push({x:330, y, size:9.5, font:"F2", text:`Bilan : ${counts.NC} NC / ${counts.PA} PA / ${counts.AC} AC / ${counts.C} C`});
   y -= 20;
@@ -1876,6 +1937,8 @@ async function docxForVisit(visit, photos, settings){
   body.push(wP(wR(`Opération : ${settings.proj}`, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="26"/>`)));
   body.push(wP(wR(`${visitTitle(visit)} — ${frDate(visit.date)} (${frDayName(visit.date)})`, `<w:b/><w:sz w:val="24"/>`)));
   if (settings.redac) body.push(wP(wR(`Rédacteur : ${settings.redac}`, `<w:sz w:val="20"/>`)));
+  const wtxt = weatherText(await ensureWeather(visit, photos));
+  if (wtxt) body.push(wP(wR(`Météo : ${wtxt}`, `<w:sz w:val="20"/>`)));
   body.push(wP(wR(`${photos.length} cliché(s) horodaté(s) et géolocalisé(s) — `, `<w:sz w:val="20"/>`) + wR(`Bilan : ${counts.NC} NC / ${counts.PA} PA / ${counts.AC} AC / ${counts.C} C`, `<w:b/><w:sz w:val="20"/>`), `<w:spacing w:after="240"/>`));
 
   if (settings.cartouche.length){
