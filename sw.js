@@ -1,4 +1,5 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
+/* Application version 1.9 */
 const CACHE = "chantier-v9";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
