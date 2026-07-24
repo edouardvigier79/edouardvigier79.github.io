@@ -25,6 +25,7 @@
       --danger:#E06052;
     }
   }
+  :root{--grad:linear-gradient(135deg,#F59E0B 0%,#E8700F 55%,#D95B0B 100%)}
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   html,body{margin:0; padding:0}
   body{
@@ -40,8 +41,8 @@
   .top-inner{max-width:640px; margin:0 auto; padding:12px 14px 10px; display:flex; align-items:center; gap:10px}
   .top-id{flex:1; min-width:0}
   .eyebrow{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink2)}
-  .top-title{font-size:17px; font-weight:800; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .hazard{height:5px; background:repeating-linear-gradient(-45deg, var(--accent) 0 11px, var(--ink) 11px 22px); opacity:.92}
+  .top-title{font-size:18.5px; font-weight:850; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .hazard{height:4px; background:var(--grad)}
   .iconbtn{
     flex:none; width:40px; height:40px; border-radius:10px; border:1px solid var(--line);
     background:var(--card); color:var(--ink); font-size:17px; cursor:pointer;
@@ -51,11 +52,13 @@
 
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    border:none; border-radius:11px; padding:12px 16px;
+    border:none; border-radius:14px; padding:13px 16px;
     font:inherit; font-weight:700; cursor:pointer;
     background:var(--chip); color:var(--ink);
+    transition:transform .1s ease, filter .15s ease;
   }
-  .btn.primary{background:var(--accent); color:var(--accent-ink)}
+  .btn:active, .chip:active, .iconbtn:active, .fab:active{transform:scale(.97)}
+  .btn.primary{background:var(--grad); color:#fff; box-shadow:0 5px 16px rgba(217,106,11,.35)}
   .btn.ghost{background:transparent; border:1px solid var(--line)}
   .btn.danger{background:transparent; border:1px solid var(--danger); color:var(--danger)}
   .btn.block{width:100%}
@@ -66,7 +69,11 @@
   section.screen.on{display:block}
 
   .lockbox{min-height:78dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:24px 10px}
-  .lockbox .glyph{font-size:34px}
+  .lockbox .glyph{
+    width:86px; height:86px; border-radius:26px; background:var(--grad);
+    display:flex; align-items:center; justify-content:center; font-size:38px;
+    box-shadow:0 12px 32px rgba(217,106,11,.4); margin-bottom:6px;
+  }
   .lockbox h1{font-size:20px; margin:4px 0 0; letter-spacing:-.01em}
   .lockbox p{color:var(--ink2); margin:2px 0 14px; max-width:34ch}
   .pinfield{font-size:26px; letter-spacing:.45em; text-align:center; width:200px; padding:10px 6px 10px 16px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); color:var(--ink)}
@@ -75,10 +82,14 @@
   .sect-label{font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--ink2); margin:20px 2px 8px}
   .visit-card{
     display:flex; align-items:center; gap:12px; width:100%; text-align:left;
-    background:var(--card); border:1px solid var(--line); border-radius:13px;
-    padding:13px 14px; margin-bottom:9px; cursor:pointer; font:inherit; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); border-radius:17px;
+    padding:11px 14px 11px 11px; margin-bottom:10px; cursor:pointer; font:inherit; color:var(--ink);
     box-shadow:var(--shadow);
+    transition:transform .1s ease;
   }
+  .visit-card:active{transform:scale(.985)}
+  .visit-thumb{width:54px; height:54px; border-radius:14px; object-fit:cover; flex:none; background:var(--chip)}
+  .visit-thumb-empty{display:flex; align-items:center; justify-content:center; font-size:24px}
   .visit-date{flex:1}
   .visit-date b{font-size:16px}
   .visit-date small{display:block; color:var(--ink2); margin-top:1px}
@@ -89,8 +100,15 @@
   .pill.PA{background:var(--pa)} .pill.AC{background:var(--ac)}
   .pill.none{background:var(--chip); color:var(--ink2)}
 
-  .photo-card{background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow)}
-  .photo-card img.shot{width:100%; display:block; max-height:64dvh; object-fit:contain; background:#111}
+  .photo-card{background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow)}
+  .shot-wrap{position:relative}
+  .photo-card img.shot{width:100%; display:block; max-height:64dvh; object-fit:contain; background:#15120F}
+  .shot-badge{
+    position:absolute; top:10px; left:10px; z-index:2;
+    background:rgba(18,15,12,.72); color:#fff; font-weight:800; font-size:13px;
+    padding:4px 11px; border-radius:10px; backdrop-filter:blur(4px);
+  }
+  .shot-statut{position:absolute; top:10px; right:10px; z-index:2}
   .caption{padding:12px 14px 13px}
   .cap-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
   .cap-num{font-weight:800; font-size:15px}
@@ -104,9 +122,10 @@
 
   .fab{
     position:fixed; right:16px; bottom:18px; z-index:25;
-    width:58px; height:58px; border-radius:16px; border:none; cursor:pointer;
-    background:var(--accent); color:var(--accent-ink); font-size:27px; font-weight:700;
-    box-shadow:0 6px 20px rgba(0,0,0,.28);
+    width:62px; height:62px; border-radius:20px; border:none; cursor:pointer;
+    background:var(--grad); color:#fff; font-size:28px; font-weight:700;
+    box-shadow:0 8px 24px rgba(217,106,11,.45);
+    transition:transform .1s ease;
   }
   .addsheet{
     position:fixed; inset:auto 0 0 0; z-index:30; display:none;
@@ -361,10 +380,14 @@
         <input type="file" id="fileLogoR" accept="image/*" hidden>
       </div>
       <div class="field">
-        <label>Plan de situation (image ou capture d'écran de carte)</label>
-        <div class="chips">
-          <button class="chip" id="btnPlan">Choisir le plan…</button>
-          <button class="chip" id="btnPlanClear">Retirer</button>
+        <label for="sPlanMode">Plan de situation</label>
+        <select id="sPlanMode">
+          <option value="auto">Automatique — vue aérienne IGN + repères de zones (recommandé)</option>
+          <option value="image">Image chargée ci-dessous</option>
+        </select>
+        <div class="chips" style="margin-top:8px">
+          <button class="chip" id="btnPlan">Choisir une image…</button>
+          <button class="chip" id="btnPlanClear">Retirer l'image</button>
         </div>
         <div class="hint" id="planState"></div>
         <input type="file" id="filePlan" accept="image/*" hidden>
@@ -414,7 +437,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.8";
+const APP_VERSION = "1.9";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -471,7 +494,7 @@ const VRD_GROUPS = [
 const VRD_ELEMENTS = VRD_GROUPS.flatMap(g => g.items);
 
 /* =============== réglages =============== */
-const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"17" };
+const DEFAULTS = { proj:"Mon chantier", sub:"Suivi de chantier — constats VRD", redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"17", planMode:"auto" };
 const EXAMPLE = {
   proj:"RD120 Avenue de Paris - Château de Vincennes",
   sub:"PCM Ingénierie — AMOE",
@@ -507,7 +530,8 @@ function getSettings(){
       ents: Array.isArray(s.ents) ? s.ents : [],
       cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
       contacts: Array.isArray(s.contacts) ? s.contacts : [],
-      planZoom: s.planZoom || "17"
+      planZoom: s.planZoom || "17",
+      planMode: s.planMode || "auto"
     };
   }catch{ return {...DEFAULTS}; }
 }
@@ -793,7 +817,12 @@ async function showHome(){
     const pills = ["NC","PA","AC","C"].filter(k => counts[k])
       .map(k => `<span class="pill ${k}">${counts[k]} ${k}</span>`).join("");
     const titre = v.label ? esc(v.label) : `Visite du ${esc(frDate(v.date))}`;
+    const first = ph[0];
+    const thumb = first && first.blob
+      ? `<img class="visit-thumb" src="${mkURL(first.blob)}" alt="">`
+      : `<span class="visit-thumb visit-thumb-empty">🚧</span>`;
     return `<button class="visit-card" data-id="${v.id}">
+      ${thumb}
       <div class="visit-date"><b>${titre}</b>
       <small>${esc(frDate(v.date))} · ${esc(frDayName(v.date))} · ${ph.length} cliché${ph.length>1?"s":""}</small></div>
       <div class="visit-counts">${pills || `<span class="pill none">vide</span>`}</div>
@@ -851,12 +880,12 @@ async function renderPhotos(){
     if (p.description) fields.push(`<div class="cap-field"><span class="k">Description factuelle</span>${esc(p.description)}</div>`);
     if (p.suite) fields.push(`<div class="cap-field"><span class="k">Suite à donner</span>${esc(p.suite)}</div>`);
     return `<article class="photo-card" data-id="${p.id}">
-      <img class="shot" src="${mkURL(p.blob)}" alt="Cliché n°${p.num}" loading="lazy">
+      <div class="shot-wrap">
+        <img class="shot" src="${mkURL(p.blob)}" alt="Cliché n°${p.num}" loading="lazy">
+        <span class="shot-badge">n°${p.num}</span>
+        <span class="shot-statut"><span class="pill ${p.statut || "none"}">${p.statut || "à qualifier"}</span></span>
+      </div>
       <div class="caption">
-        <div class="cap-head">
-          <span class="cap-num">Cliché n°${p.num}</span>
-          <span class="pill ${p.statut || "none"}">${p.statut || "à qualifier"}</span>
-        </div>
         <div class="cap-meta mono">${meta.join(" · ") || "métadonnées non trouvées"}</div>
         ${p.titre ? `<div class="cap-title">${esc(p.titre)}</div>` : ""}
         ${fields.join("")}
@@ -1142,8 +1171,17 @@ async function buildAutoPlan(clusters, zoom){
 }
 async function getPlanForReport(clusters, settings){
   const up = getLogo("planImg");
+  const tryAuto = async () => { try{ return await buildAutoPlan(clusters, settings.planZoom); }catch{ return null; } };
+  if (settings.planMode === "image"){
+    if (up) return {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
+    return await tryAuto();
+  }
+  // mode automatique (défaut) : IGN d'abord, image chargée en secours
+  const a = await tryAuto();
+  if (a) return a;
   if (up) return {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
-  try{ return await buildAutoPlan(clusters, settings.planZoom); }catch{ return null; }
+  toast("Plan non intégré : aucun cliché géolocalisé, ou réseau indisponible.", true);
+  return null;
 }
 
 /* =============== partage / téléchargement =============== */
@@ -1386,8 +1424,8 @@ async function pdfForVisit(visit, photos, settings){
     zn++;
     if (y < 300) newPage();
     band(zoneLabel(c, zn).slice(0, 82), 22, 10.5);
-    // grille de photos : 5 par ligne, espacées, centrées dans leur case
-    const perRow = 5, gap = 8;
+    // grille de photos : 5 par ligne, resserrées pour maximiser leur taille
+    const perRow = 5, gap = 4;
     const cellW = (515 - gap * (perRow - 1)) / perRow;
     for (let i = 0; i < c.items.length; i += perRow){
       const row = c.items.slice(i, i + perRow);
@@ -1398,7 +1436,7 @@ async function pdfForVisit(visit, photos, settings){
         ims.push({p, im: await normalizeJpeg(p.blob, 900, 0.75)});
       }
       const dims = ims.map(o => {
-        const sc = Math.min(cellW / o.im.w, 130 / o.im.h);
+        const sc = Math.min(cellW / o.im.w, 155 / o.im.h);
         return {dw: o.im.w * sc, dh: o.im.h * sc};
       });
       const rowH = Math.max(...dims.map(d => d.dh)) + 14;
@@ -1447,11 +1485,9 @@ async function pdfForVisit(visit, photos, settings){
 
   /* ---- en-tête et pied de page (ligne pêche, texte bleu clair) ---- */
   pages.forEach((pg, i) => {
-    if (i > 0){
-      pg.rects.push({x:40, y:812, w:515.28, h:0.9, color:PDF_PEACH});
-      pg.texts.push({x:40, y:816, size:7.5, font:"F2", color:PDF_BAND, text:settings.proj.toUpperCase().slice(0, 70)});
-      pg.texts.push({x:430, y:816, size:7.5, font:"F1", color:PDF_BAND, text:"RAPPORT DE VISITE"});
-    }
+    pg.rects.push({x:40, y:812, w:515.28, h:0.9, color:PDF_PEACH});
+    pg.texts.push({x:40, y:816, size:7.5, font:"F2", color:PDF_BAND, text:settings.proj.toUpperCase().slice(0, 70)});
+    pg.texts.push({x:430, y:816, size:7.5, font:"F1", color:PDF_BAND, text:"RAPPORT DE VISITE"});
     pg.rects.push({x:40, y:36, w:515.28, h:0.9, color:PDF_PEACH});
     pg.texts.push({x:40, y:26, size:7.5, font:"F1", color:PDF_BAND, text:`${settings.sub} — ${settings.proj}`.slice(0, 88)});
     pg.texts.push({x:503, y:26, size:7.5, font:"F1", color:PDF_BAND, text:`Page ${i + 1} / ${pages.length}`});
@@ -1612,12 +1648,12 @@ async function docxForVisit(visit, photos, settings){
     for (const p of c.items){
       done++; imgId++;
       toast(`Word : cliché ${done}/${photos.length}…`);
-      const im = await normalizeJpeg(p.blob, 700, 0.72);
+      const im = await normalizeJpeg(p.blob, 800, 0.75);
       const rid = `rIdImg${imgId}`;
       media.push({name:`word/media/image${imgId}.jpg`, data:im.bytes});
       rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${imgId}.jpg"/>`);
       let cx = im.w * 9525, cy = im.h * 9525;
-      const sc = Math.min(1, 1120000 / cx, 1530000 / cy); // ≈ 3,1 x 4,2 cm max
+      const sc = Math.min(1, 1170000 / cx, 1680000 / cy); // ≈ 3,25 x 4,65 cm max
       cx = Math.round(cx * sc); cy = Math.round(cy * sc);
       const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
       cells.push(wTc(1927,
@@ -1630,7 +1666,7 @@ async function docxForVisit(visit, photos, settings){
       while (row.length < 5) row.push(wTc(1927, wP("")));
       gridRows.push(`<w:tr>${row.join("")}</w:tr>`);
     }
-    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9635" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/></w:tblGrid>${gridRows.join("")}</w:tbl>`);
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9635" w:type="dxa"/><w:tblCellMar><w:left w:w="25" w:type="dxa"/><w:right w:w="25" w:type="dxa"/></w:tblCellMar><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/><w:gridCol w:w="1927"/></w:tblGrid>${gridRows.join("")}</w:tbl>`);
     body.push(wP("", `<w:spacing w:after="40"/>`));
     // tableau récapitulatif unique de la zone
     const recRows = [];
@@ -1848,6 +1884,7 @@ function openSettings(){
   $("#sCartouche").value = s.cartouche.join("\n");
   $("#sContacts").value = s.contacts.join("\n");
   $("#sPlanZoom").value = s.planZoom;
+  $("#sPlanMode").value = s.planMode;
   $("#sKey").value = localStorage.getItem("apiKey") || "";
   refreshLogoState();
   $("#setModal").classList.add("on");
@@ -1861,7 +1898,8 @@ function saveSettingsUI(){
     ents: $("#sEnts").value.split("\n").map(x => x.trim()).filter(Boolean),
     cartouche: $("#sCartouche").value.split("\n").map(x => x.trim()).filter(Boolean),
     contacts: $("#sContacts").value.split("\n").map(x => x.trim()).filter(Boolean),
-    planZoom: $("#sPlanZoom").value
+    planZoom: $("#sPlanZoom").value,
+    planMode: $("#sPlanMode").value
   };
   saveSettings(s);
   const key = $("#sKey").value.trim();
