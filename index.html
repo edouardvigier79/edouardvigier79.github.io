@@ -489,9 +489,13 @@
     </div>
 
     <div class="settings-block">
-      <h3>Sauvegarde</h3>
-      <p>Les notes et photos sont stockées uniquement dans ce téléphone. Générez le rapport de chaque visite : c'est votre sauvegarde.</p>
-      <button class="btn block" id="btnBackupJson">⬇ Exporter toutes les notes (.json, sans photos)</button>
+      <h3>Sauvegarde &amp; restauration</h3>
+      <p>Tout est stocké uniquement dans ce téléphone. Faites une sauvegarde complète régulièrement — c'est votre filet de sécurité (téléphone perdu, changement d'appareil).</p>
+      <button class="btn primary block" id="btnBackupFull">💾 Sauvegarde complète (tous chantiers + photos)</button>
+      <div class="hint">Vous choisirez la destination : Google Drive, appli Fichiers (dossier au choix), e-mail…</div>
+      <button class="btn block" id="btnRestore" style="margin-top:10px">♻ Restaurer depuis une sauvegarde</button>
+      <input type="file" id="fileRestore" accept="application/json,.json" hidden>
+      <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px">⬇ Export léger (notes seules, sans photos)</button>
     </div>
   </div>
 </div>
@@ -500,7 +504,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -858,7 +862,10 @@ function unlock(){ $("#scrLock").classList.remove("on"); showHome().then(process
 /* raccourcis d'icône Android (?a=…) */
 let pendingAction = null;
 function launchTimestamp(){
-  location.href = "intent:#Intent;package=com.jeyluta.timestampcamera;S.browser_fallback_url=" +
+  // intent de LANCEMENT (action MAIN + catégorie LAUNCHER) : ouvre directement l'appli si installée,
+  // sinon repli Play Store. Sans action/catégorie, Android ne sait pas lancer et va toujours au Play Store.
+  location.href = "intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;" +
+    "package=com.jeyluta.timestampcamera;S.browser_fallback_url=" +
     encodeURIComponent("https://play.google.com/store/apps/details?id=com.jeyluta.timestampcamera") + ";end";
 }
 async function openTodayVisit(){
@@ -1196,6 +1203,23 @@ async function reverseGeocode(lat, lon){
     const p = j.features && j.features[0] && j.features[0].properties;
     if (!p) return "";
     return p.name && p.city ? `${p.name}, ${p.city}` : (p.label || "");
+  }catch{ return ""; }
+}
+/* GPS → commune + département (pour le plan de situation). context BAN = "94, Val-de-Marne, Île-de-France" */
+async function reverseCommune(lat, lon){
+  try{
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`, {signal: ctl.signal});
+    clearTimeout(timer);
+    if (!r.ok) return "";
+    const j = await r.json();
+    const p = j.features && j.features[0] && j.features[0].properties;
+    if (!p) return "";
+    const city = p.city || p.name || "";
+    const ctx = (p.context || "").split(",").map(x => x.trim()); // [code, dept, region]
+    if (city && ctx.length >= 2) return `${city} (${ctx[0]} — ${ctx[1]})`;
+    return city || "";
   }catch{ return ""; }
 }
 
@@ -1550,16 +1574,24 @@ async function buildAutoPlan(clusters, widthMeters){
 async function getPlanForReport(clusters, settings){
   const up = getLogo("planImg");
   const tryAuto = async () => { try{ return await buildAutoPlan(clusters, settings.planZoom); }catch{ return null; } };
-  if (settings.planMode === "image"){
-    if (up) return {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
-    return await tryAuto();
+  // commune + département du centre des clichés géolocalisés (pour le titre du plan)
+  const geo = clusters.filter(c => !c.noGps);
+  let place = "";
+  if (geo.length){
+    const lat = geo.reduce((s, c) => s + c.lat, 0) / geo.length;
+    const lon = geo.reduce((s, c) => s + c.lon, 0) / geo.length;
+    place = await reverseCommune(lat, lon);
   }
-  // mode automatique (défaut) : IGN d'abord, image chargée en secours
-  const a = await tryAuto();
-  if (a) return a;
-  if (up) return {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
-  toast("Plan non intégré : aucun cliché géolocalisé, ou réseau indisponible.", true);
-  return null;
+  let plan = null;
+  if (settings.planMode === "image"){
+    plan = up ? {bytes: logoBytes(up), w: up.w, h: up.h, auto: false} : await tryAuto();
+  } else {
+    plan = await tryAuto();
+    if (!plan && up) plan = {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
+  }
+  if (!plan){ toast("Plan non intégré : aucun cliché géolocalisé, ou réseau indisponible.", true); return null; }
+  plan.place = place;
+  return plan;
 }
 
 /* =============== partage / téléchargement =============== */
@@ -1818,7 +1850,7 @@ async function pdfForVisit(visit, photos, settings){
     const bx = 40 + (515 - dw) / 2;
     ensure(dh + 34);
     cur.rects.push({x:bx, y:y-20, w:dw, h:20, color:PDF_BAND}); // titre ajusté à la largeur du plan
-    cur.texts.push({x:bx + 8, y:y-14.5, size:9.5, font:"F2", color:PDF_NAVY, text:"PLAN DE SITUATION"});
+    cur.texts.push({x:bx + 8, y:y-14.5, size:9.5, font:"F2", color:PDF_NAVY, text:`PLAN DE SITUATION${plan.place ? " — " + plan.place.toUpperCase() : ""}`});
     y -= 20;
     cur.images.push({bytes:plan.bytes, w:plan.w, h:plan.h, x:bx, y:y-dh, dw, dh});
     y -= dh + 16;
@@ -2098,7 +2130,7 @@ async function docxForVisit(visit, photos, settings){
     pcx = Math.round(pcx * psc); pcy = Math.round(pcy * psc);
     const tw = Math.round(pcx / 635); // titre ajusté à la largeur du plan
     const planImg = `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${pcx}" cy="${pcy}"/><wp:docPr id="950" name="Plan"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="950" name="Plan"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdPlan"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${pcx}" cy="${pcy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
-    body.push(`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${tw}"/></w:tblGrid><w:tr>${wTc(tw, wP(wR("PLAN DE SITUATION", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="20"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_BAND})}</w:tr><w:tr>${wTc(tw, `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${planImg}</w:p>`)}</w:tr></w:tbl>`);
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${tw}"/></w:tblGrid><w:tr>${wTc(tw, wP(wR(`PLAN DE SITUATION${plan.place ? " — " + plan.place : ""}`, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="20"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_BAND})}</w:tr><w:tr>${wTc(tw, `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${planImg}</w:p>`)}</w:tr></w:tbl>`);
     body.push(wP("", `<w:spacing w:before="120" w:after="0"/>`));
   }
   body.push(wP(wR("Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="240"/>`));
@@ -2270,6 +2302,81 @@ async function backupJson(){
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
   downloadBlob(blob, "notes-chantier.json");
   toast("Sauvegarde des notes exportée ✔");
+}
+
+/* enregistrer un fichier en laissant l'utilisateur choisir la destination :
+   1) sélecteur de dossier natif si le navigateur le gère (PC), 2) partage Android (Drive/Fichiers/mail), 3) Téléchargements. */
+async function saveFileChooseLocation(blob, filename, shareTitle){
+  if (window.showSaveFilePicker){
+    try{
+      const handle = await window.showSaveFilePicker({ suggestedName: filename,
+        types: [{description:"Sauvegarde", accept:{"application/json":[".json"]}}] });
+      const w = await handle.createWritable(); await w.write(blob); await w.close();
+      return "saved";
+    }catch(e){ if (e && e.name === "AbortError") return "cancelled"; }
+  }
+  const file = new File([blob], filename, {type:"application/json"});
+  if (navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title: shareTitle || filename}); return "shared"; }
+    catch(e){ if (e && e.name === "AbortError") return "cancelled"; }
+  }
+  downloadBlob(blob, filename);
+  return "downloaded";
+}
+async function fullBackup(){
+  try{
+    toast("Préparation de la sauvegarde complète…");
+    const projects = await idbAll("projects");
+    const visits = await idbAll("visits");
+    const reserves = await idbAll("reserves");
+    const photos = await idbAll("photos");
+    const photoData = [];
+    for (let i = 0; i < photos.length; i++){
+      if (i % 5 === 0) toast(`Sauvegarde : photo ${i+1}/${photos.length}…`);
+      const {blob, ...rest} = photos[i];
+      rest.b64 = blob ? await blobToBase64(blob) : null;
+      photoData.push(rest);
+    }
+    const data = { app:"notes-chantier", schema:3, exportedAt:new Date().toISOString(),
+      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, photos: photoData };
+    const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+    const d = todayIso();
+    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde Notes de Chantier");
+    const mo = (blob.size/1048576).toFixed(1);
+    toast(r === "saved" ? `Sauvegarde enregistrée ✔ (${mo} Mo)` :
+          r === "shared" ? `Sauvegarde partagée ✔ (${mo} Mo)` :
+          r === "downloaded" ? `Sauvegarde dans Téléchargements ✔ (${mo} Mo)` : "Sauvegarde annulée", true);
+  }catch(err){ toast("Erreur sauvegarde : " + (err && err.message || err), true); }
+}
+async function restoreBackup(file){
+  try{
+    const data = JSON.parse(await file.text());
+    if (data.app !== "notes-chantier" || !Array.isArray(data.projects))
+      throw new Error("fichier non reconnu");
+    const nP = data.projects.length, nV = (data.visits||[]).length, nPh = (data.photos||[]).length;
+    if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\n⚠️ Cela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
+    toast("Restauration en cours…");
+    // vider les 4 stores
+    for (const st of ["photos","visits","reserves","projects"]){
+      await new Promise((res, rej) => { const t = db.transaction(st,"readwrite"); t.objectStore(st).clear(); t.oncomplete = res; t.onerror = () => rej(t.error); });
+    }
+    // réinsérer avec les identifiants d'origine
+    for (const p of data.projects) await tx("projects","readwrite", s => s.put(p));
+    for (const v of (data.visits||[])) await tx("visits","readwrite", s => s.put(v));
+    for (const r of (data.reserves||[])) await tx("reserves","readwrite", s => s.put(r));
+    for (let i = 0; i < (data.photos||[]).length; i++){
+      if (i % 5 === 0) toast(`Restauration : photo ${i+1}/${data.photos.length}…`);
+      const {b64, ...rest} = data.photos[i];
+      if (b64){ const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
+        rest.blob = new Blob([u8], {type: rest.type || "image/jpeg"}); }
+      await tx("photos","readwrite", s => s.put(rest));
+    }
+    const projects = await listProjects();
+    setCurrentProject(projects.find(p => p.id === data.currentProjectId) || projects[0]);
+    $("#setModal").classList.remove("on");
+    await showHome();
+    toast("Sauvegarde restaurée ✔", true);
+  }catch(err){ toast("Restauration impossible : " + (err && err.message || err), true); }
 }
 
 /* =============== IA : description VRD =============== */
@@ -2484,6 +2591,9 @@ async function main(){
     $("#btnUnlock").textContent = "Continuer";
   });
   $("#btnBackupJson").addEventListener("click", backupJson);
+  $("#btnBackupFull").addEventListener("click", fullBackup);
+  $("#btnRestore").addEventListener("click", () => $("#fileRestore").click());
+  $("#fileRestore").addEventListener("change", e => { if (e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value = ""; });
   $("#btnLoadExample").addEventListener("click", () => {
     $("#sProj").value = EXAMPLE.proj;
     $("#sSub").value = EXAMPLE.sub;
