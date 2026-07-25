@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
-/* Application version 2.4 */
-const CACHE = "chantier-v14";
+/* Application version 2.6 */
+const CACHE = "chantier-v16";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
@@ -14,10 +14,10 @@ self.addEventListener("activate", e => {
   );
 });
 
-/* même base locale que l'application (version 2 : + boîte d'arrivée "inbox") */
+/* même base locale que l'application — garder la MÊME version que index.html (4) pour éviter un VersionError */
 function openDb(){
   return new Promise((res, rej) => {
-    const rq = indexedDB.open("chantier-notes", 2);
+    const rq = indexedDB.open("chantier-notes", 4);
     rq.onupgradeneeded = e => {
       const d = e.target.result;
       if (!d.objectStoreNames.contains("visits")){
@@ -30,6 +30,17 @@ function openDb(){
       }
       if (!d.objectStoreNames.contains("inbox")){
         d.createObjectStore("inbox", {keyPath:"id", autoIncrement:true});
+      }
+      if (!d.objectStoreNames.contains("projects")){
+        d.createObjectStore("projects", {keyPath:"id", autoIncrement:true});
+      }
+      if (!d.objectStoreNames.contains("reserves")){
+        const r = d.createObjectStore("reserves", {keyPath:"id", autoIncrement:true});
+        r.createIndex("projectId","projectId");
+      }
+      if (!d.objectStoreNames.contains("annexes")){
+        const a = d.createObjectStore("annexes", {keyPath:"id", autoIncrement:true});
+        a.createIndex("projectId","projectId");
       }
     };
     rq.onsuccess = () => res(rq.result);
