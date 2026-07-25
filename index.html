@@ -314,6 +314,11 @@
     <img id="editImg" alt="" style="width:100%; border-radius:12px; max-height:38dvh; object-fit:contain; background:#111">
     <p class="cap-meta mono" id="editMeta" style="margin:8px 2px 10px"></p>
 
+    <div class="chips" style="margin-bottom:12px">
+      <button class="chip" id="btnCopyComment">📋 Copier ce commentaire</button>
+      <button class="chip" id="btnPasteComment" hidden>📥 Coller le commentaire</button>
+    </div>
+
     <button class="btn block aibtn" id="btnAI" hidden>✨ Décrire le cliché (IA — éléments VRD uniquement)</button>
     <div class="hint" id="aiHint" hidden style="margin:-6px 4px 12px">
       L'IA analyse chaussée, bordures, tampons, réseaux, éclairage, mobilier…
@@ -495,7 +500,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -848,7 +853,30 @@ async function submitPin(){
     else { pinMode = "new"; $("#pinInput").value = ""; msg.textContent = "Les codes ne correspondent pas."; $("#lockText").textContent = "Nouveau code (4 à 8 chiffres)."; $("#btnUnlock").textContent = "Continuer"; }
   }
 }
-function unlock(){ $("#scrLock").classList.remove("on"); showHome().then(processInbox); }
+function unlock(){ $("#scrLock").classList.remove("on"); showHome().then(processInbox).then(runPendingAction); }
+
+/* raccourcis d'icône Android (?a=…) */
+let pendingAction = null;
+function launchTimestamp(){
+  location.href = "intent:#Intent;package=com.jeyluta.timestampcamera;S.browser_fallback_url=" +
+    encodeURIComponent("https://play.google.com/store/apps/details?id=com.jeyluta.timestampcamera") + ";end";
+}
+async function openTodayVisit(){
+  const iso = todayIso(); const pid = CUR ? CUR.id : null;
+  const existing = (await idbAll("visits")).find(v => v.date === iso && v.projectId === pid);
+  if (existing) return showVisit(existing.id);
+  const id = await idbAdd("visits", {date: iso, projectId: pid, createdAt: Date.now()});
+  return showVisit(id);
+}
+async function runPendingAction(){
+  const a = pendingAction; pendingAction = null;
+  if (!a) return;
+  try{
+    if (a === "today") await openTodayVisit();
+    else if (a === "register") await showRegister();
+    else if (a === "timestamp") launchTimestamp();
+  }catch{}
+}
 
 /* =============== boîte d'arrivée : photos reçues via « Partager » =============== */
 function todayIso(){
@@ -1002,6 +1030,28 @@ async function deleteCurrentProject(){
   $("#setModal").classList.remove("on");
   await showHome();
   toast("Chantier supprimé");
+}
+
+/* =============== numérotation automatique des rapports =============== */
+async function projectVisits(pid){
+  pid = pid == null ? (CUR ? CUR.id : null) : pid;
+  return (await idbAll("visits")).filter(v => v.projectId === pid)
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt || 0) - (b.createdAt || 0));
+}
+async function reportNumber(visit){
+  const vs = await projectVisits(visit.projectId);
+  const idx = vs.findIndex(v => v.id === visit.id);
+  return idx >= 0 ? idx + 1 : vs.length + 1;
+}
+async function visitsSummary(){
+  const vs = await projectVisits();
+  const photos = await idbAll("photos");
+  return vs.map((v, i) => {
+    const ph = photos.filter(p => p.visitId === v.id);
+    const counts = {NC:0, PA:0, AC:0, C:0};
+    ph.forEach(p => { if (counts[p.statut] !== undefined) counts[p.statut]++; });
+    return { num: i+1, id: v.id, date: v.date, label: v.label, n: ph.length, counts };
+  });
 }
 
 /* =============== registre des réserves =============== */
@@ -1259,6 +1309,7 @@ async function openEditor(id){
   buildElemChips(Array.isArray(curEdit.element) ? curEdit.element : []);
   buildQuickChips();
   await buildReserveSelect();
+  $("#btnPasteComment").hidden = !clipComment;
   const hasKey = !!localStorage.getItem("apiKey");
   $("#btnAI").hidden = !hasKey;
   $("#aiHint").hidden = !hasKey;
@@ -1281,6 +1332,31 @@ function buildElemChips(selected){
     `</div></div>`).join("");
   box.querySelectorAll(".chip").forEach(c =>
     c.addEventListener("click", () => c.classList.toggle("on")));
+}
+/* dupliquer un commentaire d'un cliché à l'autre (constats répétitifs) */
+let clipComment = null;
+function copyComment(){
+  const on = document.querySelector("#statutChips .chip.on");
+  clipComment = {
+    statut: on ? on.dataset.v : "",
+    titre: $("#fTitre").value, element: selectedElems(),
+    zone: $("#fZone").value, entreprise: $("#fEnt").value,
+    description: $("#fDesc").value, suite: $("#fSuite").value
+  };
+  $("#btnPasteComment").hidden = false;
+  toast("Commentaire copié — ouvrez un autre cliché puis « Coller »");
+}
+function pasteComment(){
+  if (!clipComment) return;
+  const c = clipComment;
+  document.querySelectorAll("#statutChips .chip").forEach(x => x.classList.toggle("on", x.dataset.v === c.statut));
+  buildElemChips(Array.isArray(c.element) ? c.element : []);
+  $("#fTitre").value = c.titre || "";
+  $("#fZone").value = c.zone || "";
+  $("#fEnt").value = c.entreprise || "";
+  $("#fDesc").value = c.description || "";
+  $("#fSuite").value = c.suite || "";
+  toast("Commentaire collé — relisez puis Enregistrer");
 }
 function selectedElems(){
   return [...document.querySelectorAll("#elemChips .chip.on")].map(c => c.dataset.e);
@@ -1638,9 +1714,10 @@ async function pdfForVisit(visit, photos, settings){
   const logoH = 34;
   if (L){ const dw = logoH * L.w / L.h; cur.images.push({bytes:logoBytes(L), w:L.w, h:L.h, x:40, y:y-logoH, dw, dh:logoH}); }
   if (R){ const dw = logoH * R.w / R.h; cur.images.push({bytes:logoBytes(R), w:R.w, h:R.h, x:555.28-dw, y:y-logoH, dw, dh:logoH}); }
+  const repNum = CUR ? await reportNumber(visit) : null;
   y -= (L || R) ? 52 : 6;
   cur.rects.push({x:40, y:y-52, w:515.28, h:52, color:PDF_BAND});
-  cur.texts.push({x:52, y:y-24, size:17, font:"F2", color:PDF_PEACH, text:"RAPPORT DE VISITE DE CHANTIER"});
+  cur.texts.push({x:52, y:y-24, size:17, font:"F2", color:PDF_PEACH, text:`RAPPORT DE VISITE DE CHANTIER${repNum ? ` N°${repNum}` : ""}`});
   cur.texts.push({x:52, y:y-42, size:10.5, font:"F1", color:PDF_NAVY, text:"Constat photographique et technique"});
   y -= 70;
   cur.texts.push({x:40, y, size:12.5, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
@@ -1703,6 +1780,31 @@ async function pdfForVisit(visit, photos, settings){
     lx += 29 + lib.length * 4.3 + 20;
   }
   y -= 22;
+
+  /* ---- sommaire des visites du chantier ---- */
+  const summary = CUR ? await visitsSummary() : [];
+  if (summary.length > 1){
+    band("SOMMAIRE DES VISITES", 16, 8.5);
+    y += 8;
+    const SC = [[42, 34], [82, 220], [304, 210]]; // N° / Date / Constats
+    ensure(14);
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
+    ["N°","DATE","CONSTATS (NC / PA / AC / C)"].forEach((h, k) =>
+      cur.texts.push({x:SC[k][0]+3, y:y-7, size:7.2, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 16;
+    for (const s of summary){
+      ensure(12);
+      const cur_ = s.id === visit.id;
+      cur.texts.push({x:SC[0][0]+3, y:y-6, size:8, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:String(s.num)});
+      cur.texts.push({x:SC[1][0]+3, y:y-6, size:8, font:cur_ ? "F2" : "F1", text:`${frDate(s.date)} (${frDayName(s.date)})${cur_ ? "  ← ce rapport" : ""}`});
+      const bilan = `${s.counts.NC} NC / ${s.counts.PA} PA / ${s.counts.AC} AC / ${s.counts.C} C`;
+      cur.texts.push({x:SC[2][0]+3, y:y-6, size:8, font:"F1", color:PDF_GREY, text:bilan});
+      cur.rects.push({x:40, y:y-8.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= 12;
+    }
+    y -= 12;
+  }
+
   cur.texts.push({x:40, y, size:7.5, font:"F1", color:PDF_GREY, text:"Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion."});
   y -= 14;
 
@@ -1932,7 +2034,8 @@ async function docxForVisit(visit, photos, settings){
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid><w:tr>${logoCell(L, "rIdLL", 901, false)}${logoCell(R, "rIdLR", 902, true)}</w:tr></w:tbl>`);
     body.push(wP("", `<w:spacing w:after="120"/>`));
   }
-  body.push(wP(wR("RAPPORT DE VISITE DE CHANTIER", `<w:b/><w:color w:val="${DOCX_PEACH}"/><w:sz w:val="40"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="120" w:after="0"/><w:ind w:left="113" w:right="113"/>`));
+  const repNum = CUR ? await reportNumber(visit) : null;
+  body.push(wP(wR(`RAPPORT DE VISITE DE CHANTIER${repNum ? ` N°${repNum}` : ""}`, `<w:b/><w:color w:val="${DOCX_PEACH}"/><w:sz w:val="40"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="120" w:after="0"/><w:ind w:left="113" w:right="113"/>`));
   body.push(wP(wR("Constat photographique et technique", `<w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:after="240"/><w:ind w:left="113" w:right="113"/>`));
   body.push(wP(wR(`Opération : ${settings.proj}`, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="26"/>`)));
   body.push(wP(wR(`${visitTitle(visit)} — ${frDate(visit.date)} (${frDayName(visit.date)})`, `<w:b/><w:sz w:val="24"/>`)));
@@ -1967,6 +2070,21 @@ async function docxForVisit(visit, photos, settings){
   const legRows = LEG.map(([code, lib]) =>
     `<w:tr>${wTc(1200, wP(wR(code, `<w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_STATUT[code]})}${wTc(8438, wP(wR(lib, `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`).join("");
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="8438"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("LÉGENDE", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:2, fill:DOCX_BAND})}</w:tr>${legRows}</w:tbl>`);
+  body.push(wP("", `<w:spacing w:after="120"/>`));
+
+  /* ---- sommaire des visites du chantier ---- */
+  const summary = CUR ? await visitsSummary() : [];
+  if (summary.length > 1){
+    const sHead = `<w:tr>${wTc(900, wP(wR("N°", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(4400, wP(wR("Date de la visite", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(4338, wP(wR("Constats (NC / PA / AC / C)", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`;
+    const sRows = summary.map(s => {
+      const cur_ = s.id === visit.id;
+      const b = cur_ ? "<w:b/>" : "";
+      const col = cur_ ? `<w:color w:val="${DOCX_PEACH}"/>` : "";
+      return `<w:tr>${wTc(900, wP(wR(String(s.num), `${b}${col}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`))}${wTc(4400, wP(wR(`${frDate(s.date)} (${frDayName(s.date)})${cur_ ? "  ← ce rapport" : ""}`, `${b}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(4338, wP(wR(`${s.counts.NC} NC / ${s.counts.PA} PA / ${s.counts.AC} AC / ${s.counts.C} C`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`;
+    }).join("");
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="900"/><w:gridCol w:w="4400"/><w:gridCol w:w="4338"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("SOMMAIRE DES VISITES", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:3, fill:DOCX_BAND})}</w:tr>${sHead}${sRows}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="120"/>`));
+  }
 
   /* ---- plan de situation (chargé, sinon généré automatiquement depuis le GPS) ---- */
   const clusters = clusterPhotos(photos);
@@ -2112,7 +2230,8 @@ async function exportPdf(){
   try{
     toast("Génération du PDF…");
     const blob = await pdfForVisit(curVisit, photos, settings);
-    const name = `Rapport ${sanitizeFilename(visitTitle(curVisit))} — ${shortDate(curVisit.date)}.pdf`;
+    const rn = CUR ? await reportNumber(curVisit) : null;
+    const name = `Rapport${rn ? ` N°${rn}` : ""} ${sanitizeFilename(visitTitle(curVisit))} — ${shortDate(curVisit.date)}.pdf`;
     const r = await shareOrDownload([new File([blob], name, {type:"application/pdf"})], name);
     toast(r === "shared" ? "Rapport PDF partagé ✔" : r === "downloaded" ? "PDF enregistré dans Téléchargements ✔" : "Partage annulé");
   }catch(err){ toast("Erreur PDF : " + (err && err.message || err), true); }
@@ -2125,7 +2244,8 @@ async function exportDocx(){
   try{
     toast("Génération du document Word…");
     const blob = await docxForVisit(curVisit, photos, settings);
-    const name = `Rapport ${sanitizeFilename(visitTitle(curVisit))} — ${shortDate(curVisit.date)}.docx`;
+    const rn = CUR ? await reportNumber(curVisit) : null;
+    const name = `Rapport${rn ? ` N°${rn}` : ""} ${sanitizeFilename(visitTitle(curVisit))} — ${shortDate(curVisit.date)}.docx`;
     const r = await shareOrDownload([new File([blob], name, {type:blob.type})], name);
     toast(r === "shared" ? "Rapport Word partagé ✔" : r === "downloaded" ? "Word enregistré dans Téléchargements ✔" : "Partage annulé");
   }catch(err){ toast("Erreur Word : " + (err && err.message || err), true); }
@@ -2286,6 +2406,8 @@ async function main(){
   const savedId = Number(localStorage.getItem("currentProjectId"));
   setCurrentProject(projects.find(p => p.id === savedId) || projects[0]);
   $("#verTag").textContent = "Version " + APP_VERSION;
+  const act = new URLSearchParams(location.search).get("a");
+  if (act) pendingAction = act; // raccourci d'icône : exécuté après déverrouillage
 
   $("#btnUnlock").addEventListener("click", submitPin);
   $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
@@ -2309,11 +2431,7 @@ async function main(){
   $("#btnAdd").addEventListener("click", openAddSheet);
   $("#scrim").addEventListener("click", closeAddSheet);
   $("#btnAddCancel").addEventListener("click", closeAddSheet);
-  $("#btnOpenTimestamp").addEventListener("click", () => {
-    // lance l'application Timestamp Camera Pro (Android) ; à défaut, ouvre sa fiche Play Store
-    location.href = "intent:#Intent;package=com.jeyluta.timestampcamera;S.browser_fallback_url=" +
-      encodeURIComponent("https://play.google.com/store/apps/details?id=com.jeyluta.timestampcamera") + ";end";
-  });
+  $("#btnOpenTimestamp").addEventListener("click", launchTimestamp);
   $("#btnPickGallery").addEventListener("click", () => $("#fileGallery").click());
   $("#btnPickCamera").addEventListener("click", () => $("#fileCamera").click());
   $("#fileGallery").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
@@ -2321,6 +2439,8 @@ async function main(){
 
   $("#btnEditClose").addEventListener("click", () => $("#editModal").classList.remove("on"));
   $("#btnEditSave").addEventListener("click", saveEdit);
+  $("#btnCopyComment").addEventListener("click", copyComment);
+  $("#btnPasteComment").addEventListener("click", pasteComment);
   $("#btnAI").addEventListener("click", describeAI);
   document.querySelectorAll("#statutChips .chip").forEach(c =>
     c.addEventListener("click", () => {

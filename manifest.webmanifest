@@ -22,5 +22,28 @@
         { "name": "photos", "accept": ["image/*"] }
       ]
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "Visite du jour",
+      "short_name": "Visite du jour",
+      "description": "Ouvrir ou créer la visite d'aujourd'hui sur le chantier courant",
+      "url": "./?a=today",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ouvrir Timestamp Camera",
+      "short_name": "Timestamp",
+      "description": "Lancer l'application de prise de vue horodatée",
+      "url": "./?a=timestamp",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Registre des réserves",
+      "short_name": "Registre",
+      "description": "Ouvrir le registre des réserves du chantier courant",
+      "url": "./?a=register",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }
