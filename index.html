@@ -197,6 +197,13 @@
   .annexe-item .ax-name{font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .annexe-item .ax-meta{font-size:11.5px; color:var(--ink2)}
   .annexe-item .ax-del{flex:0 0 auto; border:none; background:transparent; color:var(--nc); font-size:19px; cursor:pointer}
+  .moyen-row{border:1.5px solid var(--line); border-radius:12px; padding:10px 11px; margin-bottom:10px; background:var(--card)}
+  .moyen-row .mr-top{display:flex; align-items:center; gap:8px; margin-bottom:8px}
+  .moyen-row .mr-top input{flex:1; font:inherit; font-weight:600; color:var(--ink); background:transparent; border:none; border-bottom:1.5px solid var(--line); padding:4px 2px}
+  .moyen-row .mr-del{flex:0 0 auto; border:none; background:transparent; color:var(--nc); font-size:18px; cursor:pointer}
+  .moyen-row .mr-field{margin-top:7px}
+  .moyen-row .mr-field label{display:block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2); margin-bottom:3px}
+  .moyen-row .mr-field .microw input, .moyen-row .mr-field > input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:9px; padding:8px 10px}
 
   .empty{text-align:center; color:var(--ink2); padding:44px 20px; line-height:1.6}
   .empty .glyph{font-size:30px; display:block; margin-bottom:8px}
@@ -288,6 +295,7 @@
       <div class="sect-label" id="visitLabel" style="margin:20px 2px 8px; flex:1">Visite</div>
       <button class="iconbtn" id="btnRenameVisit" title="Renommer la visite" aria-label="Renommer la visite" style="width:34px; height:34px; font-size:14px">✎</button>
     </div>
+    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 12px">👷 Moyens sur site (effectif, engins)</button>
     <div id="photoList"></div>
     <div class="btnrow">
       <button class="btn primary block" id="btnPdf">📄 Rapport PDF</button>
@@ -395,6 +403,12 @@
       </div>
     </div>
 
+    <div class="field">
+      <label for="fEcheance">Date limite d'exécution (échéance)</label>
+      <input type="date" id="fEcheance">
+      <div class="hint">Facultatif. Alimente le tableau de suivi ; passée la date, l'action passe automatiquement « En retard ».</div>
+    </div>
+
     <div class="field" id="reserveField">
       <label for="fReserve">Réserve au registre (constats NC / PA)</label>
       <select id="fReserve"></select>
@@ -404,6 +418,20 @@
     <div class="btnrow">
       <button class="btn danger block" id="btnDelPhoto">Supprimer ce cliché</button>
     </div>
+  </div>
+</div>
+
+<!-- ================= MOYENS SUR SITE ================= -->
+<div class="modal" id="moyensModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnMoyensClose" aria-label="Fermer">←</button>
+      <b>Moyens sur site</b>
+    </div>
+    <p class="hint" style="margin:2px 2px 10px">Pour cette visite, indiquez l'effectif constaté et les engins / matériel observés, par entreprise. Les entreprises repérées sur vos constats sont pré-listées.</p>
+    <div id="moyensList"></div>
+    <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px">➕ Ajouter une entreprise</button>
+    <button class="btn primary block" id="btnMoyensSave" style="margin-top:12px">Enregistrer</button>
   </div>
 </div>
 
@@ -541,7 +569,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.6";
+const APP_VERSION = "2.8";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1093,6 +1121,63 @@ async function renameVisit(){
   toast(curVisit.label ? "Visite renommée" : "Nom par défaut rétabli");
 }
 
+/* =============== moyens sur site (effectif / engins par entreprise, au niveau visite) =============== */
+function moyenRowHtml(ent, effectif, engins){
+  return `<div class="moyen-row">
+    <div class="mr-top"><input type="text" class="mr-ent" placeholder="Entreprise / intervenant" value="${esc(ent||"")}">
+      <button type="button" class="mr-del" aria-label="Retirer">✕</button></div>
+    <div class="mr-field"><label>Effectif constaté</label><input type="text" class="mr-eff" inputmode="numeric" placeholder="Ex. : 5 (dont 1 chef)" value="${esc(effectif||"")}"></div>
+    <div class="mr-field"><label>Engins / matériel observé</label><div class="microw">
+      <input type="text" class="mr-eng" placeholder="Ex. : finisseur, mini-pelle, PL 8×4" value="${esc(engins||"")}">
+      <button type="button" class="micbtn mr-mic" aria-label="Dictée vocale">🎤</button></div></div>
+  </div>`;
+}
+function bindMoyenRow(row){
+  row.querySelector(".mr-del").addEventListener("click", () => row.remove());
+  const mic = row.querySelector(".mr-mic");
+  if (mic){ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR){ mic.style.display = "none"; }
+    else mic.addEventListener("click", () => micToField(mic, row.querySelector(".mr-eng")));
+  }
+}
+async function openMoyens(){
+  if (!curVisit) return;
+  const photos = await idbAll("photos","visitId",curVisit.id);
+  const seen = {}; // entreprises repérées sur les constats
+  for (const p of photos){ if (p.entreprise) seen[p.entreprise.trim().toLowerCase()] = p.entreprise.trim(); }
+  const saved = Array.isArray(curVisit.intervenants) ? curVisit.intervenants : [];
+  const byKey = {}; for (const it of saved){ if (it.ent) byKey[it.ent.trim().toLowerCase()] = it; }
+  const rows = [];
+  for (const it of saved){ rows.push(it); }                                   // saisies existantes d'abord
+  for (const k in seen){ if (!byKey[k]) rows.push({ent:seen[k], effectif:"", engins:""}); } // + entreprises détectées non encore saisies
+  if (!rows.length) rows.push({ent:"", effectif:"", engins:""});
+  const box = $("#moyensList");
+  box.innerHTML = rows.map(r => moyenRowHtml(r.ent, r.effectif, r.engins)).join("");
+  box.querySelectorAll(".moyen-row").forEach(bindMoyenRow);
+  $("#moyensModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+function addMoyenRow(){
+  const box = $("#moyensList");
+  box.insertAdjacentHTML("beforeend", moyenRowHtml("", "", ""));
+  bindMoyenRow(box.lastElementChild);
+}
+async function saveMoyens(){
+  if (!curVisit) return;
+  const list = [];
+  $("#moyensList").querySelectorAll(".moyen-row").forEach(r => {
+    const ent = r.querySelector(".mr-ent").value.trim();
+    const effectif = r.querySelector(".mr-eff").value.trim();
+    const engins = r.querySelector(".mr-eng").value.trim();
+    if (ent || effectif || engins) list.push({ent, effectif, engins});
+  });
+  curVisit.intervenants = list;
+  await tx("visits","readwrite", s => s.put(curVisit));
+  stopMic();
+  $("#moyensModal").classList.remove("on");
+  toast("Moyens sur site enregistrés");
+}
+
 /* =============== bascule de chantier =============== */
 async function openProjectSheet(){
   const projects = await listProjects();
@@ -1179,8 +1264,9 @@ async function actionTracking(){
     if (!v) continue;                                 // autre chantier
     if (!["NC","PA","AC"].includes(p.statut)) continue; // seuls les constats à suivre
     if (p.reserveId) continue;                         // déjà porté au registre → évite le doublon
-    rows.push({ origin: v.date, entreprise: p.entreprise || "", statut: "En cours", code: p.statut,
-      action: p.suite || p.titre || p.description || "—", dateLimite: "", sort: p.createdAt || 0 });
+    const st = (p.dateLimite && p.dateLimite < todayIso()) ? "En retard" : "En cours";
+    rows.push({ origin: v.date, entreprise: p.entreprise || "", statut: st, code: p.statut,
+      action: p.suite || p.titre || p.description || "—", dateLimite: p.dateLimite || "", sort: p.createdAt || 0 });
   }
   rows.sort((a, b) => a.origin < b.origin ? -1 : a.origin > b.origin ? 1 : a.sort - b.sort);
   rows.forEach((r, i) => r.num = i + 1);
@@ -1475,6 +1561,7 @@ async function openEditor(id){
   $("#fEnt").value = curEdit.entreprise || "";
   $("#fDesc").value = curEdit.description || "";
   $("#fSuite").value = curEdit.suite || "";
+  $("#fEcheance").value = curEdit.dateLimite || "";
   document.querySelectorAll("#statutChips .chip").forEach(c =>
     c.classList.toggle("on", c.dataset.v === curEdit.statut));
   buildQuickChips();
@@ -1502,28 +1589,29 @@ function stopMic(){
   if (micRec){ try{ micRec.onend = null; micRec.stop(); }catch{} micRec = null; }
   if (micBtnActive){ micBtnActive.classList.remove("rec"); micBtnActive = null; }
 }
+function micToField(btn, target){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR || !target) return;
+  if (micBtnActive === btn){ stopMic(); return; }
+  stopMic();
+  micRec = new SR();
+  micRec.lang = "fr-FR"; micRec.interimResults = false; micRec.continuous = true;
+  micRec.onresult = e => {
+    let txt = "";
+    for (let i = e.resultIndex; i < e.results.length; i++){ if (e.results[i].isFinal) txt += e.results[i][0].transcript; }
+    txt = txt.trim();
+    if (txt){ target.value += (target.value && !/\s$/.test(target.value) ? " " : "") + txt; }
+  };
+  micRec.onerror = ev => { if (ev.error === "not-allowed") toast("Micro : autorisez l'accès dans le navigateur"); stopMic(); };
+  micRec.onend = () => { if (micBtnActive === btn) stopMic(); };
+  try{ micRec.start(); btn.classList.add("rec"); micBtnActive = btn; toast("🎤 Dictée — parlez, réappuyez pour arrêter"); }
+  catch{ stopMic(); }
+}
 function setupMics(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  document.querySelectorAll(".micbtn").forEach(btn => {
+  document.querySelectorAll("#editModal .micbtn").forEach(btn => {
     if (!SR){ btn.style.display = "none"; return; }
-    btn.addEventListener("click", () => {
-      if (micBtnActive === btn){ stopMic(); return; }
-      stopMic();
-      const target = $("#" + btn.dataset.mic);
-      if (!target) return;
-      micRec = new SR();
-      micRec.lang = "fr-FR"; micRec.interimResults = false; micRec.continuous = true;
-      micRec.onresult = e => {
-        let txt = "";
-        for (let i = e.resultIndex; i < e.results.length; i++){ if (e.results[i].isFinal) txt += e.results[i][0].transcript; }
-        txt = txt.trim();
-        if (txt){ target.value += (target.value && !/\s$/.test(target.value) ? " " : "") + txt; }
-      };
-      micRec.onerror = ev => { if (ev.error === "not-allowed") toast("Micro : autorisez l'accès dans le navigateur"); stopMic(); };
-      micRec.onend = () => { if (micBtnActive === btn) stopMic(); };
-      try{ micRec.start(); btn.classList.add("rec"); micBtnActive = btn; toast("🎤 Dictée — parlez, réappuyez pour arrêter"); }
-      catch{ stopMic(); }
-    });
+    btn.addEventListener("click", () => micToField(btn, $("#" + btn.dataset.mic)));
   });
 }
 /* dupliquer un commentaire d'un cliché à l'autre (constats répétitifs) */
@@ -1534,7 +1622,7 @@ function copyComment(){
     statut: on ? on.dataset.v : "",
     titre: $("#fTitre").value, element: $("#fElem").value,
     zone: $("#fZone").value, entreprise: $("#fEnt").value,
-    description: $("#fDesc").value, suite: $("#fSuite").value
+    description: $("#fDesc").value, suite: $("#fSuite").value, dateLimite: $("#fEcheance").value
   };
   $("#btnPasteComment").hidden = false;
   toast("Commentaire copié — ouvrez un autre cliché puis « Coller »");
@@ -1549,6 +1637,7 @@ function pasteComment(){
   $("#fEnt").value = c.entreprise || "";
   $("#fDesc").value = c.description || "";
   $("#fSuite").value = c.suite || "";
+  $("#fEcheance").value = c.dateLimite || "";
   toast("Commentaire collé — relisez puis Enregistrer");
 }
 function selectedElems(){ return $("#fElem").value.trim(); }
@@ -1572,13 +1661,15 @@ async function saveEdit(){
   curEdit.entreprise = $("#fEnt").value.trim();
   curEdit.description = $("#fDesc").value.trim();
   curEdit.suite = $("#fSuite").value.trim();
+  curEdit.dateLimite = $("#fEcheance").value || "";
   // rattachement au registre des réserves
   const rv = $("#fReserve").value;
   let regMsg = "";
   if (rv === "new"){
     const r = await createReserve({
       objet: curEdit.titre || curEdit.description || `Constat cliché n°${curEdit.num}`,
-      zone: curEdit.zone, entreprise: curEdit.entreprise, action: curEdit.suite, statut: "En cours"
+      zone: curEdit.zone, entreprise: curEdit.entreprise, action: curEdit.suite,
+      dateLimite: curEdit.dateLimite, statut: "En cours"
     });
     curEdit.reserveId = r.id; curEdit.reserveNum = r.num;
     regMsg = ` — réserve n°${r.num} créée`;
@@ -1836,10 +1927,17 @@ function visitIdent(photos, visit){
   return { date: frDate(visit.date), periode, arrival: arrival || "—",
     cond: w ? w.cond : "—", temp: w ? `${w.tempC >= 0 ? "+" : ""}${w.tempC}°C` : "—" };
 }
-function visitEntreprises(photos){
+function visitEntreprises(photos, visit){
+  const norm = s => (s || "").trim().toLowerCase();
+  const inter = {};
+  for (const it of (visit && visit.intervenants) || []){ if (it.ent) inter[norm(it.ent)] = it; }
   const map = {};
   for (const p of photos){ if (p.entreprise){ (map[p.entreprise] = map[p.entreprise] || new Set()).add(p.zone || ""); } }
-  return Object.entries(map).map(([ent, zones]) => ({ ent, zones: [...zones].filter(Boolean).join(", ") || "—" }));
+  return Object.entries(map).map(([ent, zones]) => {
+    const m = inter[norm(ent)] || {};
+    return { ent, zones: [...zones].filter(Boolean).join(", ") || "—",
+      effectif: (m.effectif || "").trim() || "—", engins: (m.engins || "").trim() || "—" };
+  });
 }
 function buildPdf(pages){
   // pages : [{images:[{bytes,w,h,x,y,dw,dh}], rects:[{x,y,w,h,color}], texts:[{x,y,size,font,color,text}]}]
@@ -2020,9 +2118,10 @@ async function pdfForVisit(visit, photos, settings){
     y -= dh + 16;
   }
 
-  /* ---- sommaire des visites (sous le plan) : N° / Date / Rédacteur / Constats / Statut ---- */
+  /* ---- sommaire des visites (page 2, sous le plan) : N° / Date / Rédacteur / Constats / Statut ---- */
   const summary = CUR ? await visitsSummary() : [];
   if (summary.length >= 1){
+    newPage();
     band("SOMMAIRE DES VISITES", 16, 8.5);
     y += 8;
     const SC = [42, 78, 190, 320, 500]; // N° / Date / Rédacteur / Constats / Statut
@@ -2035,7 +2134,7 @@ async function pdfForVisit(visit, photos, settings){
       ensure(13);
       const cur_ = s.id === visit.id;
       cur.texts.push({x:SC[0]+3, y:y-7, size:8, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:String(s.num)});
-      cur.texts.push({x:SC[1]+3, y:y-7, size:7.5, font:cur_ ? "F2" : "F1", text:`${frDate(s.date)}${cur_ ? " ←" : ""}`});
+      cur.texts.push({x:SC[1]+3, y:y-7, size:7.5, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:`${frDate(s.date)}${cur_ ? " »" : ""}`});
       cur.texts.push({x:SC[2]+3, y:y-7, size:7, font:"F1", color:PDF_GREY, text:(settings.redac || "—").slice(0, 24)});
       let bx = SC[3];
       for (const k of ["NC","PA","AC","C"]){ pdfBadge(cur, bx, y-1.5, k, 11 + String(s.counts[k]).length*3, 10, 6.5);
@@ -2062,35 +2161,35 @@ async function pdfForVisit(visit, photos, settings){
   cur.rects.push({x:40, y:y-9.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
   y -= 18;
 
-  const ents = visitEntreprises(photos);
-  if (ents.length){
-    band("INTERVENANTS SUR SITE", 18, 9.5);
-    const EC = [40, 210, 330, 450];
-    ensure(14);
-    cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
-    ["ENTREPRISE","EFFECTIF CONSTATÉ","ENGINS / MATÉRIEL","ZONE D'INTERVENTION"].forEach((h, k) =>
-      cur.texts.push({x:EC[k]+3, y:y-7, size:6.5, font:"F2", color:PDF_NAVY, text:h}));
-    y -= 15;
-    for (const e of ents){
-      const zl = wrapText(e.zones, 22);
-      const rowH = Math.max(1, zl.length) * 9.4 + 5;
-      ensure(rowH);
-      cur.texts.push({x:EC[0]+3, y:y-7, size:8, font:"F2", text:e.ent.slice(0, 32)});
-      cur.texts.push({x:EC[1]+3, y:y-7, size:8, font:"F1", color:PDF_GREY, text:"—"});
-      cur.texts.push({x:EC[2]+3, y:y-7, size:8, font:"F1", color:PDF_GREY, text:"—"});
-      let zy = y-7; for (const l of zl){ cur.texts.push({x:EC[3]+3, y:zy, size:8, font:"F1", text:l}); zy -= 9.4; }
-      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
-      y -= rowH;
-    }
-    y -= 16;
-  }
-
   /* ---- constats par zones automatiques ---- */
   let zn = 0, done = 0;
   for (const c of clusters){
     zn++;
     if (y < 300) newPage();
     band(zoneLabel(c, zn).slice(0, 82), 22, 10.5);
+    // tableau « intervenants sur site » propre à la zone (effectif/engins saisis via « Moyens sur site »)
+    const zEnts = visitEntreprises(c.items, visit);
+    const zoneName = (c.items.find(p => p.zone) || {}).zone || `Zone ${zn}`;
+    const zRows = zEnts.length ? zEnts : [{ent:"— (à compléter)", zones:zoneName, effectif:"—", engins:"—"}];
+    const EC = [40, 210, 330, 450];
+    ensure(29);
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
+    ["ENTREPRISE","EFFECTIF CONSTATÉ","ENGINS / MATÉRIEL","ZONE D'INTERVENTION"].forEach((h, k) =>
+      cur.texts.push({x:EC[k]+3, y:y-7, size:6.5, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 15;
+    for (const e of zRows){
+      const zl = wrapText(e.zones || zoneName, 22);
+      const gl = wrapText(e.engins || "—", 24);
+      const rowH = Math.max(1, zl.length, gl.length) * 9.4 + 5;
+      ensure(rowH);
+      cur.texts.push({x:EC[0]+3, y:y-7, size:8, font:"F2", text:(e.ent || "—").slice(0, 32)});
+      cur.texts.push({x:EC[1]+3, y:y-7, size:8, font:"F1", color:e.effectif==="—"?PDF_GREY:"0 0 0", text:String(e.effectif).slice(0, 18)});
+      let gy = y-7; for (const l of gl){ cur.texts.push({x:EC[2]+3, y:gy, size:8, font:"F1", color:e.engins==="—"?PDF_GREY:"0 0 0", text:l}); gy -= 9.4; }
+      let zy = y-7; for (const l of zl){ cur.texts.push({x:EC[3]+3, y:zy, size:8, font:"F1", text:l}); zy -= 9.4; }
+      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= rowH;
+    }
+    y -= 12;
     // grille de photos : 5 par ligne, resserrées pour maximiser leur taille
     const perRow = 5, gap = 4;
     const cellW = (515 - gap * (perRow - 1)) / perRow;
@@ -2178,7 +2277,7 @@ async function pdfForVisit(visit, photos, settings){
       ensure(rowH);
       cur.texts.push({x:RX[0]+2, y:y-8, size:8.5, font:"F2", text:String(r.num)});
       cur.texts.push({x:RX[1]+2, y:y-8, size:7.2, font:"F1", color:PDF_GREY, text:frDate(r.origin)});
-      if (r.code) pdfBadge(cur, RX[1]+2, y-16.5, r.code, 15, 8, 5.5);
+      if (r.code) pdfBadge(cur, RX[1]+44, y-6.5, r.code, 14, 8, 5.5);
       let ey = y-8; for (const l of entLines){ cur.texts.push({x:RX[2]+2, y:ey, size:7.6, font:"F1", text:l}); ey -= 9.2; }
       let ay = y-8; for (const l of actLines){ cur.texts.push({x:RX[3]+2, y:ay, size:7.6, font:"F1", text:l}); ay -= 9.2; }
       cur.texts.push({x:RX[4]+2, y:y-8, size:7.2, font:"F1", color:PDF_GREY, text:r.dateLimite ? frDate(r.dateLimite) : "—"});
@@ -2405,14 +2504,15 @@ async function docxForVisit(visit, photos, settings){
     body.push(wP("", `<w:spacing w:before="120" w:after="0"/>`));
   }
 
-  /* ---- sommaire des visites (sous le plan) : N° / Date / Rédacteur / Constats / Statut ---- */
+  /* ---- sommaire des visites (page 2, sous le plan) : N° / Date / Rédacteur / Constats / Statut ---- */
   const summary = CUR ? await visitsSummary() : [];
   if (summary.length >= 1){
+    body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
     const sHead = `<w:tr>${wTc(700, wP(wR("N°", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(2200, wP(wR("Date", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2400, wP(wR("Rédacteur", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2738, wP(wR("Constats (C-NC-PA-AC)", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(1600, wP(wR("Statut", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`;
     const sRows = summary.map(s => {
       const cur_ = s.id === visit.id;
       const b = cur_ ? "<w:b/>" : "";
-      return `<w:tr>${wTc(700, wP(wR(String(s.num), `${b}${cur_ ? `<w:color w:val="${DOCX_PEACH}"/>` : ""}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`))}${wTc(2200, wP(wR(`${frDate(s.date)}${cur_ ? " ←" : ""}`, `${b}<w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}${wTc(2400, wP(wR(settings.redac || "—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`))}${wTc(2738, `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${wCountsBadges(s.counts, 14)}</w:p>`)}${wTc(1600, wP(wR("Réalisée", `<w:b/><w:color w:val="${DOCX_STATUT.C}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`;
+      return `<w:tr>${wTc(700, wP(wR(String(s.num), `${b}${cur_ ? `<w:color w:val="${DOCX_PEACH}"/>` : ""}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`))}${wTc(2200, wP(wR(`${frDate(s.date)}${cur_ ? " »" : ""}`, `${b}${cur_ ? `<w:color w:val="${DOCX_PEACH}"/>` : ""}<w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}${wTc(2400, wP(wR(settings.redac || "—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`))}${wTc(2738, `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${wCountsBadges(s.counts, 14)}</w:p>`)}${wTc(1600, wP(wR("Réalisée", `<w:b/><w:color w:val="${DOCX_STATUT.C}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`;
     }).join("");
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="2200"/><w:gridCol w:w="2400"/><w:gridCol w:w="2738"/><w:gridCol w:w="1600"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("SOMMAIRE DES VISITES", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:5, fill:DOCX_BAND})}</w:tr>${sHead}${sRows}</w:tbl>`);
     body.push(wP("", `<w:spacing w:before="120" w:after="120"/>`));
@@ -2427,15 +2527,6 @@ async function docxForVisit(visit, photos, settings){
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="9640" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${"<w:gridCol w:w=\"1928\"/>".repeat(5)}</w:tblGrid><w:tr>${wTc(9640, wP(wR("IDENTIFICATION & MÉTÉO", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:5, fill:DOCX_BAND})}</w:tr>${idHead}${idRow}</w:tbl>`);
   body.push(wP("", `<w:spacing w:after="80"/>`));
 
-  const ents = visitEntreprises(photos);
-  if (ents.length){
-    const eHead = `<w:tr>${wTc(2900, wP(wR("Entreprise", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2100, wP(wR("Effectif constaté", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2100, wP(wR("Engins / Matériel observé", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2538, wP(wR("Zone d'intervention", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`;
-    const eRows = ents.map(e =>
-      `<w:tr>${wTc(2900, wP(wR(e.ent, `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2100, wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2100, wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2538, wP(wR(e.zones, `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`).join("");
-    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="2900"/><w:gridCol w:w="2100"/><w:gridCol w:w="2100"/><w:gridCol w:w="2538"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("INTERVENANTS SUR SITE", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:4, fill:DOCX_BAND})}</w:tr>${eHead}${eRows}</w:tbl>`);
-    body.push(wP("", `<w:spacing w:after="120"/>`));
-  }
-
   body.push(wP(wR("Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="120"/>`));
   body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
 
@@ -2445,6 +2536,15 @@ async function docxForVisit(visit, photos, settings){
   for (const c of clusters){
     zn++;
     body.push(wP(wR(zoneLabel(c, zn), `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="80"/><w:ind w:left="113"/>`));
+    // tableau « intervenants sur site » propre à la zone (effectif/engins saisis via « Moyens sur site »)
+    const zEnts = visitEntreprises(c.items, visit);
+    const zoneName = (c.items.find(p => p.zone) || {}).zone || `Zone ${zn}`;
+    const zRows = zEnts.length ? zEnts : [{ent:"— (à compléter)", zones:zoneName, effectif:"—", engins:"—"}];
+    const eHead = `<w:tr>${wTc(2900, wP(wR("Entreprise", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2100, wP(wR("Effectif constaté", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2100, wP(wR("Engins / Matériel observé", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(2538, wP(wR("Zone d'intervention", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`;
+    const eRows = zRows.map(e =>
+      `<w:tr>${wTc(2900, wP(wR(e.ent || "—", `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2100, wP(wR(String(e.effectif ?? "—"), `${e.effectif==="—"?`<w:color w:val="${DOCX_GREY}"/>`:""}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2100, wP(wR(String(e.engins ?? "—"), `${e.engins==="—"?`<w:color w:val="${DOCX_GREY}"/>`:""}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${wTc(2538, wP(wR(e.zones || zoneName, `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`).join("");
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="2900"/><w:gridCol w:w="2100"/><w:gridCol w:w="2100"/><w:gridCol w:w="2538"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("INTERVENANTS SUR SITE", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {span:4, fill:DOCX_BAND})}</w:tr>${eHead}${eRows}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="80"/>`));
     // grille de photos : 5 côte à côte, taille réduite, espacées
     const cells = [];
     for (const p of c.items){
@@ -2886,6 +2986,10 @@ async function main(){
   });
   $("#btnBack").addEventListener("click", showHome);
   $("#btnRenameVisit").addEventListener("click", renameVisit);
+  $("#btnMoyens").addEventListener("click", openMoyens);
+  $("#btnMoyensClose").addEventListener("click", () => { stopMic(); $("#moyensModal").classList.remove("on"); });
+  $("#btnMoyensAdd").addEventListener("click", addMoyenRow);
+  $("#btnMoyensSave").addEventListener("click", saveMoyens);
   $("#btnRegBack").addEventListener("click", showHome);
   $("#btnRegAdd").addEventListener("click", addManualReserve);
   $("#btnNewProject").addEventListener("click", newProjectFlow);
