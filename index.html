@@ -19,7 +19,7 @@
     --shadow-lg:0 12px 34px rgba(34,29,23,.13);
     --danger:#C0392B;
     --r-xl:26px; --r-lg:20px; --r-md:15px; --r-sm:11px;
-    --plan-op:.26; --halo-b:rgba(47,134,197,.18); --halo-o:rgba(217,106,11,.11);
+    --plan-op:.62; --halo-b:rgba(47,134,197,.05); --halo-o:rgba(217,106,11,.03);
   }
   @media (prefers-color-scheme: dark){
     :root{
@@ -30,13 +30,12 @@
       --shadow:0 1px 3px rgba(0,0,0,.45);
       --shadow-lg:0 14px 36px rgba(0,0,0,.55);
       --danger:#E06052;
-      --plan-op:.15; --halo-b:rgba(111,182,232,.12); --halo-o:rgba(240,126,26,.08);
+      --plan-op:.66; --halo-b:rgba(111,182,232,.05); --halo-o:rgba(240,126,26,.03);
     }
   }
   :root{
     --grad:linear-gradient(135deg,#F7A23B 0%,#E8700F 52%,#D95B0B 100%);
     --grad-blue:linear-gradient(135deg,#74C2F1 0%,#3D95D4 55%,#2F86C5 100%);
-    --plan-svg:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cg fill='none' stroke='%23000' stroke-linecap='round'%3E%3Cg stroke-width='.6' opacity='.4'%3E%3Cpath d='M0 40h300M0 110h300M0 180h300M0 250h300'/%3E%3Cpath d='M40 0v300M110 0v300M180 0v300M250 0v300'/%3E%3C/g%3E%3Cg stroke-width='1.7' opacity='.9'%3E%3Cpath d='M-10 214C60 194 92 124 162 109S252 74 312 89'/%3E%3Cpath d='M-10 238C60 218 92 148 162 133S252 98 312 113'/%3E%3C/g%3E%3Cg stroke-width='1.1' opacity='.72'%3E%3Crect x='28' y='24' width='58' height='44' rx='6'/%3E%3Crect x='122' y='192' width='72' height='52' rx='6'/%3E%3Crect x='218' y='150' width='50' height='62' rx='6'/%3E%3Ccircle cx='198' cy='120' r='8'/%3E%3Ccircle cx='72' cy='158' r='5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
   html,body{margin:0; padding:0}
@@ -47,17 +46,18 @@
     font-size:15px; line-height:1.45;
     min-height:100dvh;
   }
-  /* fond de plan estompé : trame technique + tracés de voirie (masque → suit la couleur du thème) */
+  /* fond de plan estompé : illustration de chantier (atelier d'enrobé), très atténuée */
   body::before{
     content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
-    background-color:var(--blue); opacity:var(--plan-op);
-    -webkit-mask-image:var(--plan-svg); mask-image:var(--plan-svg);
-    -webkit-mask-size:300px 300px; mask-size:300px 300px;
-    -webkit-mask-repeat:repeat; mask-repeat:repeat;
+    background-image:url("fond-plan.jpg");
+    background-size:cover; background-position:center top; background-repeat:no-repeat;
+    opacity:var(--plan-op);
+    filter:blur(0.6px) saturate(112%);
+    transform:scale(1.03); /* absorbe le halo de flou sur les bords */
   }
-  /* halos doux bleu / orange derrière la trame */
+  /* halos doux bleu / orange par-dessus l'image, pour fondre avec la palette */
   body::after{
-    content:""; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
     background:
       radial-gradient(58vw 42vh at 88% -6%, var(--halo-b), transparent 70%),
       radial-gradient(52vw 38vh at -8% 102%, var(--halo-o), transparent 72%);
@@ -145,12 +145,28 @@
     color:var(--blue-deep); margin-top:9px;
   }
   .lockbox h1{font-size:20px; margin:4px 0 0; letter-spacing:-.01em}
-  .lockbox p{color:var(--ink2); margin:2px 0 14px; max-width:34ch}
+  .lockbox p{color:var(--ink); font-weight:500; margin:2px 0 14px; max-width:34ch}
+  /* voile radial : garde le texte lisible tout en laissant l'illustration vivre sur les bords */
+  .lockbox::before{
+    content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(ellipse 115% 46% at 50% 44%,
+      color-mix(in srgb, var(--bg) 92%, transparent) 0%,
+      color-mix(in srgb, var(--bg) 74%, transparent) 52%,
+      transparent 82%);
+  }
+  .lockbox{position:relative; isolation:isolate}
   .pinfield{font-size:26px; letter-spacing:.45em; text-align:center; width:210px; padding:12px 6px 12px 16px; border-radius:99px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
   .pinfield:focus{border-color:var(--blue); outline:none; box-shadow:0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent)}
   .lockmsg{min-height:22px; font-size:13.5px; color:var(--danger); font-weight:600; margin-top:10px}
 
-  .sect-label{font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink2); margin:20px 2px 8px; display:flex; align-items:center; gap:8px}
+  /* étiquette de section : pastille translucide pour rester lisible sur le fond de plan */
+  .sect-label{
+    font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink);
+    margin:20px 2px 8px; display:inline-flex; align-items:center; gap:8px;
+    background:color-mix(in srgb, var(--card) 86%, transparent);
+    border:1px solid var(--line); border-radius:99px; padding:7px 14px 7px 11px;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:var(--shadow);
+  }
   .sect-label::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--grad-blue); flex:none}
   .home-project{display:flex; gap:8px; align-items:center; margin:14px 0 2px}
   .proj-chip{flex:1; display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:99px; padding:12px 18px; font:inherit; cursor:pointer; color:var(--ink); box-shadow:var(--shadow); min-width:0}
@@ -334,7 +350,9 @@
   .moyen-row .mr-field .microw input, .moyen-row .mr-field > input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:var(--r-sm); padding:10px 12px}
   .moyen-row .mr-field input:focus{border-color:var(--blue); outline:none}
 
-  .empty{text-align:center; color:var(--ink2); padding:44px 20px; line-height:1.6}
+  .empty{text-align:center; color:var(--ink2); padding:34px 20px; line-height:1.6;
+    background:color-mix(in srgb, var(--card) 84%, transparent); border:1px solid var(--line);
+    border-radius:var(--r-xl); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px)}
   .empty .glyph{font-size:30px; display:block; margin-bottom:8px}
   .toast{
     position:fixed; left:50%; bottom:88px; transform:translateX(-50%);
@@ -2211,14 +2229,53 @@ function wrapText(text, maxChars){
 }
 
 /* =============== générateur PDF =============== */
-const PDF_NAVY = "0.12 0.22 0.39", PDF_LABEL = "0.93 0.95 0.98", PDF_GREY = "0.42 0.42 0.42";
-const PDF_BAND = "0.549 0.725 0.843";  // fond bandeaux — bleu foncé rgb(140,185,215)
-const PDF_PEACH = "0.929 0.490 0.192"; // titre & lignes — orange foncé rgb(237,125,49)
-const PDF_STATUT = { C:"0.18 0.49 0.27", NC:"0.93 0.13 0.09", PA:"0.71 0.46 0.03", AC:"0.18 0.36 0.62" };
-/* pastille de statut PDF : texte blanc centré sur fond coloré (comme la légende) */
+const PDF_NAVY = "0.10 0.20 0.36", PDF_LABEL = "0.93 0.95 0.98", PDF_GREY = "0.40 0.40 0.42";
+const PDF_BAND = "0.549 0.725 0.843";  // repli aplat si un dégradé n'est pas voulu
+const PDF_PEACH = "0.95 0.48 0.13";    // orange vif — titres et filets
+const PDF_STATUT = { C:"0.16 0.47 0.26", NC:"0.84 0.15 0.10", PA:"0.76 0.48 0.03", AC:"0.16 0.35 0.60" };
+
+/* ---- dégradés (haut → bas, sauf horiz) : bandeaux, page de garde, pastilles brillantes ---- */
+const PDF_G_BAND  = ["0.78 0.89 0.97", "0.58 0.78 0.91", "0.44 0.67 0.85"]; // bandeaux de section
+const PDF_G_TITLE = ["0.36 0.60 0.81", "0.20 0.42 0.66", "0.11 0.26 0.45"]; // bandeau de titre (garde)
+const PDF_G_LABEL = ["0.98 0.99 1.00", "0.90 0.94 0.98"];                   // en-têtes de colonnes
+const PDF_G_RULE  = ["0.95 0.52 0.13", "0.25 0.55 0.80"];                   // filet orange → bleu
+const PDF_G_STATUT = {                                                       // pastilles « brillantes »
+  C:  ["0.44 0.74 0.52", "0.20 0.53 0.30", "0.11 0.38 0.20"],
+  NC: ["0.97 0.45 0.38", "0.84 0.18 0.13", "0.64 0.09 0.06"],
+  PA: ["0.97 0.76 0.26", "0.80 0.52 0.04", "0.60 0.37 0.02"],
+  AC: ["0.42 0.63 0.87", "0.20 0.40 0.66", "0.11 0.25 0.47"]
+};
+const PDF_G_SUIVI = { // statuts du tableau de suivi
+  "Soldé": PDF_G_STATUT.C, "En retard": PDF_G_STATUT.NC, "En cours": PDF_G_STATUT.PA
+};
+
+/* ---- échelle typographique du PDF (un seul endroit à régler) ---- */
+const FS = {
+  title:   18,    // RAPPORT DE VISITE DE CHANTIER
+  subtitle:10.5,  // sous-titre de la page de garde
+  lead:    12.5,  // Opération : …
+  band:    10.5,  // bandeaux de section
+  bandSm:  9.5,   // bandeaux secondaires (zones, plan)
+  body:    8.5,   // texte courant des tableaux
+  small:   8,     // texte secondaire
+  mini:    7.2,   // en-têtes de colonnes
+  badge:   7.5,   // texte des pastilles de statut
+  caption: 7,     // légendes sous les photos
+  micro:   6.2    // GPS sous les photos, heures
+};
+
+/* pastille de statut PDF : texte blanc centré sur dégradé brillant */
 function pdfBadge(cur, x, y, code, w, h, size){
-  cur.rects.push({x, y:y-h+3, w, h, color: PDF_STATUT[code] || PDF_GREY});
+  const g = PDF_G_STATUT[code];
+  const box = {x, y:y-h+3, w, h};
+  if (g) cur.rects.push({...box, grad:g});
+  else cur.rects.push({...box, color:PDF_GREY});
   cur.texts.push({x: x + w/2 - (code.length*size*0.30), y:y-h+3 + (h-size)/2 + 1, size, font:"F2", color:"1 1 1", text:code});
+}
+/* pastille de statut de suivi (En cours / En retard / Soldé) */
+function pdfPill(cur, x, y, w, h, label, size){
+  cur.rects.push({x, y, w, h, grad: PDF_G_SUIVI[label] || PDF_G_STATUT.PA});
+  cur.texts.push({x: x + 4, y: y + (h - size)/2 + 1, size, font:"F2", color:"1 1 1", text:label});
 }
 /* données d'identification et intervenants d'une visite (auto) */
 function visitIdent(photos, visit){
@@ -2242,8 +2299,22 @@ function visitEntreprises(photos, visit){
       effectif: (m.effectif || "").trim() || "—", engins: (m.engins || "").trim() || "—" };
   });
 }
+/* dégradé axial PDF (ShadingType 2). stops = ["r g b", …] 2 ou 3 arrêts, du haut vers le bas */
+function pdfShadingDict(r){
+  const st = r.grad.map(c => `[${c}]`);
+  const fn = st.length >= 3
+    ? `<< /FunctionType 3 /Domain [0 1] /Bounds [0.42] /Encode [0 1 0 1] /Functions [`
+      + `<< /FunctionType 2 /Domain [0 1] /C0 ${st[0]} /C1 ${st[1]} /N 1 >> `
+      + `<< /FunctionType 2 /Domain [0 1] /C0 ${st[1]} /C1 ${st[2]} /N 1 >> ] >>`
+    : `<< /FunctionType 2 /Domain [0 1] /C0 ${st[0]} /C1 ${st[st.length-1]} /N 1 >>`;
+  // vertical par défaut (haut → bas) ; horizontal si r.horiz
+  const c = r.horiz
+    ? `${r.x.toFixed(2)} ${r.y.toFixed(2)} ${(r.x + r.w).toFixed(2)} ${r.y.toFixed(2)}`
+    : `${r.x.toFixed(2)} ${(r.y + r.h).toFixed(2)} ${r.x.toFixed(2)} ${r.y.toFixed(2)}`;
+  return `<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [${c}] /Extend [true true] /Function ${fn} >>`;
+}
 function buildPdf(pages){
-  // pages : [{images:[{bytes,w,h,x,y,dw,dh}], rects:[{x,y,w,h,color}], texts:[{x,y,size,font,color,text}]}]
+  // pages : [{images:[…], rects:[{x,y,w,h,color}|{x,y,w,h,grad:[…],horiz?}], texts:[…]}]
   const enc = new TextEncoder();
   const chunks = [];
   let pos = 0;
@@ -2251,8 +2322,9 @@ function buildPdf(pages){
   const offsets = {};
   let objNum = 4; // 1 Catalog, 2 Pages, 3 F1, 4 F2 réservés
   const plan = pages.map(p => {
-    const o = {imgs: []};
+    const o = {imgs: [], shs: []};
     for (let k = 0; k < (p.images || []).length; k++) o.imgs.push(++objNum);
+    for (const r of (p.rects || [])) if (r.grad) o.shs.push({r, num: ++objNum});
     o.content = ++objNum;
     o.page = ++objNum;
     return o;
@@ -2277,11 +2349,22 @@ function buildPdf(pages){
       push(im.bytes);
       push("\nendstream\n"); endObj();
     });
-    // contenu : aplats, puis images, puis textes
+    // objets de dégradé de la page
+    o.shs.forEach((s, k) => {
+      beginObj(s.num);
+      push(pdfShadingDict(s.r) + "\n");
+      endObj();
+    });
+    // contenu : aplats et dégradés, puis images, puis textes
     const parts = [];
     const put = s => parts.push(enc.encode(s));
+    let shIdx = 0;
     for (const r of (p.rects || [])){
-      put(`${r.color} rg ${r.x.toFixed(2)} ${r.y.toFixed(2)} ${r.w.toFixed(2)} ${r.h.toFixed(2)} re f\n`);
+      if (r.grad){
+        put(`q ${r.x.toFixed(2)} ${r.y.toFixed(2)} ${r.w.toFixed(2)} ${r.h.toFixed(2)} re W n /Sh${shIdx++} sh Q\n`);
+      } else {
+        put(`${r.color} rg ${r.x.toFixed(2)} ${r.y.toFixed(2)} ${r.w.toFixed(2)} ${r.h.toFixed(2)} re f\n`);
+      }
     }
     imgs.forEach((im, k) => {
       put(`q ${im.dw.toFixed(2)} 0 0 ${im.dh.toFixed(2)} ${im.x.toFixed(2)} ${im.y.toFixed(2)} cm /Im${k} Do Q\n`);
@@ -2301,7 +2384,10 @@ function buildPdf(pages){
     const xobj = o.imgs.length
       ? ` /XObject << ${o.imgs.map((n, k) => `/Im${k} ${n} 0 R`).join(" ")} >>`
       : "";
-    push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xobj} >> /Contents ${o.content} 0 R >>\n`);
+    const shres = o.shs.length
+      ? ` /Shading << ${o.shs.map((s, k) => `/Sh${k} ${s.num} 0 R`).join(" ")} >>`
+      : "";
+    push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xobj}${shres} >> /Contents ${o.content} 0 R >>\n`);
     endObj();
   });
 
@@ -2320,10 +2406,11 @@ async function pdfForVisit(visit, photos, settings){
   let cur = null, y = 0;
   const newPage = () => { cur = {images:[], rects:[], texts:[]}; pages.push(cur); y = 795; };
   const ensure = h => { if (y - h < 50) newPage(); };
-  const band = (label, h, size) => { // bandeau bleu clair, texte bleu foncé
+  const band = (label, h, size) => { // bandeau bleu dégradé + filet orange→bleu, texte bleu foncé
     ensure(h + 8);
-    cur.rects.push({x:40, y:y-h, w:515.28, h, color:PDF_BAND});
-    cur.texts.push({x:48, y:y - h + (h - size) / 2 + 1.5, size, font:"F2", color:PDF_NAVY, text:label});
+    cur.rects.push({x:40, y:y-h, w:515.28, h, grad:PDF_G_BAND});
+    cur.rects.push({x:40, y:y-h, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true}); // filet lumineux en pied
+    cur.texts.push({x:48, y:y - h + (h - size) / 2 + 2.2, size, font:"F2", color:PDF_NAVY, text:label});
     y -= h + 8;
   };
   const counts = {NC:0, PA:0, AC:0, C:0};
@@ -2338,11 +2425,13 @@ async function pdfForVisit(visit, photos, settings){
   for (const R of Rs){ const dw = logoH * R.w / R.h; rx -= dw; cur.images.push({bytes:logoBytes(R), w:R.w, h:R.h, x:rx, y:y-logoH, dw, dh:logoH}); rx -= 10; }
   const repNum = CUR ? await reportNumber(visit) : null;
   y -= (L || Rs.length) ? 52 : 6;
-  cur.rects.push({x:40, y:y-52, w:515.28, h:52, color:PDF_BAND});
-  cur.texts.push({x:52, y:y-24, size:17, font:"F2", color:PDF_PEACH, text:`RAPPORT DE VISITE DE CHANTIER${repNum ? ` N°${repNum}` : ""}`});
-  cur.texts.push({x:52, y:y-42, size:10.5, font:"F1", color:PDF_NAVY, text:"Constat photographique et technique"});
-  y -= 70;
-  cur.texts.push({x:40, y, size:12.5, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
+  // bandeau de titre : bleu profond dégradé, titre orange vif, filet lumineux en pied
+  cur.rects.push({x:40, y:y-56, w:515.28, h:56, grad:PDF_G_TITLE});
+  cur.rects.push({x:40, y:y-56, w:515.28, h:2.4, grad:PDF_G_RULE, horiz:true});
+  cur.texts.push({x:52, y:y-26, size:FS.title, font:"F2", color:PDF_PEACH, text:`RAPPORT DE VISITE DE CHANTIER${repNum ? ` N°${repNum}` : ""}`});
+  cur.texts.push({x:52, y:y-45, size:FS.subtitle, font:"F1", color:"0.88 0.93 0.98", text:"Constat photographique et technique"});
+  y -= 74;
+  cur.texts.push({x:40, y, size:FS.lead, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
   cur.texts.push({x:40, y, size:11, font:"F2", text:`${visitTitle(visit)} — ${frDate(visit.date)} (${frDayName(visit.date)})`}); y -= 15;
   if (settings.redac){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Rédacteur : ${settings.redac}`}); y -= 14; }
   const wtxt = weatherText(await ensureWeather(visit, photos));
@@ -2352,7 +2441,7 @@ async function pdfForVisit(visit, photos, settings){
   y -= 20;
 
   if (settings.cartouche.length){
-    band("INTERVENANTS ET REPÈRES DE L'OPÉRATION", 16, 8.5);
+    band("INTERVENANTS ET REPÈRES DE L'OPÉRATION", 17, FS.bandSm);
     y += 8;
     for (const line of settings.cartouche){
       const idx = line.indexOf(":");
@@ -2361,10 +2450,10 @@ async function pdfForVisit(visit, photos, settings){
       const valLines = wrapText(val, 80);
       const rowH = valLines.length * 11 + 5;
       ensure(rowH);
-      cur.rects.push({x:40, y:y-rowH+3, w:150, h:rowH, color:PDF_LABEL});
-      cur.texts.push({x:45, y:y-8, size:7.4, font:"F2", color:PDF_NAVY, text:label.toUpperCase().slice(0, 34)});
+      cur.rects.push({x:40, y:y-rowH+3, w:150, h:rowH, grad:PDF_G_LABEL});
+      cur.texts.push({x:45, y:y-8, size:FS.mini, font:"F2", color:PDF_NAVY, text:label.toUpperCase().slice(0, 35)});
       let vy = y - 8;
-      for (const vl of valLines){ cur.texts.push({x:198, y:vy, size:8.5, font:"F1", text:vl}); vy -= 11; }
+      for (const vl of valLines){ cur.texts.push({x:198, y:vy, size:FS.body, font:"F1", text:vl}); vy -= 11; }
       cur.rects.push({x:40, y:y-rowH+2.4, w:515.28, h:0.6, color:"0.85 0.87 0.9"});
       y -= rowH;
     }
@@ -2372,19 +2461,19 @@ async function pdfForVisit(visit, photos, settings){
   }
 
   if (settings.contacts.length){
-    band("CONTACTS", 16, 8.5);
+    band("CONTACTS", 17, FS.bandSm);
     y += 8;
     const COLS = [[42, 122], [168, 132], [304, 88], [396, 157]];
     ensure(14);
-    cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
     ["ORGANISME","NOM","TÉLÉPHONE","E-MAIL"].forEach((h, k) =>
-      cur.texts.push({x:COLS[k][0], y:y-7, size:7.4, font:"F2", color:PDF_NAVY, text:h}));
+      cur.texts.push({x:COLS[k][0], y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
     y -= 16;
     for (const line of settings.contacts){
       const parts = line.split(";").map(x => x.trim());
       ensure(13);
       parts.slice(0, 4).forEach((v, k) =>
-        cur.texts.push({x:COLS[k][0], y:y-6, size:8, font:"F1", text:v.slice(0, k === 3 ? 36 : 28)}));
+        cur.texts.push({x:COLS[k][0], y:y-6, size:FS.small, font:"F1", text:v.slice(0, k === 3 ? 36 : 28)}));
       cur.rects.push({x:40, y:y-9, w:515.28, h:0.6, color:"0.85 0.87 0.9"});
       y -= 13;
     }
@@ -2392,17 +2481,17 @@ async function pdfForVisit(visit, photos, settings){
   }
 
   ensure(60);
-  cur.texts.push({x:40, y, size:10, font:"F2", color:PDF_NAVY, text:"Légende"}); y -= 16;
+  cur.texts.push({x:40, y, size:FS.bandSm, font:"F2", color:PDF_NAVY, text:"Légende"}); y -= 16;
   const LEG = [["C","Conforme"],["NC","Non-conforme"],["PA","Point d'attention"],["AC","À confirmer"]];
   let lx = 40;
   for (const [code, lib] of LEG){
-    cur.rects.push({x:lx, y:y-3.5, w:24, h:13, color:PDF_STATUT[code]});
-    cur.texts.push({x:lx + (code.length === 1 ? 8.5 : 5), y:y-0.5, size:8, font:"F2", color:"1 1 1", text:code});
-    cur.texts.push({x:lx+29, y:y-0.5, size:8.5, font:"F1", text:lib});
-    lx += 29 + lib.length * 4.3 + 20;
+    cur.rects.push({x:lx, y:y-3.5, w:25, h:14, grad:PDF_G_STATUT[code]});
+    cur.texts.push({x:lx + (code.length === 1 ? 9 : 5.5), y:y-0.2, size:FS.badge, font:"F2", color:"1 1 1", text:code});
+    cur.texts.push({x:lx+30, y:y-0.2, size:FS.body, font:"F1", text:lib});
+    lx += 30 + lib.length * 4.4 + 20;
   }
   y -= 22;
-  cur.texts.push({x:40, y, size:7.5, font:"F1", color:PDF_GREY, text:"Rapport généré par PCM-CAD (PCM Aménagement Urbain), à vérifier avant diffusion."});
+  cur.texts.push({x:40, y, size:FS.caption, font:"F1", color:PDF_GREY, text:"Rapport généré par PCM-CAD (PCM Aménagement Urbain), à vérifier avant diffusion."});
   y -= 14;
 
   /* ---- plan de situation (chargé, sinon généré automatiquement depuis le GPS) ---- */
@@ -2414,8 +2503,9 @@ async function pdfForVisit(visit, photos, settings){
     const dw = plan.w * sc, dh = plan.h * sc;
     const bx = 40 + (515 - dw) / 2;
     ensure(dh + 34);
-    cur.rects.push({x:bx, y:y-20, w:dw, h:20, color:PDF_BAND}); // titre ajusté à la largeur du plan
-    cur.texts.push({x:bx + 8, y:y-14.5, size:9.5, font:"F2", color:PDF_NAVY, text:`PLAN DE SITUATION${plan.place ? " — " + plan.place.toUpperCase() : ""}`});
+    cur.rects.push({x:bx, y:y-21, w:dw, h:21, grad:PDF_G_BAND}); // titre ajusté à la largeur du plan
+    cur.rects.push({x:bx, y:y-21, w:dw, h:1.6, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:bx + 8, y:y-14.5, size:FS.bandSm, font:"F2", color:PDF_NAVY, text:`PLAN DE SITUATION${plan.place ? " — " + plan.place.toUpperCase() : ""}`});
     y -= 20;
     cur.images.push({bytes:plan.bytes, w:plan.w, h:plan.h, x:bx, y:y-dh, dw, dh});
     y -= dh + 16;
@@ -2425,70 +2515,70 @@ async function pdfForVisit(visit, photos, settings){
   const summary = CUR ? await visitsSummary() : [];
   if (summary.length >= 1){
     newPage();
-    band("SOMMAIRE DES VISITES", 16, 8.5);
+    band("SOMMAIRE DES VISITES", 17, FS.bandSm);
     y += 8;
-    const SC = [42, 78, 190, 320, 500]; // N° / Date / Rédacteur / Constats / Statut
-    ensure(14);
-    cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
+    const SC = [42, 78, 190, 320, 498]; // N° / Date / Rédacteur / Constats / Statut
+    ensure(15);
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
     ["N°","DATE","RÉDACTEUR","CONSTATS","STATUT"].forEach((h, k) =>
-      cur.texts.push({x:SC[k]+3, y:y-7, size:7, font:"F2", color:PDF_NAVY, text:h}));
-    y -= 15;
+      cur.texts.push({x:SC[k]+3, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 16;
     for (const s of summary){
-      ensure(13);
+      ensure(14);
       const cur_ = s.id === visit.id;
-      cur.texts.push({x:SC[0]+3, y:y-7, size:8, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:String(s.num)});
-      cur.texts.push({x:SC[1]+3, y:y-7, size:7.5, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:`${frDate(s.date)}${cur_ ? " »" : ""}`});
-      cur.texts.push({x:SC[2]+3, y:y-7, size:7, font:"F1", color:PDF_GREY, text:(settings.redac || "—").slice(0, 24)});
+      cur.texts.push({x:SC[0]+3, y:y-7.5, size:FS.body, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:String(s.num)});
+      cur.texts.push({x:SC[1]+3, y:y-7.5, size:FS.small, font:cur_ ? "F2" : "F1", color:cur_ ? PDF_PEACH : "0 0 0", text:`${frDate(s.date)}${cur_ ? " »" : ""}`});
+      cur.texts.push({x:SC[2]+3, y:y-7.5, size:FS.mini, font:"F1", color:PDF_GREY, text:(settings.redac || "—").slice(0, 24)});
       let bx = SC[3];
-      for (const k of ["NC","PA","AC","C"]){ pdfBadge(cur, bx, y-1.5, k, 11 + String(s.counts[k]).length*3, 10, 6.5);
-        cur.texts.push({x:bx + 15, y:y-7, size:6.4, font:"F1", color:PDF_GREY, text:String(s.counts[k])}); bx += 30; }
-      cur.texts.push({x:SC[4]+3, y:y-7, size:7.5, font:"F2", color:PDF_STATUT.C, text:"Réalisée"});
-      cur.rects.push({x:40, y:y-9.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
-      y -= 13;
+      for (const k of ["NC","PA","AC","C"]){ pdfBadge(cur, bx, y-1.5, k, 12 + String(s.counts[k]).length*3, 11, FS.caption);
+        cur.texts.push({x:bx + 16, y:y-7.5, size:FS.mini, font:"F1", color:PDF_GREY, text:String(s.counts[k])}); bx += 31; }
+      cur.texts.push({x:SC[4]+3, y:y-7.5, size:FS.small, font:"F2", color:PDF_STATUT.C, text:"Réalisée"});
+      cur.rects.push({x:40, y:y-10, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= 14;
     }
     y -= 14;
   }
 
   /* ---- identification & météo + intervenants (une fois, en tête des constats) ---- */
   const ident = visitIdent(photos, visit);
-  band("IDENTIFICATION & MÉTÉO", 18, 9.5);
+  band("IDENTIFICATION & MÉTÉO", 19, FS.bandSm);
   const IC = [40, 145, 250, 355, 465];
-  ensure(14);
-  cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
+  ensure(15);
+  cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
   ["DATE","PÉRIODE","HEURE ARRIVÉE","CONDITIONS","TEMPÉRATURE"].forEach((h, k) =>
-    cur.texts.push({x:IC[k]+3, y:y-7, size:6.8, font:"F2", color:PDF_NAVY, text:h}));
-  y -= 15;
-  ensure(13);
+    cur.texts.push({x:IC[k]+3, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+  y -= 16;
+  ensure(14);
   [ident.date, ident.periode, ident.arrival, ident.cond, ident.temp].forEach((v, k) =>
-    cur.texts.push({x:IC[k]+3, y:y-7, size:8, font:"F1", text:String(v).slice(0, 18)}));
-  cur.rects.push({x:40, y:y-9.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
-  y -= 18;
+    cur.texts.push({x:IC[k]+3, y:y-7.5, size:FS.body, font:"F1", text:String(v).slice(0, 17)}));
+  cur.rects.push({x:40, y:y-10, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+  y -= 19;
 
   /* ---- constats par zones automatiques ---- */
   let zn = 0, done = 0;
   for (const c of clusters){
     zn++;
     if (y < 300) newPage();
-    band(zoneLabel(c, zn).slice(0, 82), 22, 10.5);
+    band(zoneLabel(c, zn).slice(0, 78), 23, FS.band);
     // tableau « intervenants sur site » propre à la zone (effectif/engins saisis via « Moyens sur site »)
     const zEnts = visitEntreprises(c.items, visit);
     const zoneName = (c.items.find(p => p.zone) || {}).zone || `Zone ${zn}`;
     const zRows = zEnts.length ? zEnts : [{ent:"— (à compléter)", zones:zoneName, effectif:"—", engins:"—"}];
     const EC = [40, 210, 330, 450];
-    ensure(29);
-    cur.rects.push({x:40, y:y-11, w:515.28, h:14, color:PDF_LABEL});
+    ensure(30);
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
     ["ENTREPRISE","EFFECTIF CONSTATÉ","ENGINS / MATÉRIEL","ZONE D'INTERVENTION"].forEach((h, k) =>
-      cur.texts.push({x:EC[k]+3, y:y-7, size:6.5, font:"F2", color:PDF_NAVY, text:h}));
-    y -= 15;
+      cur.texts.push({x:EC[k]+3, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 16;
     for (const e of zRows){
-      const zl = wrapText(e.zones || zoneName, 22);
-      const gl = wrapText(e.engins || "—", 24);
-      const rowH = Math.max(1, zl.length, gl.length) * 9.4 + 5;
+      const zl = wrapText(e.zones || zoneName, 21);
+      const gl = wrapText(e.engins || "—", 23);
+      const rowH = Math.max(1, zl.length, gl.length) * 9.8 + 5;
       ensure(rowH);
-      cur.texts.push({x:EC[0]+3, y:y-7, size:8, font:"F2", text:(e.ent || "—").slice(0, 32)});
-      cur.texts.push({x:EC[1]+3, y:y-7, size:8, font:"F1", color:e.effectif==="—"?PDF_GREY:"0 0 0", text:String(e.effectif).slice(0, 18)});
-      let gy = y-7; for (const l of gl){ cur.texts.push({x:EC[2]+3, y:gy, size:8, font:"F1", color:e.engins==="—"?PDF_GREY:"0 0 0", text:l}); gy -= 9.4; }
-      let zy = y-7; for (const l of zl){ cur.texts.push({x:EC[3]+3, y:zy, size:8, font:"F1", text:l}); zy -= 9.4; }
+      cur.texts.push({x:EC[0]+3, y:y-7.5, size:FS.body, font:"F2", text:(e.ent || "—").slice(0, 30)});
+      cur.texts.push({x:EC[1]+3, y:y-7.5, size:FS.body, font:"F1", color:e.effectif==="—"?PDF_GREY:"0 0 0", text:String(e.effectif).slice(0, 17)});
+      let gy = y-7.5; for (const l of gl){ cur.texts.push({x:EC[2]+3, y:gy, size:FS.body, font:"F1", color:e.engins==="—"?PDF_GREY:"0 0 0", text:l}); gy -= 9.8; }
+      let zy = y-7.5; for (const l of zl){ cur.texts.push({x:EC[3]+3, y:zy, size:FS.body, font:"F1", text:l}); zy -= 9.8; }
       cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
       y -= rowH;
     }
@@ -2514,10 +2604,10 @@ async function pdfForVisit(visit, photos, settings){
         const x0 = 40 + k * (cellW + gap);
         const cxImg = x0 + (cellW - dims[k].dw) / 2;
         cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:cxImg, y:y - dims[k].dh, dw:dims[k].dw, dh:dims[k].dh});
-        cur.texts.push({x:cxImg, y:y - dims[k].dh - 9, size:6.8, font:"F2", color:PDF_GREY,
+        cur.texts.push({x:cxImg, y:y - dims[k].dh - 9.5, size:FS.caption, font:"F2", color:PDF_NAVY,
           text:`n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}`});
         if (o.p.lat != null){
-          cur.texts.push({x:cxImg, y:y - dims[k].dh - 16, size:5.6, font:"F1", color:PDF_GREY,
+          cur.texts.push({x:cxImg, y:y - dims[k].dh - 17, size:FS.micro, font:"F1", color:PDF_GREY,
             text:`${o.p.gpsApprox ? "~" : ""}${o.p.lat.toFixed(5)}, ${o.p.lon.toFixed(5)}`});
         }
       });
@@ -2526,11 +2616,9 @@ async function pdfForVisit(visit, photos, settings){
     // tableau récapitulatif unique de la zone
     const CX = [[40, 26], [66, 36], [102, 268], [370, 185]]; // N° / Statut / Constat / Suite
     ensure(34);
-    cur.rects.push({x:40, y:y-15, w:515.28, h:15, color:PDF_LABEL});
-    cur.texts.push({x:CX[0][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"N°"});
-    cur.texts.push({x:CX[1][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"STATUT"});
-    cur.texts.push({x:CX[2][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"CONSTAT"});
-    cur.texts.push({x:CX[3][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"SUITE À DONNER"});
+    cur.rects.push({x:40, y:y-15, w:515.28, h:15, grad:PDF_G_LABEL});
+    ["N°","STATUT","CONSTAT","SUITE À DONNER"].forEach((h, k) =>
+      cur.texts.push({x:CX[k][0]+3, y:y-10.5, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
     y -= 19;
     for (const p of c.items){
       const constat = [];
@@ -2538,17 +2626,17 @@ async function pdfForVisit(visit, photos, settings){
       if (p.description) for (const l of wrapText(p.description, 62)) constat.push({t:l});
       if (p.entreprise) constat.push({t:"Entreprise : " + p.entreprise, g:true});
       if (!constat.length) constat.push({t:"—", g:true});
-      const suite = p.suite ? wrapText(p.suite, 42) : ["—"];
+      const suite = p.suite ? wrapText(p.suite, 41) : ["—"];
       const nLines = Math.max(constat.length, suite.length, 2);
-      const rowH = nLines * 9.6 + 8;
+      const rowH = nLines * 9.9 + 8;
       ensure(rowH);
-      cur.texts.push({x:CX[0][0]+3, y:y-8, size:8.5, font:"F2", text:String(p.num)});
-      if (p.takenAt) cur.texts.push({x:CX[0][0]+1, y:y-17.5, size:6.2, font:"F1", color:PDF_GREY, text:p.takenAt.split("T")[1]});
-      if (p.statut) pdfBadge(cur, CX[1][0]+2, y-4.5, p.statut, 22, 12, 8);
+      cur.texts.push({x:CX[0][0]+3, y:y-8, size:FS.body, font:"F2", text:String(p.num)});
+      if (p.takenAt) cur.texts.push({x:CX[0][0]+1, y:y-18, size:FS.micro, font:"F1", color:PDF_GREY, text:p.takenAt.split("T")[1]});
+      if (p.statut) pdfBadge(cur, CX[1][0]+2, y-4, p.statut, 23, 13, FS.badge);
       let cyv = y - 8;
-      for (const l of constat){ cur.texts.push({x:CX[2][0]+3, y:cyv, size:l.b ? 8.3 : 8, font:l.b ? "F2" : "F1", color:l.g ? PDF_GREY : "0 0 0", text:l.t}); cyv -= 9.6; }
+      for (const l of constat){ cur.texts.push({x:CX[2][0]+3, y:cyv, size:l.b ? FS.body : FS.small, font:l.b ? "F2" : "F1", color:l.g ? PDF_GREY : "0 0 0", text:l.t}); cyv -= 9.9; }
       let syv = y - 8;
-      for (const l of suite){ cur.texts.push({x:CX[3][0]+3, y:syv, size:8, font:"F1", text:l}); syv -= 9.6; }
+      for (const l of suite){ cur.texts.push({x:CX[3][0]+3, y:syv, size:FS.small, font:"F1", text:l}); syv -= 9.9; }
       cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.6, color:"0.85 0.87 0.9"});
       y -= rowH;
     }
@@ -2559,8 +2647,8 @@ async function pdfForVisit(visit, photos, settings){
   const prog = await reserveProgress();
   if (prog.length){
     if (y < 300) newPage();
-    band("SUIVI PHOTOGRAPHIQUE DES RÉSERVES — AVANT / APRÈS", 22, 10);
-    cur.texts.push({x:40, y, size:8, font:"F1", color:PDF_GREY, text:`Évolution constatée d'une visite à l'autre pour ${prog.length} réserve(s) suivie(s).`});
+    band("SUIVI PHOTOGRAPHIQUE DES RÉSERVES — AVANT / APRÈS", 23, FS.band);
+    cur.texts.push({x:40, y, size:FS.small, font:"F1", color:PDF_GREY, text:`Évolution constatée d'une visite à l'autre pour ${prog.length} réserve(s) suivie(s).`});
     y -= 18;
     const colW = 250, colX = [40, 305];
     for (const g of prog){
@@ -2569,21 +2657,19 @@ async function pdfForVisit(visit, photos, settings){
       const blockH = Math.max(d[0].dh, d[1].dh) + 46;
       if (blockH + 8 > y - 56) newPage();
       // en-tête de la réserve + statut
-      cur.rects.push({x:40, y:y-14, w:515.28, h:14, color:PDF_LABEL});
-      cur.texts.push({x:44, y:y-10.5, size:7.6, font:"F2", color:PDF_NAVY,
-        text:`RÉSERVE N°${g.r.num} — ${(g.r.objet || "").slice(0, 62)}`});
-      const stC = g.statut === "Soldé" ? PDF_STATUT.C : (g.statut === "En retard" ? PDF_STATUT.NC : PDF_STATUT.PA);
-      cur.rects.push({x:492, y:y-13.5, w:63, h:12, color:stC});
-      cur.texts.push({x:496, y:y-10, size:6.6, font:"F2", color:"1 1 1", text:g.statut});
-      y -= 20;
+      cur.rects.push({x:40, y:y-15, w:515.28, h:15, grad:PDF_G_LABEL});
+      cur.texts.push({x:44, y:y-11, size:FS.mini, font:"F2", color:PDF_NAVY,
+        text:`RÉSERVE N°${g.r.num} — ${(g.r.objet || "").slice(0, 58)}`});
+      pdfPill(cur, 488, y-14.5, 67, 13, g.statut, FS.caption);
+      y -= 21;
       // légendes puis clichés côte à côte
-      cur.texts.push({x:colX[0], y:y-8, size:7.4, font:"F2", color:PDF_STATUT.NC, text:`AVANT — ${frDate(g.before.date)}`});
-      cur.texts.push({x:colX[1], y:y-8, size:7.4, font:"F2", color:PDF_STATUT.C, text:`APRÈS — ${frDate(g.after.date)}`});
+      cur.texts.push({x:colX[0], y:y-8, size:FS.mini, font:"F2", color:PDF_STATUT.NC, text:`AVANT — ${frDate(g.before.date)}`});
+      cur.texts.push({x:colX[1], y:y-8, size:FS.mini, font:"F2", color:PDF_STATUT.C, text:`APRÈS — ${frDate(g.after.date)}`});
       y -= 12;
       [0,1].forEach(k => {
         cur.images.push({bytes:ims[k].bytes, w:ims[k].w, h:ims[k].h,
           x:colX[k] + (colW - d[k].dw) / 2, y:y - d[k].dh, dw:d[k].dw, dh:d[k].dh});
-        cur.texts.push({x:colX[k], y:y - d[k].dh - 8, size:6.4, font:"F1", color:PDF_GREY,
+        cur.texts.push({x:colX[k], y:y - d[k].dh - 8.5, size:FS.micro, font:"F1", color:PDF_GREY,
           text:`cliché n°${(k ? g.after : g.before).p.num}`});
       });
       y -= Math.max(d[0].dh, d[1].dh) + 20;
@@ -2597,31 +2683,28 @@ async function pdfForVisit(visit, photos, settings){
     const nOuv = track.filter(r => r.statut !== "Soldé").length;
     const nRet = track.filter(r => r.statut === "En retard").length;
     if (y < 260) newPage();
-    band("TABLEAU DE SUIVI DES ACTIONS (C · NC · PA · AC) ET RÉSERVES", 22, 10);
-    cur.texts.push({x:40, y, size:8, font:"F1", color:PDF_GREY, text:`Généré automatiquement à partir des constats et réserves. ${track.length} action(s), ${nOuv} en cours${nRet ? ` dont ${nRet} en retard` : ""}.`});
-    y -= 16;
+    band("TABLEAU DE SUIVI DES ACTIONS (C · NC · PA · AC) ET RÉSERVES", 23, FS.band);
+    cur.texts.push({x:40, y, size:FS.small, font:"F1", color:PDF_GREY, text:`Généré automatiquement à partir des constats et réserves. ${track.length} action(s), ${nOuv} en cours${nRet ? ` dont ${nRet} en retard` : ""}.`});
+    y -= 17;
     // N° / Origine / Entreprise désignée / Action attendue / Échéance / Statut
-    const RX = [40, 66, 150, 268, 430, 486];
-    ensure(15);
-    cur.rects.push({x:40, y:y-12, w:515.28, h:12, color:PDF_BAND});
+    const RX = [40, 64, 152, 268, 428, 484];
+    ensure(16);
+    cur.rects.push({x:40, y:y-13, w:515.28, h:14, grad:PDF_G_LABEL});
     ["N°","ORIGINE","INTERVENANT","ACTION / JUSTIFICATION ATTENDUE","ÉCHÉANCE","STATUT"].forEach((h, k) =>
-      cur.texts.push({x:RX[k]+2, y:y-8.5, size:6.3, font:"F2", color:PDF_NAVY, text:h}));
-    y -= 15;
+      cur.texts.push({x:RX[k]+2, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 17;
     for (const r of track){
-      const actLines = wrapText(r.action || "—", 40);
+      const actLines = wrapText(r.action || "—", 38);
       const entLines = wrapText(r.entreprise || "—", 20);
-      const rowH = Math.max(actLines.length, entLines.length, 1) * 9.2 + 6;
+      const rowH = Math.max(actLines.length, entLines.length, 1) * 9.8 + 7;
       ensure(rowH);
-      cur.texts.push({x:RX[0]+2, y:y-8, size:8.5, font:"F2", text:String(r.num)});
-      cur.texts.push({x:RX[1]+2, y:y-8, size:7.2, font:"F1", color:PDF_GREY, text:frDate(r.origin)});
-      if (r.code) pdfBadge(cur, RX[1]+44, y-6.5, r.code, 14, 8, 5.5);
-      let ey = y-8; for (const l of entLines){ cur.texts.push({x:RX[2]+2, y:ey, size:7.6, font:"F1", text:l}); ey -= 9.2; }
-      let ay = y-8; for (const l of actLines){ cur.texts.push({x:RX[3]+2, y:ay, size:7.6, font:"F1", text:l}); ay -= 9.2; }
-      cur.texts.push({x:RX[4]+2, y:y-8, size:7.2, font:"F1", color:PDF_GREY, text:r.dateLimite ? frDate(r.dateLimite) : "—"});
-      const st = r.statut;
-      const stC = st === "Soldé" ? PDF_STATUT.C : (st === "En retard" ? PDF_STATUT.NC : PDF_STATUT.PA);
-      cur.rects.push({x:RX[5]+1, y:y-11, w:66, h:11, color:stC});
-      cur.texts.push({x:RX[5]+4, y:y-8, size:6.8, font:"F2", color:"1 1 1", text:st});
+      cur.texts.push({x:RX[0]+2, y:y-8, size:FS.body, font:"F2", text:String(r.num)});
+      cur.texts.push({x:RX[1]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:frDate(r.origin)});
+      if (r.code) pdfBadge(cur, RX[1]+46, y-6, r.code, 15, 9, FS.micro);
+      let ey = y-8; for (const l of entLines){ cur.texts.push({x:RX[2]+2, y:ey, size:FS.small, font:"F1", text:l}); ey -= 9.8; }
+      let ay = y-8; for (const l of actLines){ cur.texts.push({x:RX[3]+2, y:ay, size:FS.small, font:"F1", text:l}); ay -= 9.8; }
+      cur.texts.push({x:RX[4]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:r.dateLimite ? frDate(r.dateLimite) : "—"});
+      pdfPill(cur, RX[5]+1, y-11.5, 70, 13, r.statut, FS.caption);
       cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.6, color:"0.85 0.87 0.9"});
       y -= rowH;
     }
@@ -2631,41 +2714,44 @@ async function pdfForVisit(visit, photos, settings){
   /* ---- signature ---- */
   ensure(60);
   y -= 10;
-  cur.rects.push({x:355, y:y-52, w:200, h:52, color:PDF_LABEL});
-  cur.texts.push({x:362, y:y-12, size:8, font:"F2", color:PDF_NAVY, text:"Rédacteur / Visa"});
-  if (settings.redac) cur.texts.push({x:362, y:y-26, size:8.5, font:"F1", text:settings.redac.slice(0, 34)});
-  cur.texts.push({x:362, y:y-44, size:7.5, font:"F1", color:PDF_GREY, text:`Le ${frDate(visit.date)}`});
+  cur.rects.push({x:355, y:y-52, w:200, h:52, grad:PDF_G_LABEL});
+  cur.rects.push({x:355, y:y-52, w:200, h:1.4, grad:PDF_G_RULE, horiz:true});
+  cur.texts.push({x:362, y:y-12, size:FS.small, font:"F2", color:PDF_NAVY, text:"Rédacteur / Visa"});
+  if (settings.redac) cur.texts.push({x:362, y:y-26, size:FS.body, font:"F1", text:settings.redac.slice(0, 34)});
+  cur.texts.push({x:362, y:y-44, size:FS.caption, font:"F1", color:PDF_GREY, text:`Le ${frDate(visit.date)}`});
 
   /* ---- pièces annexes : page de garde + sommaire automatique + images intégrées ---- */
   const annexes = await listAnnexes();
   if (annexes.length){
     newPage();
-    cur.rects.push({x:40, y:y-40, w:515.28, h:40, color:PDF_BAND});
-    cur.texts.push({x:52, y:y-25, size:16, font:"F2", color:PDF_NAVY, text:"PIÈCES ANNEXES"});
-    y -= 56;
-    cur.texts.push({x:40, y, size:9, font:"F1", color:PDF_GREY, text:`${annexes.length} document(s) joint(s) au présent rapport.`});
+    cur.rects.push({x:40, y:y-42, w:515.28, h:42, grad:PDF_G_TITLE});
+    cur.rects.push({x:40, y:y-42, w:515.28, h:2, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:52, y:y-26, size:FS.title - 2, font:"F2", color:PDF_PEACH, text:"PIÈCES ANNEXES"});
+    y -= 58;
+    cur.texts.push({x:40, y, size:FS.bandSm, font:"F1", color:PDF_GREY, text:`${annexes.length} document(s) joint(s) au présent rapport.`});
     y -= 20;
-    const AX = [40, 70, 395, 470]; // N° / Document / Type / Intégration
-    ensure(15);
-    cur.rects.push({x:40, y:y-13, w:515.28, h:14, color:PDF_LABEL});
-    ["N°","DOCUMENT","TYPE","AU RAPPORT"].forEach((h, k) => cur.texts.push({x:AX[k]+3, y:y-9, size:7, font:"F2", color:PDF_NAVY, text:h}));
-    y -= 16;
+    const AX = [40, 70, 395, 468]; // N° / Document / Type / Intégration
+    ensure(16);
+    cur.rects.push({x:40, y:y-13, w:515.28, h:14, grad:PDF_G_LABEL});
+    ["N°","DOCUMENT","TYPE","AU RAPPORT"].forEach((h, k) => cur.texts.push({x:AX[k]+3, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 17;
     annexes.forEach((a, i) => {
-      ensure(13);
-      cur.texts.push({x:AX[0]+3, y:y-8, size:8, font:"F2", text:"A"+(i+1)});
-      cur.texts.push({x:AX[1]+3, y:y-8, size:8, font:"F1", text:wrapText(a.name, 58)[0]});
-      cur.texts.push({x:AX[2]+3, y:y-8, size:7.5, font:"F1", color:PDF_GREY, text:a.isImg ? "Image" : (/pdf/i.test(a.type) ? "PDF" : "Fichier")});
-      cur.texts.push({x:AX[3]+3, y:y-8, size:7.5, font:"F2", color:a.isImg ? PDF_STATUT.C : PDF_STATUT.PA, text:a.isImg ? "Intégrée" : "Jointe à part"});
-      cur.rects.push({x:40, y:y-9.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
-      y -= 13;
+      ensure(14);
+      cur.texts.push({x:AX[0]+3, y:y-8, size:FS.body, font:"F2", text:"A"+(i+1)});
+      cur.texts.push({x:AX[1]+3, y:y-8, size:FS.small, font:"F1", text:wrapText(a.name, 56)[0]});
+      cur.texts.push({x:AX[2]+3, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:a.isImg ? "Image" : (/pdf/i.test(a.type) ? "PDF" : "Fichier")});
+      cur.texts.push({x:AX[3]+3, y:y-8, size:FS.mini, font:"F2", color:a.isImg ? PDF_STATUT.C : PDF_STATUT.PA, text:a.isImg ? "Intégrée" : "Jointe à part"});
+      cur.rects.push({x:40, y:y-10, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= 14;
     });
     let ai = 0;
     for (const a of annexes){
       ai++;
       if (!a.isImg || !a.dataUrl) continue;
       newPage();
-      cur.rects.push({x:40, y:y-18, w:515.28, h:18, color:PDF_BAND});
-      cur.texts.push({x:48, y:y-13, size:9.5, font:"F2", color:PDF_NAVY, text:`ANNEXE A${ai} — ${a.name}`.slice(0, 86)});
+      cur.rects.push({x:40, y:y-19, w:515.28, h:19, grad:PDF_G_BAND});
+      cur.rects.push({x:40, y:y-19, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+      cur.texts.push({x:48, y:y-13, size:FS.bandSm, font:"F2", color:PDF_NAVY, text:`ANNEXE A${ai} — ${a.name}`.slice(0, 82)});
       y -= 26;
       const bytes = Uint8Array.from(atob(a.dataUrl.split(",")[1]), c => c.charCodeAt(0));
       const sc = Math.min(515 / a.w, (y - 50) / a.h);
@@ -2676,13 +2762,14 @@ async function pdfForVisit(visit, photos, settings){
   }
 
   /* ---- en-tête et pied de page (ligne pêche, texte bleu clair) ---- */
+  const HDR_INK = "0.34 0.55 0.72"; // bleu moyen, lisible sur blanc
   pages.forEach((pg, i) => {
-    pg.rects.push({x:40, y:812, w:515.28, h:0.9, color:PDF_PEACH});
-    pg.texts.push({x:40, y:816, size:7.5, font:"F2", color:PDF_BAND, text:settings.proj.toUpperCase().slice(0, 70)});
-    pg.texts.push({x:430, y:816, size:7.5, font:"F1", color:PDF_BAND, text:"RAPPORT DE VISITE"});
-    pg.rects.push({x:40, y:36, w:515.28, h:0.9, color:PDF_PEACH});
-    pg.texts.push({x:40, y:26, size:7.5, font:"F1", color:PDF_BAND, text:`${settings.sub} — ${settings.proj}`.slice(0, 88)});
-    pg.texts.push({x:503, y:26, size:7.5, font:"F1", color:PDF_BAND, text:`Page ${i + 1} / ${pages.length}`});
+    pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR_INK, text:settings.proj.toUpperCase().slice(0, 70)});
+    pg.texts.push({x:430, y:816, size:FS.caption, font:"F1", color:HDR_INK, text:"RAPPORT DE VISITE"});
+    pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR_INK, text:`${settings.sub} — ${settings.proj}`.slice(0, 88)});
+    pg.texts.push({x:503, y:26, size:FS.caption, font:"F1", color:HDR_INK, text:`Page ${i + 1} / ${pages.length}`});
   });
   return buildPdf(pages);
 }
