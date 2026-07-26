@@ -225,6 +225,19 @@
   .cap-res.done .cr-lab{color:var(--c)}
   .cap-res.late{background:rgba(192,57,43,.10); border-color:rgba(192,57,43,.34)}
   .cap-res.late .cr-lab{color:var(--nc)}
+  /* réserves ouvertes à lever pendant la visite */
+  .open-res{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:12px 14px; margin:0 0 12px; box-shadow:var(--shadow)}
+  .open-res > h4{margin:0 0 9px; font-size:11px; font-weight:800; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--ink2); display:flex; align-items:center; gap:8px}
+  .open-res > h4::before{content:""; width:14px; height:3px; border-radius:99px; background:var(--grad); flex:none}
+  .or-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 0; border-top:1px solid var(--line)}
+  .or-row:first-of-type{border-top:none}
+  .or-txt{flex:1 1 auto; min-width:0}
+  .or-txt b{font-size:14px; display:block}
+  .or-txt small{font-size:11.5px; color:var(--ink2)}
+  .or-txt small.late{color:var(--nc); font-weight:700}
+  .or-row .btn{padding:9px 13px; font-size:12.5px; flex:none}
   /* compteur de clichés à compléter */
   .todo-chip{display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit;
     margin:0 0 12px; padding:12px 15px; border-radius:var(--r-lg); cursor:pointer; color:var(--ink);
@@ -449,6 +462,7 @@
   </div>
   <input type="file" id="fileGallery" accept="image/*" multiple hidden>
   <input type="file" id="fileCamera" accept="image/*" capture="environment" hidden>
+  <input type="file" id="fileLevee" accept="image/*" capture="environment" hidden>
 </div>
 
 <!-- ================= ÉDITEUR DE COMMENTAIRE ================= -->
@@ -1527,10 +1541,6 @@ async function renderPhotos(){
   freeURLs();
   const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
   const list = $("#photoList");
-  if (!photos.length){
-    list.innerHTML = `<div class="empty"><span class="glyph">📷</span>Aucun cliché.<br>Prenez vos photos avec Timestamp Camera,<br>puis ajoutez-les avec le bouton +.</div>`;
-    return;
-  }
   const reserves = CUR ? await idbAll("reserves","projectId",CUR.id) : [];
   const resById = {}; reserves.forEach(r => resById[r.id] = r);
 
@@ -1540,7 +1550,31 @@ async function renderPhotos(){
     ? `<button class="todo-chip" id="btnTodo">⚠️ <span><b>${todo.length} cliché${todo.length > 1 ? "s" : ""} à compléter</b> — statut ou description manquants. Appuyez pour ouvrir le premier.</span></button>`
     : "";
 
-  list.innerHTML = todoHtml + photos.map(p => {
+  /* réserves encore ouvertes : photographier la levée sans quitter la visite */
+  const ouvertes = reserves.filter(r => reserveStatut(r) !== "Soldé").sort((a,b) => a.num - b.num);
+  const openHtml = ouvertes.length ? `<div class="open-res"><h4>Réserves ouvertes · ${ouvertes.length}</h4>` +
+    ouvertes.map(r => {
+      const st = reserveStatut(r);
+      const ech = r.dateLimite ? `échéance ${frDate(r.dateLimite)}` : "sans échéance";
+      return `<div class="or-row">
+        <span class="or-txt"><b>n°${r.num} — ${esc((r.objet || "(sans objet)").slice(0, 60))}</b>
+          <small class="${st === "En retard" ? "late" : ""}">${st === "En retard" ? "⚠ En retard · " : ""}${esc(ech)}${r.entreprise ? " · " + esc(r.entreprise) : ""}</small></span>
+        <button class="btn blue" data-levee="${r.id}">📷 Photo de levée</button>
+      </div>`;
+    }).join("") + `</div>` : "";
+
+  /* fonction de branchement des boutons « Photo de levée » (panneau présent même sans cliché) */
+  const bindLevee = () => list.querySelectorAll("[data-levee]").forEach(b =>
+    b.addEventListener("click", () => askLeveePhoto(Number(b.dataset.levee))));
+
+  if (!photos.length){
+    list.innerHTML = openHtml +
+      `<div class="empty"><span class="glyph">📷</span>Aucun cliché.<br>Prenez vos photos avec Timestamp Camera,<br>puis ajoutez-les avec le bouton +.</div>`;
+    bindLevee();
+    return;
+  }
+
+  list.innerHTML = openHtml + todoHtml + photos.map(p => {
     const meta = [];
     if (p.takenAt){ const [d, t] = p.takenAt.split("T"); meta.push(`${frDate(d)} ${t}`); }
     if (p.lat != null){
@@ -1591,6 +1625,7 @@ async function renderPhotos(){
     </article>`;
   }).join("");
 
+  bindLevee();
   const cardId = e => Number(e.target.closest(".photo-card").dataset.id);
   list.querySelectorAll("[data-act=edit]").forEach(b => b.addEventListener("click", e => openEditor(cardId(e))));
   list.querySelectorAll("[data-act=solder]").forEach(b => b.addEventListener("click", e => {
@@ -1709,10 +1744,15 @@ async function ensureWeather(visit, photos){
 }
 function weatherText(w){ return w ? `${w.cond}, ${w.tempC >= 0 ? "+" : ""}${w.tempC}°C` : null; }
 
-async function importFiles(files){
+/* opts.leveeReserveId : le cliché importé constate la levée d'une réserve (photo de levée) */
+async function importFiles(files, opts){
   if (!files.length || !curVisit) return;
+  opts = opts || {};
+  const levee = opts.leveeReserveId
+    ? (await idbAll("reserves","projectId",CUR.id)).find(x => x.id === opts.leveeReserveId)
+    : null;
   closeAddSheet();
-  toast(`Import de ${files.length} cliché${files.length>1?"s":""}…`);
+  toast(levee ? "Enregistrement de la photo de levée…" : `Import de ${files.length} cliché${files.length>1?"s":""}…`);
   const existing = await idbAll("photos","visitId",curVisit.id);
   let num = existing.reduce((m,p) => Math.max(m, p.num || 0), 0);
   let devPos, devPosAsked = false; // position du téléphone, demandée une seule fois par import
@@ -1746,17 +1786,38 @@ async function importFiles(files){
       blob: f, name: f.name || "",
       takenAt: exif.takenAt || null,
       lat, lon, gpsApprox,
-      statut: "", titre: "", element: [], zone, entreprise: "", description: "", suite: "",
+      statut: "", titre: "", element: "", zone, entreprise: "", description: "", suite: "",
       createdAt: Date.now()
     };
-    await tx("photos","readwrite", s => s.add(rec));
+    if (levee){
+      // constat de levée : pré-rempli et rattaché à la réserve, puis solde avec ce cliché comme preuve
+      rec.statut = "C";
+      rec.titre = `Levée de la réserve n°${levee.num}`;
+      rec.description = `Réserve n°${levee.num} levée : ${levee.objet || ""}`.trim();
+      rec.entreprise = levee.entreprise || "";
+      rec.zone = zone || levee.zone || "";
+      rec.reserveId = levee.id; rec.reserveNum = levee.num;
+    }
+    const newId = await idbAdd("photos", rec);
+    if (levee) await solderReserve(levee.id, newId);
   }
   await renderPhotos();
+  if (levee){
+    toast(`Photo de levée enregistrée — réserve n°${levee.num} soldée. Relisez le constat si besoin.`);
+    return;
+  }
   if (diag.size){
     toast(`Import fait, mais adresse non remplie : ${[...diag].join(" · ")}`, true);
   } else {
     toast(`${files.length} cliché${files.length>1?"s":""} ajouté${files.length>1?"s":""} — date, GPS et adresse remplis`);
   }
+}
+/* prise d'une nouvelle photo prouvant la levée d'une réserve (appareil photo direct) */
+let pendingLeveeId = null;
+function askLeveePhoto(reserveId){
+  if (!curVisit){ toast("Ouvrez d'abord une visite", true); return; }
+  pendingLeveeId = reserveId;
+  $("#fileLevee").click();
 }
 
 /* =============== éditeur =============== */
@@ -3289,6 +3350,12 @@ async function main(){
   $("#btnPickCamera").addEventListener("click", () => $("#fileCamera").click());
   $("#fileGallery").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
   $("#fileCamera").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
+  $("#fileLevee").addEventListener("change", e => {
+    const f = e.target.files[0];
+    e.target.value = "";
+    if (f && pendingLeveeId) importFiles([f], {leveeReserveId: pendingLeveeId});
+    pendingLeveeId = null;
+  });
 
   $("#btnEditClose").addEventListener("click", () => { stopMic(); $("#editModal").classList.remove("on"); });
   $("#btnEditSave").addEventListener("click", saveEdit);
