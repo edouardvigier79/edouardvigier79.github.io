@@ -307,8 +307,6 @@
   .chips .chip.stPA.on{background:var(--pa); border-color:var(--pa); color:#fff}
   .chips .chip.stAC.on{background:var(--ac); border-color:var(--ac); color:#fff}
   .hint{font-size:12.5px; color:var(--ink2); margin-top:4px}
-  .elem-group{margin-bottom:11px}
-  .elem-group-label{font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--blue); margin:0 0 5px}
   .aibtn.busy{opacity:.6; pointer-events:none}
   .microw{display:flex; align-items:flex-start; gap:7px}
   .microw > input, .microw > textarea{flex:1}
@@ -506,14 +504,6 @@
     </div>
 
     <div class="field">
-      <label for="fElem">Observation / précision (libre)</label>
-      <div class="microw">
-        <input type="text" id="fElem" placeholder="Ex. : bordure T2, tampon fonte, réseau AEP…">
-        <button type="button" class="micbtn" data-mic="fElem" aria-label="Dictée vocale">🎤</button>
-      </div>
-    </div>
-
-    <div class="field">
       <label for="fZone">Localisation / zone</label>
       <input type="text" id="fZone" list="zonesList" placeholder="Ex. : Carrefour av. du Château / av. de Paris">
       <datalist id="zonesList"></datalist>
@@ -690,6 +680,17 @@
       <h3>Code de verrouillage</h3>
       <p>Le code protège l'ouverture du carnet sur ce téléphone.</p>
       <button class="btn block" id="btnChangePin">Changer le code</button>
+      <div class="field" style="margin:14px 0 0">
+        <label for="sAutoLock">Verrouillage automatique</label>
+        <select id="sAutoLock">
+          <option value="0">Jamais (rester ouvert)</option>
+          <option value="60">Après 1 minute</option>
+          <option value="300">Après 5 minutes</option>
+          <option value="900">Après 15 minutes</option>
+          <option value="3600">Après 1 heure</option>
+        </select>
+        <div class="hint">Reverrouille le carnet après ce délai d'inactivité, ou quand l'application reste en arrière-plan aussi longtemps. Protège vos constats si le téléphone est perdu ou prêté sur chantier.</div>
+      </div>
     </div>
 
     <div class="settings-block">
@@ -1114,7 +1115,43 @@ async function submitPin(){
 function unlock(){
   document.body.classList.remove("locked");
   $("#scrLock").classList.remove("on");
+  armIdle();
   showHome().then(processInbox).then(runPendingAction);
+}
+
+/* =============== verrouillage automatique (inactivité + retour d'arrière-plan) =============== */
+const AUTOLOCK_DEFAULT = 300; // 5 minutes
+function autoLockDelay(){
+  const v = localStorage.getItem("autoLock");
+  return v === null ? AUTOLOCK_DEFAULT : Number(v) || 0;
+}
+let idleTimer = null, hiddenAt = null;
+function isLocked(){ return document.body.classList.contains("locked"); }
+function autoLockArmed(){ return autoLockDelay() > 0 && !!localStorage.getItem("pinHash") && !isLocked(); }
+function armIdle(){
+  clearTimeout(idleTimer);
+  if (!autoLockArmed()) return;
+  idleTimer = setTimeout(() => {
+    if (isLocked()) return;
+    if (micBtnActive) return armIdle();   // dictée en cours : on ne coupe pas
+    showLock();
+    toast("Carnet reverrouillé après inactivité");
+  }, autoLockDelay() * 1000);
+}
+function setupAutoLock(){
+  ["pointerdown","keydown","touchstart","scroll"].forEach(ev =>
+    window.addEventListener(ev, armIdle, {passive:true}));
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden){ hiddenAt = Date.now(); clearTimeout(idleTimer); return; }
+    const d = autoLockDelay();
+    if (d && hiddenAt && autoLockArmed() && Date.now() - hiddenAt >= d * 1000){
+      showLock();
+      toast("Carnet reverrouillé");
+    }
+    hiddenAt = null;
+    armIdle();
+  });
+  armIdle();
 }
 
 /* raccourcis d'icône Android (?a=…) */
@@ -1183,12 +1220,6 @@ async function processInbox(){
     toast("Import partagé : " + (err && err.message || err), true);
   }
 }
-let hiddenAt = null;
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) hiddenAt = Date.now();
-  else if (hiddenAt && Date.now() - hiddenAt > 5 * 60 * 1000) showLock();
-});
-
 /* =============== vues =============== */
 let curVisit = null, curEdit = null;
 const objectURLs = [];
@@ -1580,9 +1611,7 @@ async function renderPhotos(){
     if (p.lat != null){
       meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.gpsApprox ? "≈ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
     }
-    const obs = elemToStr(p.element);
     const fields = [];
-    if (obs) fields.push(`<div class="cap-field"><span class="k">Observation</span>${esc(obs)}</div>`);
     if (p.zone) fields.push(`<div class="cap-field"><span class="k">Localisation</span>${esc(p.zone)}</div>`);
     if (p.entreprise) fields.push(`<div class="cap-field"><span class="k">Entreprise / lot</span>${esc(p.entreprise)}</div>`);
     if (p.description) fields.push(`<div class="cap-field"><span class="k">Description factuelle</span>${esc(p.description)}</div>`);
@@ -1786,7 +1815,7 @@ async function importFiles(files, opts){
       blob: f, name: f.name || "",
       takenAt: exif.takenAt || null,
       lat, lon, gpsApprox,
-      statut: "", titre: "", element: "", zone, entreprise: "", description: "", suite: "",
+      statut: "", titre: "", zone, entreprise: "", description: "", suite: "",
       createdAt: Date.now()
     };
     if (levee){
@@ -1836,7 +1865,6 @@ async function openEditor(id){
   if (curEdit.lat != null) meta.push(`GPS ${curEdit.gpsApprox ? "≈ (position à l'import) " : ""}${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
   $("#editMeta").textContent = meta.join(" — ") || "Pas de métadonnées EXIF trouvées";
   $("#fTitre").value = curEdit.titre || "";
-  $("#fElem").value = elemToStr(curEdit.element);
   $("#fZone").value = curEdit.zone || "";
   $("#fEnt").value = curEdit.entreprise || "";
   $("#fDesc").value = curEdit.description || "";
@@ -1860,8 +1888,6 @@ async function buildReserveSelect(){
   sel.innerHTML = opts.join("");
   sel.value = curEdit.reserveId ? String(curEdit.reserveId) : "";
 }
-/* champ « observation » : chaîne libre (rétro-compat avec les anciens tableaux d'éléments) */
-function elemToStr(v){ return Array.isArray(v) ? v.join(", ") : (v || ""); }
 
 /* dictée vocale (Web Speech API) sur tous les champs marqués data-mic */
 let micRec = null, micBtnActive = null;
@@ -1900,7 +1926,7 @@ function copyComment(){
   const on = document.querySelector("#statutChips .chip.on");
   clipComment = {
     statut: on ? on.dataset.v : "",
-    titre: $("#fTitre").value, element: $("#fElem").value,
+    titre: $("#fTitre").value,
     zone: $("#fZone").value, entreprise: $("#fEnt").value,
     description: $("#fDesc").value, suite: $("#fSuite").value, dateLimite: $("#fEcheance").value
   };
@@ -1912,7 +1938,6 @@ function pasteComment(){
   const c = clipComment;
   document.querySelectorAll("#statutChips .chip").forEach(x => x.classList.toggle("on", x.dataset.v === c.statut));
   $("#fTitre").value = c.titre || "";
-  $("#fElem").value = elemToStr(c.element);
   $("#fZone").value = c.zone || "";
   $("#fEnt").value = c.entreprise || "";
   $("#fDesc").value = c.description || "";
@@ -1920,7 +1945,6 @@ function pasteComment(){
   $("#fEcheance").value = c.dateLimite || "";
   toast("Commentaire collé — relisez puis Enregistrer");
 }
-function selectedElems(){ return $("#fElem").value.trim(); }
 function buildQuickChips(){
   const s = getSettings();
   $("#zonesList").innerHTML = s.zones.map(z => `<option value="${esc(z)}">`).join("");
@@ -1936,7 +1960,6 @@ async function saveEdit(){
   const on = document.querySelector("#statutChips .chip.on");
   curEdit.statut = on ? on.dataset.v : "";
   curEdit.titre = $("#fTitre").value.trim();
-  curEdit.element = selectedElems();
   curEdit.zone = $("#fZone").value.trim();
   curEdit.entreprise = $("#fEnt").value.trim();
   curEdit.description = $("#fDesc").value.trim();
@@ -2510,11 +2533,9 @@ async function pdfForVisit(visit, photos, settings){
     cur.texts.push({x:CX[3][0]+3, y:y-10.5, size:7.4, font:"F2", color:PDF_NAVY, text:"SUITE À DONNER"});
     y -= 19;
     for (const p of c.items){
-      const obs = elemToStr(p.element);
       const constat = [];
       if (p.titre) for (const l of wrapText(p.titre, 58)) constat.push({t:l, b:true});
       if (p.description) for (const l of wrapText(p.description, 62)) constat.push({t:l});
-      if (obs) for (const l of wrapText("Observation : " + obs, 62)) constat.push({t:l, g:true});
       if (p.entreprise) constat.push({t:"Entreprise : " + p.entreprise, g:true});
       if (!constat.length) constat.push({t:"—", g:true});
       const suite = p.suite ? wrapText(p.suite, 42) : ["—"];
@@ -2892,11 +2913,9 @@ async function docxForVisit(visit, photos, settings){
     const recRows = [];
     recRows.push(`<w:tr>${wTc(700, wP(wR("N°", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(900, wP(wR("Statut", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL})}${wTc(5038, wP(wR("Constat", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${wTc(3000, wP(wR("Suite à donner", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}</w:tr>`);
     for (const p of c.items){
-      const obs = elemToStr(p.element);
       let constat = "";
       if (p.titre) constat += wP(wR(p.titre, `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
       if (p.description) constat += wP(wR(p.description, `<w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
-      if (obs) constat += wP(wR("Observation : " + obs, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
       if (p.entreprise) constat += wP(wR("Entreprise : " + p.entreprise, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
       if (!constat) constat = wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`);
       const numCell = wP(wR(String(p.num), `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
@@ -3186,12 +3205,11 @@ const AI_SCHEMA = {
   properties:{
     statut:{type:"string", enum:["C","NC","PA","AC"]},
     titre:{type:"string"},
-    elements:{type:"array", items:{type:"string", enum:VRD_ELEMENTS}},
     localisation:{type:"string"},
     description:{type:"string"},
     suite:{type:"string"}
   },
-  required:["statut","titre","elements","localisation","description","suite"],
+  required:["statut","titre","localisation","description","suite"],
   additionalProperties:false
 };
 function aiSystem(settings){
@@ -3208,7 +3226,7 @@ INTERDICTION ABSOLUE : ne jamais décrire, mentionner ni identifier les personne
 
 L'horodatage, les coordonnées et l'adresse incrustés sur la photo (Timestamp Camera) peuvent être lus pour situer le constat. Chantier : ${settings.proj}.${settings.zones.length ? " Zones connues : " + settings.zones.join(" ; ") + "." : ""}
 
-Champs à produire : statut (C conforme / NC non-conforme / PA point d'attention / AC à confirmer — choisis le plus plausible), titre (court, style nom de fichier, ex. "Épaufrure bordure Comblanchien"), elements (catégories VRD concernées), localisation (rue/carrefour lu sur la photo ou déduit), description (factuelle, 2 à 4 phrases), suite (action concrète attendue ; "" si aucune).`;
+Champs à produire : statut (C conforme / NC non-conforme / PA point d'attention / AC à confirmer — choisis le plus plausible), titre (court, style nom de fichier, ex. "Épaufrure bordure Comblanchien"), localisation (rue/carrefour lu sur la photo ou déduit), description (factuelle, 2 à 4 phrases ; nomme les éléments VRD concernés dans le texte), suite (action concrète attendue ; "" si aucune).`;
 }
 async function describeAI(){
   if (!curEdit) return;
@@ -3252,8 +3270,6 @@ async function describeAI(){
     // pré-remplit le formulaire — l'utilisateur relit et enregistre
     document.querySelectorAll("#statutChips .chip").forEach(c =>
       c.classList.toggle("on", c.dataset.v === out.statut));
-    const aiElems = (out.elements || []).filter(e => VRD_ELEMENTS.includes(e));
-    if (aiElems.length) $("#fElem").value = aiElems.join(", ");
     if (out.titre) $("#fTitre").value = out.titre;
     if (out.localisation) $("#fZone").value = out.localisation;
     if (out.description) $("#fDesc").value = out.description;
@@ -3284,6 +3300,7 @@ function openSettings(){
   $("#sPlanZoom").value = s.planZoom;
   $("#sPlanMode").value = s.planMode;
   $("#sKey").value = localStorage.getItem("apiKey") || "";
+  $("#sAutoLock").value = String(autoLockDelay());
   refreshLogoState();
   renderAnnexeList();
   $("#setModal").classList.add("on");
@@ -3304,6 +3321,8 @@ async function saveSettingsUI(){
   const key = $("#sKey").value.trim();
   if (key) localStorage.setItem("apiKey", key);
   else localStorage.removeItem("apiKey");
+  localStorage.setItem("autoLock", $("#sAutoLock").value);
+  armIdle();
   applyHeader(s);
   $("#setModal").classList.remove("on");
   toast("Réglages enregistrés");
@@ -3322,6 +3341,7 @@ async function main(){
   $("#btnUnlock").addEventListener("click", submitPin);
   $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
   $("#btnLock").addEventListener("click", showLock);
+  setupAutoLock();
 
   $("#btnNewVisit").addEventListener("click", async () => {
     const iso = todayIso();
