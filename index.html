@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Notes de Chantier — Constats VRD</title>
+<title>PCM-CAD — Notes de chantier VRD</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#F4F1EA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14110E" media="(prefers-color-scheme: dark)">
@@ -112,7 +112,7 @@
   section.screen{display:none}
   section.screen.on{display:block}
 
-  .lockbox{min-height:78dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:24px 10px}
+  .lockbox{min-height:92dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:24px 10px}
   .lockbox .glyph{
     width:96px; height:96px; border-radius:38% 62% 58% 42% / 46% 40% 60% 54%;
     background:var(--grad);
@@ -125,6 +125,25 @@
     50%{border-radius:58% 42% 40% 60% / 56% 58% 42% 44%}
   }
   @media (prefers-reduced-motion: reduce){ .lockbox .glyph{animation:none} }
+  /* bloc de marque de la page de connexion */
+  /* verrouillé : page de marque plein écran, aucun nom de chantier visible */
+  body.locked header.top{display:none}
+  .brand{display:flex; flex-direction:column; align-items:center; gap:2px; margin-bottom:22px}
+  .brand-org{
+    font-size:12.5px; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--blue); text-align:center; line-height:1.3;
+  }
+  .brand-app{
+    font-size:40px; font-weight:900; letter-spacing:.01em; line-height:1;
+    color:var(--accent);
+  }
+  .brand-rule{width:52px; height:3px; border-radius:99px; margin-top:8px;
+    background:linear-gradient(90deg, var(--accent), var(--blue))}
+  .brand-by{
+    font-family:Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    font-style:italic; font-size:16px; font-weight:600; letter-spacing:.02em;
+    color:var(--blue-deep); margin-top:9px;
+  }
   .lockbox h1{font-size:20px; margin:4px 0 0; letter-spacing:-.01em}
   .lockbox p{color:var(--ink2); margin:2px 0 14px; max-width:34ch}
   .pinfield{font-size:26px; letter-spacing:.45em; text-align:center; width:210px; padding:12px 6px 12px 16px; border-radius:99px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
@@ -196,6 +215,25 @@
   .cap-field .k{font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); display:block; margin-bottom:1px}
   .cap-actions{display:flex; gap:8px; margin-top:12px}
   .cap-actions .btn{padding:9px 13px; font-size:13.5px}
+  /* bandeau réserve rattachée à un cliché (solde direct avec preuve photo) */
+  .cap-res{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:12px; padding:10px 12px;
+    border-radius:var(--r-md); background:var(--blue-soft); border:1px solid var(--blue-line)}
+  .cap-res .cr-lab{flex:1 1 auto; font-size:12.5px; font-weight:800; color:var(--blue-deep); min-width:0}
+  .cap-res .cr-lab small{display:block; font-weight:600; font-size:11.5px; opacity:.8}
+  .cap-res .btn{padding:8px 13px; font-size:12.5px}
+  .cap-res.done{background:rgba(46,125,69,.12); border-color:rgba(46,125,69,.38)}
+  .cap-res.done .cr-lab{color:var(--c)}
+  .cap-res.late{background:rgba(192,57,43,.10); border-color:rgba(192,57,43,.34)}
+  .cap-res.late .cr-lab{color:var(--nc)}
+  /* compteur de clichés à compléter */
+  .todo-chip{display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit;
+    margin:0 0 12px; padding:12px 15px; border-radius:var(--r-lg); cursor:pointer; color:var(--ink);
+    background:rgba(168,116,7,.13); border:1px solid rgba(168,116,7,.4); font-weight:700; font-size:13.5px}
+  .todo-chip b{color:var(--pa)}
+  @media (prefers-color-scheme: dark){
+    .cap-res.done{background:rgba(92,180,124,.15)} .cap-res.late{background:rgba(224,96,82,.15)}
+    .todo-chip{background:rgba(220,164,37,.15); border-color:rgba(220,164,37,.42)}
+  }
 
   .fab{
     position:fixed; right:16px; bottom:18px; z-index:25;
@@ -324,8 +362,13 @@
 <section class="screen" id="scrLock">
   <div class="wrap">
     <div class="lockbox">
+      <div class="brand">
+        <div class="brand-org">PCM Aménagement Urbain</div>
+        <div class="brand-app">PCM-CAD</div>
+        <div class="brand-rule"></div>
+        <div class="brand-by">by Édouard Vigier</div>
+      </div>
       <div class="glyph">🔒</div>
-      <h1 id="lockTitle">Notes de chantier</h1>
       <p id="lockText">Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone.</p>
       <input class="pinfield mono" id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Code PIN">
       <div class="lockmsg" id="lockMsg"></div>
@@ -494,7 +537,7 @@
     <div class="field" id="reserveField">
       <label for="fReserve">Réserve au registre (constats NC / PA)</label>
       <select id="fReserve"></select>
-      <div class="hint">Rattache ce constat à une réserve numérotée, suivie de visite en visite jusqu'à son solde.</div>
+      <div class="hint">Rattachez le cliché à une réserve <b>déjà ouverte</b> pour construire l'avant/après : le rapport compare automatiquement le premier cliché et le plus récent. Le solde se fait ensuite d'un appui depuis le cliché.</div>
     </div>
 
     <div class="btnrow">
@@ -651,7 +694,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "2.9";
+const APP_VERSION = "3.0";
 /* =============== utilitaires =============== */
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1014,10 +1057,11 @@ function showLock(){
   $("#scrLock").classList.add("on");
   $("#editModal").classList.remove("on");
   $("#setModal").classList.remove("on");
+  $("#moyensModal").classList.remove("on");
   closeAddSheet();
+  document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
   pinMode = has ? "enter" : "create";
-  $("#lockTitle").textContent = has ? "Notes de chantier" : "Bienvenue";
   $("#lockText").textContent = has
     ? "Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone."
     : "Choisissez un code (4 à 8 chiffres) qui protégera votre carnet sur ce téléphone.";
@@ -1053,7 +1097,11 @@ async function submitPin(){
     else { pinMode = "new"; $("#pinInput").value = ""; msg.textContent = "Les codes ne correspondent pas."; $("#lockText").textContent = "Nouveau code (4 à 8 chiffres)."; $("#btnUnlock").textContent = "Continuer"; }
   }
 }
-function unlock(){ $("#scrLock").classList.remove("on"); showHome().then(processInbox).then(runPendingAction); }
+function unlock(){
+  document.body.classList.remove("locked");
+  $("#scrLock").classList.remove("on");
+  showHome().then(processInbox).then(runPendingAction);
+}
 
 /* raccourcis d'icône Android (?a=…) */
 let pendingAction = null;
@@ -1355,13 +1403,40 @@ async function actionTracking(){
   return rows;
 }
 
+/* avant / après : réserves suivies sur plusieurs visites → 1er cliché vs cliché de levée (ou le dernier) */
+async function reserveProgress(){
+  if (!CUR) return [];
+  const reserves = (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num);
+  if (!reserves.length) return [];
+  const vmap = {};
+  (await projectVisits()).forEach(v => vmap[v.id] = v);
+  const linked = (await idbAll("photos")).filter(p => p.reserveId && vmap[p.visitId]);
+  const out = [];
+  for (const r of reserves){
+    const ph = linked.filter(p => p.reserveId === r.id).sort((a, b) => {
+      const da = vmap[a.visitId].date, db = vmap[b.visitId].date;
+      return da < db ? -1 : da > db ? 1 : (a.num - b.num);
+    });
+    if (ph.length < 2) continue;
+    const before = ph[0];
+    const after = (r.soldePhotoId && ph.find(p => p.id === r.soldePhotoId)) || ph[ph.length - 1];
+    if (after.id === before.id) continue;
+    out.push({ r, statut: reserveStatut(r),
+      before: {p: before, date: vmap[before.visitId].date},
+      after:  {p: after,  date: vmap[after.visitId].date} });
+  }
+  return out;
+}
+
 /* =============== registre des réserves =============== */
 async function nextReserveNum(){
   const res = await idbAll("reserves","projectId",CUR.id);
   return res.reduce((m, r) => Math.max(m, r.num || 0), 0) + 1;
 }
-async function createReserve({objet, zone, statut, entreprise, action, dateLimite}){
-  const rec = { projectId: CUR.id, num: await nextReserveNum(), date: todayIso(),
+async function createReserve({objet, zone, statut, entreprise, action, dateLimite, date}){
+  // « Origine » = la visite qui a relevé le constat, pas le jour de la saisie
+  const rec = { projectId: CUR.id, num: await nextReserveNum(),
+    date: date || (curVisit && curVisit.date) || todayIso(),
     zone: zone || "", objet: objet || "", entreprise: entreprise || "", action: action || "",
     dateLimite: dateLimite || "", statut: statut || "En cours", dateSolde: "", createdAt: Date.now() };
   rec.id = await idbAdd("reserves", rec);
@@ -1410,6 +1485,7 @@ async function renderRegister(){
       const r = res.find(x => x.id === id);
       r.statut = r.statut === "Soldé" ? "En cours" : "Soldé";
       r.dateSolde = r.statut === "Soldé" ? todayIso() : "";
+      if (r.statut !== "Soldé") r.soldePhotoId = null;
       await tx("reserves","readwrite", s => s.put(r));
       await renderRegister();
     });
@@ -1455,19 +1531,48 @@ async function renderPhotos(){
     list.innerHTML = `<div class="empty"><span class="glyph">📷</span>Aucun cliché.<br>Prenez vos photos avec Timestamp Camera,<br>puis ajoutez-les avec le bouton +.</div>`;
     return;
   }
-  list.innerHTML = photos.map(p => {
+  const reserves = CUR ? await idbAll("reserves","projectId",CUR.id) : [];
+  const resById = {}; reserves.forEach(r => resById[r.id] = r);
+
+  /* compteur de clichés à compléter (sans statut ou sans description) */
+  const todo = photos.filter(photoIncomplete);
+  const todoHtml = todo.length
+    ? `<button class="todo-chip" id="btnTodo">⚠️ <span><b>${todo.length} cliché${todo.length > 1 ? "s" : ""} à compléter</b> — statut ou description manquants. Appuyez pour ouvrir le premier.</span></button>`
+    : "";
+
+  list.innerHTML = todoHtml + photos.map(p => {
     const meta = [];
     if (p.takenAt){ const [d, t] = p.takenAt.split("T"); meta.push(`${frDate(d)} ${t}`); }
     if (p.lat != null){
       meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.gpsApprox ? "≈ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
     }
-    const elems = Array.isArray(p.element) ? p.element : [];
+    const obs = elemToStr(p.element);
     const fields = [];
-    if (elems.length) fields.push(`<div class="cap-field"><span class="k">Élément VRD</span>${esc(elems.join(", "))}</div>`);
+    if (obs) fields.push(`<div class="cap-field"><span class="k">Observation</span>${esc(obs)}</div>`);
     if (p.zone) fields.push(`<div class="cap-field"><span class="k">Localisation</span>${esc(p.zone)}</div>`);
     if (p.entreprise) fields.push(`<div class="cap-field"><span class="k">Entreprise / lot</span>${esc(p.entreprise)}</div>`);
     if (p.description) fields.push(`<div class="cap-field"><span class="k">Description factuelle</span>${esc(p.description)}</div>`);
     if (p.suite) fields.push(`<div class="cap-field"><span class="k">Suite à donner</span>${esc(p.suite)}</div>`);
+    if (p.dateLimite) fields.push(`<div class="cap-field"><span class="k">Échéance</span>${esc(frDate(p.dateLimite))}</div>`);
+
+    /* bandeau de la réserve rattachée : solder / réouvrir sans quitter la visite */
+    let resHtml = "";
+    const r = p.reserveId ? resById[p.reserveId] : null;
+    if (r){
+      const st = reserveStatut(r);
+      const isProof = r.soldePhotoId === p.id;
+      const cls = st === "Soldé" ? " done" : (st === "En retard" ? " late" : "");
+      const sub = st === "Soldé"
+        ? (isProof ? "Levée constatée sur ce cliché" + (r.dateSolde ? ` le ${frDate(r.dateSolde)}` : "")
+                   : "Soldée" + (r.dateSolde ? ` le ${frDate(r.dateSolde)}` : ""))
+        : (r.dateLimite ? `Échéance ${frDate(r.dateLimite)}` : "Sans échéance");
+      const btn = st === "Soldé"
+        ? `<button class="btn ghost" data-act="reopen">↩ Réouvrir</button>`
+        : `<button class="btn blue" data-act="solder">✓ Solder avec ce cliché</button>`;
+      resHtml = `<div class="cap-res${cls}">
+        <span class="cr-lab">Réserve n°${r.num} · ${st}<small>${esc(sub)}</small></span>${btn}</div>`;
+    }
+
     return `<article class="photo-card" data-id="${p.id}">
       <div class="shot-wrap">
         <img class="shot" src="${mkURL(p.blob)}" alt="Cliché n°${p.num}" loading="lazy">
@@ -1478,14 +1583,46 @@ async function renderPhotos(){
         <div class="cap-meta mono">${meta.join(" · ") || "métadonnées non trouvées"}</div>
         ${p.titre ? `<div class="cap-title">${esc(p.titre)}</div>` : ""}
         ${fields.join("")}
+        ${resHtml}
         <div class="cap-actions">
           <button class="btn" data-act="edit">✎ Commentaire</button>
         </div>
       </div>
     </article>`;
   }).join("");
-  list.querySelectorAll("[data-act=edit]").forEach(b =>
-    b.addEventListener("click", e => openEditor(Number(e.target.closest(".photo-card").dataset.id))));
+
+  const cardId = e => Number(e.target.closest(".photo-card").dataset.id);
+  list.querySelectorAll("[data-act=edit]").forEach(b => b.addEventListener("click", e => openEditor(cardId(e))));
+  list.querySelectorAll("[data-act=solder]").forEach(b => b.addEventListener("click", e => {
+    const id = cardId(e);
+    solderReserve(photos.find(x => x.id === id).reserveId, id);
+  }));
+  list.querySelectorAll("[data-act=reopen]").forEach(b => b.addEventListener("click", e => {
+    const id = cardId(e);
+    reopenReserve(photos.find(x => x.id === id).reserveId);
+  }));
+  const bt = $("#btnTodo");
+  if (bt) bt.addEventListener("click", () => openEditor(todo[0].id));
+}
+/* un cliché est « à compléter » s'il manque le statut ou la description */
+function photoIncomplete(p){ return !p.statut || !(p.description || "").trim(); }
+
+/* solder une réserve depuis le cliché qui en constate la levée */
+async function solderReserve(reserveId, photoId){
+  const r = (await idbAll("reserves","projectId",CUR.id)).find(x => x.id === reserveId);
+  if (!r) return;
+  r.statut = "Soldé"; r.dateSolde = todayIso(); r.soldePhotoId = photoId;
+  await tx("reserves","readwrite", s => s.put(r));
+  await renderPhotos();
+  toast(`Réserve n°${r.num} soldée — levée constatée sur ce cliché`);
+}
+async function reopenReserve(reserveId){
+  const r = (await idbAll("reserves","projectId",CUR.id)).find(x => x.id === reserveId);
+  if (!r) return;
+  r.statut = "En cours"; r.dateSolde = ""; r.soldePhotoId = null;
+  await tx("reserves","readwrite", s => s.put(r));
+  await renderPhotos();
+  toast(`Réserve n°${r.num} réouverte`);
 }
 
 /* =============== ajout de photos =============== */
@@ -2181,7 +2318,7 @@ async function pdfForVisit(visit, photos, settings){
     lx += 29 + lib.length * 4.3 + 20;
   }
   y -= 22;
-  cur.texts.push({x:40, y, size:7.5, font:"F1", color:PDF_GREY, text:"Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion."});
+  cur.texts.push({x:40, y, size:7.5, font:"F1", color:PDF_GREY, text:"Rapport généré par PCM-CAD (PCM Aménagement Urbain), à vérifier avant diffusion."});
   y -= 14;
 
   /* ---- plan de situation (chargé, sinon généré automatiquement depuis le GPS) ---- */
@@ -2334,6 +2471,42 @@ async function pdfForVisit(visit, photos, settings){
       y -= rowH;
     }
     y -= 14;
+  }
+
+  /* ---- suivi photographique des réserves : avant / après entre visites ---- */
+  const prog = await reserveProgress();
+  if (prog.length){
+    if (y < 300) newPage();
+    band("SUIVI PHOTOGRAPHIQUE DES RÉSERVES — AVANT / APRÈS", 22, 10);
+    cur.texts.push({x:40, y, size:8, font:"F1", color:PDF_GREY, text:`Évolution constatée d'une visite à l'autre pour ${prog.length} réserve(s) suivie(s).`});
+    y -= 18;
+    const colW = 250, colX = [40, 305];
+    for (const g of prog){
+      const ims = [await normalizeJpeg(g.before.p.blob, 900, 0.75), await normalizeJpeg(g.after.p.blob, 900, 0.75)];
+      const d = ims.map(im => { const sc = Math.min(colW / im.w, 165 / im.h); return {dw: im.w * sc, dh: im.h * sc}; });
+      const blockH = Math.max(d[0].dh, d[1].dh) + 46;
+      if (blockH + 8 > y - 56) newPage();
+      // en-tête de la réserve + statut
+      cur.rects.push({x:40, y:y-14, w:515.28, h:14, color:PDF_LABEL});
+      cur.texts.push({x:44, y:y-10.5, size:7.6, font:"F2", color:PDF_NAVY,
+        text:`RÉSERVE N°${g.r.num} — ${(g.r.objet || "").slice(0, 62)}`});
+      const stC = g.statut === "Soldé" ? PDF_STATUT.C : (g.statut === "En retard" ? PDF_STATUT.NC : PDF_STATUT.PA);
+      cur.rects.push({x:492, y:y-13.5, w:63, h:12, color:stC});
+      cur.texts.push({x:496, y:y-10, size:6.6, font:"F2", color:"1 1 1", text:g.statut});
+      y -= 20;
+      // légendes puis clichés côte à côte
+      cur.texts.push({x:colX[0], y:y-8, size:7.4, font:"F2", color:PDF_STATUT.NC, text:`AVANT — ${frDate(g.before.date)}`});
+      cur.texts.push({x:colX[1], y:y-8, size:7.4, font:"F2", color:PDF_STATUT.C, text:`APRÈS — ${frDate(g.after.date)}`});
+      y -= 12;
+      [0,1].forEach(k => {
+        cur.images.push({bytes:ims[k].bytes, w:ims[k].w, h:ims[k].h,
+          x:colX[k] + (colW - d[k].dw) / 2, y:y - d[k].dh, dw:d[k].dw, dh:d[k].dh});
+        cur.texts.push({x:colX[k], y:y - d[k].dh - 8, size:6.4, font:"F1", color:PDF_GREY,
+          text:`cliché n°${(k ? g.after : g.before).p.num}`});
+      });
+      y -= Math.max(d[0].dh, d[1].dh) + 20;
+    }
+    y -= 6;
   }
 
   /* ---- tableau de suivi des actions et réserves (automatique : constats NC/PA/AC + réserves) ---- */
@@ -2609,7 +2782,7 @@ async function docxForVisit(visit, photos, settings){
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="9640" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${"<w:gridCol w:w=\"1928\"/>".repeat(5)}</w:tblGrid><w:tr>${wTc(9640, wP(wR("IDENTIFICATION & MÉTÉO", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:5, fill:DOCX_BAND})}</w:tr>${idHead}${idRow}</w:tbl>`);
   body.push(wP("", `<w:spacing w:after="80"/>`));
 
-  body.push(wP(wR("Rapport généré par l'application Notes de Chantier — Constats VRD, à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="120"/>`));
+  body.push(wP(wR("Rapport généré par PCM-CAD (PCM Aménagement Urbain), à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="120"/>`));
   body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
 
   /* ---- constats par zones automatiques (GPS ± 10 m) ---- */
@@ -2675,6 +2848,37 @@ async function docxForVisit(visit, photos, settings){
     }
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="900"/><w:gridCol w:w="5038"/><w:gridCol w:w="3000"/></w:tblGrid>${recRows.join("")}</w:tbl>`);
     body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  /* ---- suivi photographique des réserves : avant / après entre visites ---- */
+  const prog = await reserveProgress();
+  if (prog.length){
+    const PSTC = {"Soldé":DOCX_STATUT.C, "En retard":DOCX_STATUT.NC, "En cours":DOCX_STATUT.PA};
+    body.push(wP(wR("SUIVI PHOTOGRAPHIQUE DES RÉSERVES — AVANT / APRÈS", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="60"/><w:ind w:left="113"/>`));
+    body.push(wP(wR(`Évolution constatée d'une visite à l'autre pour ${prog.length} réserve(s) suivie(s).`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="100"/>`));
+    for (const g of prog){
+      const cells = [];
+      for (const side of [g.before, g.after]){
+        imgId++;
+        const im = await normalizeJpeg(side.p.blob, 800, 0.75);
+        const rid = `rIdImg${imgId}`;
+        media.push({name:`word/media/image${imgId}.jpg`, data:im.bytes});
+        rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${imgId}.jpg"/>`);
+        let cx = im.w * 9525, cy = im.h * 9525;
+        const sc = Math.min(1, 2790000 / cx, 2200000 / cy); // ≈ 7,7 x 6,1 cm
+        cx = Math.round(cx * sc); cy = Math.round(cy * sc);
+        cells.push(`<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${wPhoto(rid, cx, cy, 3000 + imgId)}</w:p>` +
+          wP(wR(`cliché n°${side.p.num}`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="13"/>`), `<w:spacing w:before="20" w:after="0"/><w:jc w:val="center"/>`));
+      }
+      const hdrP = `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>` +
+        `<w:r><w:rPr><w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="17"/></w:rPr><w:t xml:space="preserve">${escXml(`Réserve n°${g.r.num} — ${g.r.objet || ""}`)}  </w:t></w:r>` +
+        `<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:shd w:val="clear" w:fill="${PSTC[g.statut]}"/><w:sz w:val="15"/></w:rPr><w:t xml:space="preserve"> ${g.statut} </w:t></w:r></w:p>`;
+      const hdr = `<w:tr>${wTc(9638, hdrP, {span:2, fill:DOCX_LABEL})}</w:tr>`;
+      const legend = `<w:tr>${wTc(4819, wP(wR(`AVANT — ${frDate(g.before.date)}`, `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`))}${wTc(4819, wP(wR(`APRÈS — ${frDate(g.after.date)}`, `<w:b/><w:color w:val="${DOCX_STATUT.C}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`))}</w:tr>`;
+      const imgs = `<w:tr>${wTc(4819, cells[0])}${wTc(4819, cells[1])}</w:tr>`;
+      body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid>${hdr}${legend}${imgs}</w:tbl>`);
+      body.push(wP("", `<w:spacing w:after="140"/>`));
+    }
   }
 
   /* ---- tableau de suivi des actions et réserves (automatique : constats NC/PA/AC + réserves) ---- */
@@ -2871,7 +3075,7 @@ async function fullBackup(){
       currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, annexes, photos: photoData };
     const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
     const d = todayIso();
-    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde Notes de Chantier");
+    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde PCM-CAD");
     const mo = (blob.size/1048576).toFixed(1);
     toast(r === "saved" ? `Sauvegarde enregistrée ✔ (${mo} Mo)` :
           r === "shared" ? `Sauvegarde partagée ✔ (${mo} Mo)` :
