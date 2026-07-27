@@ -473,10 +473,13 @@
     <button class="btn primary block" id="btnOpenTimestamp">📷 Ouvrir Timestamp Camera (prise de vue)</button>
     <div class="hint" style="margin:-4px 4px 2px">Prenez vos clichés horodatés, revenez ici, puis importez-les.</div>
     <button class="btn block" id="btnPickGallery">🖼 Importer depuis la galerie</button>
+    <button class="btn blue block" id="btnPickDrive">📁 Depuis Fichiers / Google Drive</button>
     <button class="btn ghost block" id="btnPickCamera">Appareil photo simple (sans horodatage)</button>
     <button class="btn ghost block" id="btnAddCancel">Annuler</button>
   </div>
   <input type="file" id="fileGallery" accept="image/*" multiple hidden>
+  <!-- sans accept : ouvre le sélecteur Fichiers, seul endroit où Google Drive apparaît -->
+  <input type="file" id="fileDrive" multiple hidden>
   <input type="file" id="fileCamera" accept="image/*" capture="environment" hidden>
   <input type="file" id="fileLevee" accept="image/*" capture="environment" hidden>
 </div>
@@ -696,9 +699,10 @@
           <button class="chip" id="btnLogoClear">Retirer tous</button>
         </div>
         <div class="hint" id="logoState"></div>
-        <div class="hint">Gauche réservé à la maîtrise d'ouvrage ; jusqu'à 3 logos à droite, affichés à la même hauteur. Depuis le téléphone, le sélecteur propose Galerie, Fichiers ou Google Drive.</div>
-        <input type="file" id="fileLogoL" accept="image/*" hidden>
-        <input type="file" id="fileLogoR" accept="image/*" hidden>
+        <div class="hint">Gauche réservé à la maîtrise d'ouvrage ; jusqu'à 3 logos à droite, affichés à la même hauteur. Le sélecteur ouvre <b>Fichiers</b> : Google Drive, Photos et le stockage du téléphone y sont accessibles (menu ☰ en haut à gauche).</div>
+        <!-- pas de accept="image/*" : Android ouvrirait le sélecteur Photos, qui masque Google Drive -->
+        <input type="file" id="fileLogoL" hidden>
+        <input type="file" id="fileLogoR" hidden>
       </div>
       <div class="field">
         <label for="sPlanMode">Plan de situation</label>
@@ -711,7 +715,8 @@
           <button class="chip" id="btnPlanClear">Retirer l'image</button>
         </div>
         <div class="hint" id="planState"></div>
-        <input type="file" id="filePlan" accept="image/*" hidden>
+        <div class="hint">Le sélecteur ouvre <b>Fichiers</b> (Google Drive, Photos, stockage du téléphone).</div>
+        <input type="file" id="filePlan" hidden>
       </div>
       <div class="field">
         <label for="sPlanZoom">Échelle du plan automatique</label>
@@ -2097,6 +2102,21 @@ async function saveEdit(){
   toast("Commentaire enregistré" + regMsg);
 }
 
+/* Les sélecteurs de logos/plan/photos n'imposent plus « image/* » (sinon Android masque Google
+   Drive) : on filtre donc nous-mêmes, en tolérant les fichiers dont le type MIME est vide,
+   ce qui arrive souvent avec les fournisseurs distants comme Drive. */
+function isImageFile(f){
+  if (!f) return false;
+  if (/^image\//i.test(f.type || "")) return true;
+  if (f.type) return false;
+  return /\.(jpe?g|png|webp|gif|bmp|heic|heif)$/i.test(f.name || "");
+}
+function filterImages(files, label){
+  const imgs = files.filter(isImageFile);
+  const rejets = files.length - imgs.length;
+  if (rejets) toast(`${rejets} fichier(s) ignoré(s) : ${label} accepte uniquement des images.`, true);
+  return imgs;
+}
 /* Cliché illisible (fichier corrompu, format non décodable) : on ne fait pas échouer tout le
    rapport — on renvoie null et le générateur pose un cadre « illisible » à la place. */
 async function safeJpeg(blob, maxDim, q){
@@ -3629,8 +3649,14 @@ async function main(){
   $("#btnAddCancel").addEventListener("click", closeAddSheet);
   $("#btnOpenTimestamp").addEventListener("click", launchTimestamp);
   $("#btnPickGallery").addEventListener("click", () => $("#fileGallery").click());
+  $("#btnPickDrive").addEventListener("click", () => $("#fileDrive").click());
   $("#btnPickCamera").addEventListener("click", () => $("#fileCamera").click());
   $("#fileGallery").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
+  $("#fileDrive").addEventListener("change", e => {
+    const imgs = filterImages([...e.target.files], "l'import de clichés");
+    e.target.value = "";
+    if (imgs.length) importFiles(imgs);
+  });
   $("#fileCamera").addEventListener("change", e => { importFiles([...e.target.files]); e.target.value = ""; });
   $("#fileLevee").addEventListener("change", e => {
     const f = e.target.files[0];
@@ -3702,8 +3728,12 @@ async function main(){
   });
   $("#btnPlan").addEventListener("click", () => $("#filePlan").click());
   $("#filePlan").addEventListener("change", async e => {
-    if (e.target.files[0]){ await storePlan(e.target.files[0]); refreshLogoState(); toast("Plan de situation enregistré"); }
+    const f = e.target.files[0];
     e.target.value = "";
+    if (!f) return;
+    if (!isImageFile(f)){ toast("Le plan de situation doit être une image (JPG, PNG…).", true); return; }
+    try{ await storePlan(f); refreshLogoState(); toast("Plan de situation enregistré"); }
+    catch{ toast("Image illisible — essayez un autre fichier.", true); }
   });
   $("#btnPlanClear").addEventListener("click", () => {
     localStorage.removeItem("planImg");
@@ -3712,15 +3742,22 @@ async function main(){
   $("#btnLogoL").addEventListener("click", () => $("#fileLogoL").click());
   $("#btnLogoR").addEventListener("click", () => $("#fileLogoR").click());
   $("#fileLogoL").addEventListener("change", async e => {
-    if (e.target.files[0]){ await storeLogo("logoL", e.target.files[0]); refreshLogoState(); toast("Logo gauche enregistré"); }
+    const f = e.target.files[0];
     e.target.value = "";
+    if (!f) return;
+    if (!isImageFile(f)){ toast("Un logo doit être une image (JPG, PNG…).", true); return; }
+    try{ await storeLogo("logoL", f); refreshLogoState(); toast("Logo gauche enregistré"); }
+    catch{ toast("Image illisible — essayez un autre fichier.", true); }
   });
   $("#fileLogoR").addEventListener("change", async e => {
-    if (e.target.files[0]){
-      const ok = await addLogoR(e.target.files[0]);
-      refreshLogoState(); toast(ok ? "Logo droit ajouté" : "Maximum 3 logos à droite atteint");
-    }
+    const f = e.target.files[0];
     e.target.value = "";
+    if (!f) return;
+    if (!isImageFile(f)){ toast("Un logo doit être une image (JPG, PNG…).", true); return; }
+    try{
+      const ok = await addLogoR(f);
+      refreshLogoState(); toast(ok ? "Logo droit ajouté" : "Maximum 3 logos à droite atteint");
+    }catch{ toast("Image illisible — essayez un autre fichier.", true); }
   });
   $("#btnLogoClear").addEventListener("click", async () => {
     if (CUR){ CUR.logoL = null; CUR.logoR = null; CUR.logosR = []; await saveCurrentProject(); }
