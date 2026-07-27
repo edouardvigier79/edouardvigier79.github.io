@@ -254,6 +254,46 @@
   .or-txt small{font-size:11.5px; color:var(--ink2)}
   .or-txt small.late{color:var(--nc); font-weight:700}
   .or-row .btn{padding:9px 13px; font-size:12.5px; flex:none}
+  /* ---- fiches de contrôle ---- */
+  .ctrl-card{display:flex; align-items:center; gap:11px; width:100%; text-align:left; font:inherit; color:var(--ink);
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:12px 14px;
+    margin-bottom:9px; cursor:pointer; box-shadow:var(--shadow)}
+  .ctrl-card .cc-txt{flex:1; min-width:0}
+  .ctrl-card .cc-txt b{display:block; font-size:14.5px}
+  .ctrl-card .cc-txt small{color:var(--ink2); font-size:12px}
+  .cc-verdict{flex:none; font-size:11px; font-weight:800; padding:5px 11px; border-radius:99px; color:#fff; text-align:center}
+  .cc-verdict.ok{background:var(--c)} .cc-verdict.ko{background:var(--nc)} .cc-verdict.res{background:var(--pa)}
+  .cc-verdict.wip{background:var(--chip); color:var(--ink2)}
+  .ctrl-fam{margin-bottom:12px}
+  .ctrl-fam > h5{margin:0 0 6px; font-size:10.5px; font-weight:800; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--blue)}
+  .ctrl-head{background:var(--blue-soft); border:1px solid var(--blue-line); border-radius:var(--r-md);
+    padding:10px 13px; margin-bottom:14px}
+  .ctrl-head b{display:block; font-size:15px}
+  .ctrl-head small{color:var(--ink2); font-size:12px}
+  .ci{border:1px solid var(--line); border-radius:var(--r-md); padding:11px 13px; margin-bottom:9px; background:var(--card)}
+  .ci-l{font-size:14px; font-weight:600; margin-bottom:8px}
+  .ci-l .ci-seuil{display:block; font-weight:500; font-size:11.5px; color:var(--ink2); margin-top:2px}
+  .ci-choices{display:flex; gap:6px; flex-wrap:wrap}
+  .ci-choices button{border:1.5px solid var(--line); background:var(--card); color:var(--ink); border-radius:99px;
+    padding:7px 14px; font:inherit; font-size:13px; font-weight:700; cursor:pointer}
+  .ci-choices button.on[data-v="C"]{background:var(--c); border-color:var(--c); color:#fff}
+  .ci-choices button.on[data-v="NC"]{background:var(--nc); border-color:var(--nc); color:#fff}
+  .ci-choices button.on[data-v="SO"]{background:var(--chip-on); border-color:var(--chip-on); color:var(--chip-on-ink)}
+  .ci-meas{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .ci-meas input{flex:0 1 120px; font:inherit; color:var(--ink); background:var(--bg);
+    border:1.5px solid var(--line); border-radius:var(--r-sm); padding:9px 11px}
+  .ci-meas input:focus{border-color:var(--blue); outline:none}
+  .ci-meas .ci-u{font-size:13px; color:var(--ink2); font-weight:600}
+  .ci-verdict{font-size:11.5px; font-weight:800; padding:4px 11px; border-radius:99px; color:#fff}
+  .ci-verdict.ok{background:var(--c)} .ci-verdict.ko{background:var(--nc)}
+  .ci textarea{width:100%; font:inherit; color:var(--ink); background:var(--bg);
+    border:1.5px solid var(--line); border-radius:var(--r-sm); padding:9px 11px; min-height:56px; resize:vertical}
+  .ctrl-concl{border-radius:var(--r-lg); padding:14px 16px; margin:16px 0 4px; font-weight:800; text-align:center; font-size:15px}
+  .ctrl-concl.ok{background:rgba(46,125,69,.14); color:var(--c); border:1.5px solid rgba(46,125,69,.4)}
+  .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
+  .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
+  .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
   /* compteur de clichés à compléter */
   .todo-chip{display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit;
     margin:0 0 12px; padding:12px 15px; border-radius:var(--r-lg); cursor:pointer; color:var(--ink);
@@ -449,7 +489,8 @@
       <div class="sect-label" id="visitLabel" style="margin:20px 2px 8px; flex:1">Visite</div>
       <button class="iconbtn" id="btnRenameVisit" title="Renommer la visite" aria-label="Renommer la visite" style="width:34px; height:34px; font-size:14px">✎</button>
     </div>
-    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 12px">👷 Moyens sur site (effectif, engins)</button>
+    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 8px">👷 Moyens sur site (effectif, engins)</button>
+    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 12px">📋 Fiches de contrôle / points d'arrêt</button>
     <div id="photoList"></div>
     <div class="btnrow">
       <button class="btn primary block" id="btnPdf">📄 Rapport PDF</button>
@@ -582,6 +623,47 @@
     <div id="moyensList"></div>
     <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px">➕ Ajouter une entreprise</button>
     <button class="btn primary block" id="btnMoyensSave" style="margin-top:12px">Enregistrer</button>
+  </div>
+</div>
+
+<!-- ================= FICHES DE CONTRÔLE : liste + choix du modèle ================= -->
+<div class="modal" id="ctrlModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnCtrlClose" aria-label="Fermer">←</button>
+      <b>Fiches de contrôle</b>
+    </div>
+    <p class="hint" style="margin:2px 2px 12px">Points d'arrêt et contrôles de conformité rattachés à cette visite. Les mesures sont comparées automatiquement à leur seuil.</p>
+    <div id="ctrlList"></div>
+    <div class="sect-label" style="margin-top:18px">Ouvrir une nouvelle fiche</div>
+    <div id="ctrlPicker"></div>
+  </div>
+</div>
+
+<!-- ================= FICHE DE CONTRÔLE : saisie ================= -->
+<div class="modal" id="ctrlFormModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnCtrlFormClose" aria-label="Fermer">←</button>
+      <b id="ctrlFormTitle">Fiche</b>
+      <button class="btn primary" id="btnCtrlSave" style="padding:9px 16px">Enregistrer</button>
+    </div>
+    <div class="ctrl-head" id="ctrlHead"></div>
+    <div class="field">
+      <label for="cZone">Localisation / zone contrôlée</label>
+      <input type="text" id="cZone" list="zonesList3" placeholder="Ex. : Carrefour av. du Château">
+      <datalist id="zonesList3"></datalist>
+    </div>
+    <div class="field">
+      <label for="cEnt">Entreprise concernée</label>
+      <input type="text" id="cEnt" list="entsList2" placeholder="Ex. : Colas (mandataire)">
+      <datalist id="entsList2"></datalist>
+    </div>
+    <div id="ctrlItems"></div>
+    <div class="ctrl-concl" id="ctrlConcl"></div>
+    <div class="btnrow" id="cDelRow">
+      <button class="btn danger block" id="btnCtrlDelete">Supprimer cette fiche</button>
+    </div>
   </div>
 </div>
 
@@ -820,6 +902,150 @@ function blobToBase64(blob){
 }
 
 /* =============== catégories VRD (nomenclature stricte) =============== */
+/* =============== fiches de contrôle / points d'arrêt (MOE) ===============
+   Types de point : "v" vérification (C/NC/SO) · "m" mesure (valeur comparée à un seuil) · "t" texte libre.
+   Mesure : op ">=" | "<=" | "between", seuil (ou min/max), u = unité. La conformité est calculée. */
+const CTRL_LIB = [
+  { id:"implantation", fam:"Terrassement", name:"Implantation / piquetage", ref:"Fasc. 2 — CCTG",
+    items:[
+      {l:"Piquetage conforme au plan d'exécution visé", t:"v"},
+      {l:"Piquetage contradictoire réalisé avec l'entreprise", t:"v"},
+      {l:"Écart altimétrique sur points caractéristiques", t:"m", u:"cm", op:"<=", seuil:2},
+      {l:"Écart planimétrique", t:"m", u:"cm", op:"<=", seuil:5},
+      {l:"Repères et bornes protégés et rattachés (NGF / Lambert)", t:"v"},
+      {l:"DT-DICT à jour et réseaux repérés sur site", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"fond-forme", fam:"Terrassement", name:"Réception de fond de forme / arase", ref:"Fasc. 2 · GTR NF P 11-300",
+    items:[
+      {l:"Décapage terminé, emprise conforme", t:"v"},
+      {l:"Portance à la plaque EV2", t:"m", u:"MPa", op:">=", seuil:50},
+      {l:"Rapport EV2/EV1", t:"m", u:"", op:"<=", seuil:2.2},
+      {l:"Pente transversale d'assainissement", t:"m", u:"%", op:">=", seuil:2},
+      {l:"Absence de points bas et de flaches (contrôle à la règle)", t:"v"},
+      {l:"Purges réalisées et remblayées en matériau conforme", t:"v"},
+      {l:"Sol conforme à la classification GTR annoncée", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"tranchee", fam:"Terrassement", name:"Tranchée avant remblaiement (point d'arrêt)", ref:"Fasc. 70/71 · NF P 98-331",
+    items:[
+      {l:"Profondeur de fouille conforme au profil", t:"v"},
+      {l:"Lit de pose : matériau et épaisseur", t:"m", u:"cm", op:">=", seuil:10},
+      {l:"Enrobage de la canalisation conforme", t:"v"},
+      {l:"Hauteur de couverture sur génératrice supérieure", t:"m", u:"cm", op:">=", seuil:80},
+      {l:"Grillage avertisseur posé, couleur conforme au réseau", t:"v"},
+      {l:"Blindage / talutage conforme, sécurité assurée", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"remblai", fam:"Terrassement", name:"Remblaiement et compactage de tranchée", ref:"Fasc. 70 · NF P 98-331 · GTR",
+    items:[
+      {l:"Matériau de remblai conforme au marché", t:"v"},
+      {l:"Épaisseur des couches élémentaires", t:"m", u:"cm", op:"<=", seuil:30},
+      {l:"Objectif de densification atteint (q3 / q4)", t:"v"},
+      {l:"Contrôle de compactage fourni (pénétrodensitographe)", t:"v"},
+      {l:"Absence de venue d'eau / fond stabilisé", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+
+  { id:"assises", fam:"Chaussée", name:"Couche d'assise (GNT / grave traitée)", ref:"Fasc. 25 · NF EN 13285",
+    items:[
+      {l:"Matériau conforme (bon de livraison contrôlé)", t:"v"},
+      {l:"Épaisseur mise en œuvre", t:"m", u:"cm", op:">=", seuil:20},
+      {l:"Portance EV2 en surface d'assise", t:"m", u:"MPa", op:">=", seuil:80},
+      {l:"Planéité à la règle de 3 m", t:"m", u:"mm", op:"<=", seuil:15},
+      {l:"Pente transversale conforme au profil", t:"v"},
+      {l:"Compactage : atelier et nombre de passes conformes", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"roulement", fam:"Chaussée", name:"Couche de roulement (enrobés)", ref:"Fasc. 27 · NF P 98-150-1 · NF EN 13108",
+    items:[
+      {l:"Bon de livraison : formule et provenance conformes", t:"v"},
+      {l:"Température de livraison au camion", t:"m", u:"°C", op:"between", min:140, max:180},
+      {l:"Température de mise en œuvre avant compactage", t:"m", u:"°C", op:">=", seuil:130},
+      {l:"Couche d'accrochage répandue et dosée", t:"v"},
+      {l:"Épaisseur moyenne mise en œuvre", t:"m", u:"cm", op:">=", seuil:6},
+      {l:"Planéité à la règle de 3 m", t:"m", u:"mm", op:"<=", seuil:5},
+      {l:"Joints longitudinaux et transversaux traités", t:"v"},
+      {l:"Absence de ségrégation, d'arrachement et de ressuage", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"bordures", fam:"Chaussée", name:"Pose de bordures et caniveaux", ref:"Fasc. 31 · NF EN 1340",
+    items:[
+      {l:"Type et classe de bordure conformes au marché", t:"v"},
+      {l:"Fondation béton : dimensions et dosage conformes", t:"v"},
+      {l:"Contre-butée réalisée", t:"v"},
+      {l:"Écart d'alignement au cordeau", t:"m", u:"mm", op:"<=", seuil:5},
+      {l:"Écart altimétrique par rapport au projet", t:"m", u:"mm", op:"<=", seuil:10},
+      {l:"Largeur des joints", t:"m", u:"mm", op:"<=", seuil:15},
+      {l:"Éléments non épaufrés ni fissurés", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+
+  { id:"assain-epreuve", fam:"Assainissement", name:"Épreuves d'assainissement (point d'arrêt)", ref:"Fasc. 70 · NF EN 1610",
+    items:[
+      {l:"Essai d'étanchéité réalisé (air ou eau) — PV fourni", t:"v"},
+      {l:"Résultat de l'essai d'étanchéité conforme", t:"v"},
+      {l:"Inspection télévisée réalisée — rapport fourni", t:"v"},
+      {l:"Absence de contre-pente et de flache à l'ITV", t:"v"},
+      {l:"Pente d'écoulement effective", t:"m", u:"%", op:">=", seuil:0.5},
+      {l:"Essai de compactage de tranchée conforme", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"regards", fam:"Assainissement", name:"Regards, boîtes et tampons", ref:"Fasc. 70 · NF EN 124",
+    items:[
+      {l:"Implantation conforme au plan", t:"v"},
+      {l:"Classe de tampon adaptée au trafic (D400 en chaussée)", t:"v"},
+      {l:"Tampon calé, non bruyant, scellement conforme", t:"v"},
+      {l:"Écart de niveau tampon / revêtement fini", t:"m", u:"mm", op:"<=", seuil:5},
+      {l:"Cunette et raccordements soignés", t:"v"},
+      {l:"Échelons / crosse conformes si profondeur > 1,50 m", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"reseaux-secs", fam:"Assainissement", name:"Réseaux secs et fourreaux", ref:"Fasc. 70 · NF C 15-100",
+    items:[
+      {l:"Nature et diamètre des fourreaux conformes", t:"v"},
+      {l:"Aiguillage laissé en attente dans les fourreaux", t:"v"},
+      {l:"Grillage avertisseur à la bonne couleur et à la bonne hauteur", t:"v"},
+      {l:"Chambres de tirage implantées et calées", t:"v"},
+      {l:"Mise à la terre réalisée et continuité vérifiée", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+
+  { id:"trottoir-pmr", fam:"Finitions", name:"Trottoirs et accessibilité PMR", ref:"Arr. 15/01/2007 · Fasc. 32",
+    items:[
+      {l:"Largeur de cheminement libre de tout obstacle", t:"m", u:"m", op:">=", seuil:1.40},
+      {l:"Dévers transversal du cheminement", t:"m", u:"%", op:"<=", seuil:2},
+      {l:"Pente longitudinale", t:"m", u:"%", op:"<=", seuil:5},
+      {l:"Ressaut au droit des abaissés", t:"m", u:"cm", op:"<=", seuil:2},
+      {l:"Bandes d'éveil de vigilance posées et conformes", t:"v"},
+      {l:"Absence de flache retenant l'eau", t:"v"},
+      {l:"Revêtement non glissant et sans joint saillant", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"signalisation", fam:"Finitions", name:"Signalisation horizontale et verticale", ref:"IISR 8ᵉ partie · NF EN 1436",
+    items:[
+      {l:"Implantation conforme au plan de signalisation", t:"v"},
+      {l:"Marquage : dimensions et modulation conformes", t:"v"},
+      {l:"Rétroréflexion des produits certifiée (PV fourni)", t:"v"},
+      {l:"Panneaux : classe de rétroréflexion et gamme conformes", t:"v"},
+      {l:"Massifs et supports conformes, panneaux d'aplomb", t:"v"},
+      {l:"Absence de marquage résiduel de la phase travaux", t:"v"},
+      {l:"Observations", t:"t"}
+    ]},
+  { id:"opr", fam:"Finitions", name:"Opérations préalables à la réception (OPR)", ref:"CCAG-Travaux art. 41",
+    items:[
+      {l:"Ouvrages conformes aux plans et au marché", t:"v"},
+      {l:"Nettoyage général et repliement des installations", t:"v"},
+      {l:"DOE remis (plans de récolement, PV d'essais, notices)", t:"v"},
+      {l:"Levée des réserves antérieures vérifiée", t:"v"},
+      {l:"Essais et contrôles contractuels tous fournis", t:"v"},
+      {l:"Ouvrages de sécurité et accessibilité opérationnels", t:"v"},
+      {l:"Réserves formulées lors des OPR", t:"t"},
+      {l:"Observations", t:"t"}
+    ]}
+];
+const CTRL_FAMS = ["Terrassement","Chaussée","Assainissement","Finitions"];
+
 const VRD_GROUPS = [
   { label: "Voirie & surfaces", items: [
     "Chaussée", "Revêtement", "Structure de chaussée",
@@ -971,9 +1197,22 @@ async function renderAnnexeList(){
 
 /* =============== base locale (IndexedDB) =============== */
 let db;
-function openDB(){
+const DB_STORES = ["visits","photos","inbox","projects","reserves","annexes","controls"];
+/* Ouvre la base, puis vérifie que tous les magasins existent. Si une montée de version a été
+   interrompue ou incomplète, on rouvre en version+1 pour créer ce qui manque plutôt que de planter. */
+async function openDB(){
+  let d = await openDBVersion();
+  const manquants = DB_STORES.filter(s => !d.objectStoreNames.contains(s));
+  if (manquants.length){
+    const v = d.version + 1;
+    d.close();
+    d = await openDBVersion(v);
+  }
+  return d;
+}
+function openDBVersion(version){
   return new Promise((res, rej) => {
-    const rq = indexedDB.open("chantier-notes", 4);
+    const rq = version ? indexedDB.open("chantier-notes", version) : indexedDB.open("chantier-notes", 5);
     rq.onupgradeneeded = e => {
       const d = e.target.result;
       if (!d.objectStoreNames.contains("visits")){
@@ -997,6 +1236,11 @@ function openDB(){
       if (!d.objectStoreNames.contains("annexes")){
         const a = d.createObjectStore("annexes", {keyPath:"id", autoIncrement:true});
         a.createIndex("projectId","projectId");
+      }
+      if (!d.objectStoreNames.contains("controls")){
+        const c = d.createObjectStore("controls", {keyPath:"id", autoIncrement:true});
+        c.createIndex("projectId","projectId");
+        c.createIndex("visitId","visitId");
       }
     };
     rq.onsuccess = () => res(rq.result);
@@ -1155,6 +1399,8 @@ function showLock(){
   $("#setModal").classList.remove("on");
   $("#moyensModal").classList.remove("on");
   $("#resModal").classList.remove("on");
+  $("#ctrlModal").classList.remove("on");
+  $("#ctrlFormModal").classList.remove("on");
   closeAddSheet();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
@@ -1621,6 +1867,213 @@ async function renderRegister(){
 function parseFrDate(s){
   const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : "";
+}
+
+/* =============== fiches de contrôle =============== */
+function ctrlSeuilText(it){
+  if (it.t !== "m") return "";
+  const u = it.u ? " " + it.u : "";
+  if (it.op === "between") return `Attendu : entre ${it.min} et ${it.max}${u}`;
+  if (it.op === "<=") return `Attendu : ≤ ${it.seuil}${u}`;
+  if (it.op === ">=") return `Attendu : ≥ ${it.seuil}${u}`;
+  return "";
+}
+/* conformité d'une mesure : "" si non saisie, sinon "C" ou "NC" */
+function measVerdict(it, val){
+  if (val === "" || val === null || val === undefined) return "";
+  const v = parseFloat(String(val).replace(",", "."));
+  if (!isFinite(v)) return "";
+  if (it.op === "between") return (v >= it.min && v <= it.max) ? "C" : "NC";
+  if (it.op === "<=") return v <= it.seuil ? "C" : "NC";
+  if (it.op === ">=") return v >= it.seuil ? "C" : "NC";
+  return "";
+}
+/* statut effectif d'un point : les mesures sont jugées, les vérifications sont saisies */
+function itemStatut(it){
+  if (it.t === "m") return measVerdict(it, it.val);
+  if (it.t === "t") return "";
+  return it.statut || "";
+}
+function ctrlStats(f){
+  let c = 0, nc = 0, so = 0, reste = 0;
+  for (const it of f.items){
+    if (it.t === "t") continue;
+    const s = itemStatut(it);
+    if (s === "C") c++; else if (s === "NC") nc++; else if (s === "SO") so++; else reste++;
+  }
+  return {c, nc, so, reste, total:c+nc+so+reste};
+}
+function ctrlConclusion(f){
+  const s = ctrlStats(f);
+  if (s.reste) return "En cours";
+  if (s.nc) return "Non conforme";
+  return "Conforme";
+}
+async function nextCtrlNum(){
+  const all = await idbAll("controls","projectId",CUR.id);
+  return all.reduce((m, x) => Math.max(m, x.num || 0), 0) + 1;
+}
+async function visitControls(visitId){
+  return (await idbAll("controls","visitId",visitId)).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+}
+
+/* ---- écran liste + choix du modèle ---- */
+async function openCtrl(){
+  if (!curVisit) return;
+  await renderCtrlList();
+  const box = $("#ctrlPicker");
+  box.innerHTML = CTRL_FAMS.map(fam => {
+    const items = CTRL_LIB.filter(t => t.fam === fam);
+    if (!items.length) return "";
+    return `<div class="ctrl-fam"><h5>${esc(fam)}</h5>` +
+      items.map(t => `<button class="ctrl-card" data-tpl="${t.id}">
+        <span class="cc-txt"><b>${esc(t.name)}</b><small>${esc(t.ref)} · ${t.items.filter(i=>i.t!=="t").length} points</small></span>
+        <span class="cc-verdict wip">Ouvrir</span></button>`).join("") + `</div>`;
+  }).join("");
+  box.querySelectorAll("[data-tpl]").forEach(b =>
+    b.addEventListener("click", () => newCtrl(b.dataset.tpl)));
+  $("#ctrlModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+async function renderCtrlList(){
+  const list = $("#ctrlList");
+  const fiches = await visitControls(curVisit.id);
+  if (!fiches.length){ list.innerHTML = `<div class="hint">Aucune fiche sur cette visite.</div>`; return; }
+  const cls = {"Conforme":"ok", "Non conforme":"ko", "En cours":"wip"};
+  list.innerHTML = fiches.map(f => {
+    const v = ctrlConclusion(f), s = ctrlStats(f);
+    return `<button class="ctrl-card" data-id="${f.id}">
+      <span class="cc-txt"><b>n°${f.num} — ${esc(f.name)}</b>
+        <small>${esc(f.zone || "zone non précisée")}${f.entreprise ? " · " + esc(f.entreprise) : ""} · ${s.c} C / ${s.nc} NC${s.reste ? " · " + s.reste + " à saisir" : ""}</small></span>
+      <span class="cc-verdict ${cls[v]}">${v}</span></button>`;
+  }).join("");
+  list.querySelectorAll("[data-id]").forEach(b =>
+    b.addEventListener("click", async () => {
+      const f = (await visitControls(curVisit.id)).find(x => x.id === Number(b.dataset.id));
+      if (f) openCtrlForm(f);
+    }));
+}
+async function newCtrl(tplId){
+  const t = CTRL_LIB.find(x => x.id === tplId);
+  if (!t) return;
+  const f = {
+    projectId: CUR.id, visitId: curVisit.id, templateId: t.id, num: await nextCtrlNum(),
+    name: t.name, ref: t.ref, fam: t.fam, date: curVisit.date,
+    zone: "", entreprise: "",
+    items: t.items.map(i => ({...i, statut:"", val:"", obs:""})),
+    createdAt: Date.now()
+  };
+  openCtrlForm(f);
+}
+
+/* ---- formulaire de saisie ---- */
+let curCtrl = null;
+function openCtrlForm(f){
+  curCtrl = JSON.parse(JSON.stringify(f)); // copie de travail : on n'écrit qu'à l'enregistrement
+  const s = getSettings();
+  $("#zonesList3").innerHTML = s.zones.map(z => `<option value="${esc(z)}">`).join("");
+  $("#entsList2").innerHTML = s.ents.map(z => `<option value="${esc(z)}">`).join("");
+  $("#ctrlFormTitle").textContent = `Fiche n°${curCtrl.num}`;
+  $("#ctrlHead").innerHTML = `<b>${esc(curCtrl.name)}</b><small>${esc(curCtrl.ref)} · visite du ${esc(frDate(curCtrl.date))}</small>`;
+  $("#cZone").value = curCtrl.zone || "";
+  $("#cEnt").value = curCtrl.entreprise || "";
+  $("#cDelRow").hidden = !curCtrl.id;
+  renderCtrlItems();
+  $("#ctrlModal").classList.remove("on");
+  $("#ctrlFormModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+function renderCtrlItems(){
+  const box = $("#ctrlItems");
+  box.innerHTML = curCtrl.items.map((it, k) => {
+    const seuil = ctrlSeuilText(it);
+    const head = `<div class="ci-l">${esc(it.l)}${seuil ? `<span class="ci-seuil">${esc(seuil)}</span>` : ""}</div>`;
+    if (it.t === "t"){
+      return `<div class="ci">${head}<textarea data-k="${k}" data-f="obs" placeholder="Saisie libre…">${esc(it.obs || "")}</textarea></div>`;
+    }
+    if (it.t === "m"){
+      const v = measVerdict(it, it.val);
+      return `<div class="ci">${head}<div class="ci-meas">
+        <input type="text" inputmode="decimal" data-k="${k}" data-f="val" value="${esc(it.val || "")}" placeholder="valeur">
+        <span class="ci-u">${esc(it.u || "")}</span>
+        ${v ? `<span class="ci-verdict ${v === "C" ? "ok" : "ko"}">${v === "C" ? "Conforme" : "Non conforme"}</span>` : `<span class="ci-u">— non mesuré</span>`}
+      </div></div>`;
+    }
+    return `<div class="ci">${head}<div class="ci-choices" data-k="${k}">
+      <button data-v="C" class="${it.statut==="C"?"on":""}">Conforme</button>
+      <button data-v="NC" class="${it.statut==="NC"?"on":""}">Non conforme</button>
+      <button data-v="SO" class="${it.statut==="SO"?"on":""}">Sans objet</button>
+    </div></div>`;
+  }).join("");
+  // vérifications
+  box.querySelectorAll(".ci-choices").forEach(grp => {
+    const k = Number(grp.dataset.k);
+    grp.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+      curCtrl.items[k].statut = (curCtrl.items[k].statut === b.dataset.v) ? "" : b.dataset.v;
+      renderCtrlItems();
+    }));
+  });
+  // mesures et textes : on ne redessine pas à chaque frappe pour ne pas perdre le focus
+  box.querySelectorAll("[data-f=val]").forEach(inp => {
+    const k = Number(inp.dataset.k);
+    inp.addEventListener("input", () => { curCtrl.items[k].val = inp.value; refreshCtrlConcl(); });
+    inp.addEventListener("blur", renderCtrlItems);
+  });
+  box.querySelectorAll("[data-f=obs]").forEach(t => {
+    const k = Number(t.dataset.k);
+    t.addEventListener("input", () => { curCtrl.items[k].obs = t.value; });
+  });
+  refreshCtrlConcl();
+}
+function refreshCtrlConcl(){
+  const v = ctrlConclusion(curCtrl), s = ctrlStats(curCtrl);
+  const cls = {"Conforme":"ok","Non conforme":"ko","En cours":"res"};
+  $("#ctrlConcl").className = "ctrl-concl " + cls[v];
+  $("#ctrlConcl").innerHTML = `${v}<small>${s.c} conforme(s) · ${s.nc} non conforme(s) · ${s.so} sans objet${s.reste ? ` · ${s.reste} point(s) à saisir` : ""}</small>`;
+}
+function closeCtrlForm(){ stopMic(); $("#ctrlFormModal").classList.remove("on"); curCtrl = null; }
+
+async function saveCtrlForm(){
+  if (!curCtrl) return;
+  curCtrl.zone = $("#cZone").value.trim();
+  curCtrl.entreprise = $("#cEnt").value.trim();
+  curCtrl.conclusion = ctrlConclusion(curCtrl);
+  if (curCtrl.id) await tx("controls","readwrite", s => s.put(curCtrl));
+  else curCtrl.id = await idbAdd("controls", curCtrl);
+  const fiche = curCtrl;
+  closeCtrlForm();
+  await proposeReservesFromCtrl(fiche);
+  await openCtrl();
+  toast(`Fiche n°${fiche.num} enregistrée — ${fiche.conclusion}`);
+}
+/* les points non conformes sont proposés en réserves : la décision reste à la maîtrise d'œuvre */
+async function proposeReservesFromCtrl(f){
+  const ncs = f.items.filter(it => it.t !== "t" && itemStatut(it) === "NC");
+  if (!ncs.length) return;
+  const existantes = await idbAll("reserves","projectId",CUR.id);
+  const nouveaux = ncs.filter(it => !existantes.some(r => r.ctrlItem === `${f.id}:${it.l}`));
+  if (!nouveaux.length) return;
+  const liste = nouveaux.map(it => "• " + it.l).join("\n");
+  if (!confirm(`Fiche n°${f.num} — ${nouveaux.length} point(s) non conforme(s) :\n\n${liste}\n\nOuvrir une réserve au registre pour chacun ?`)) return;
+  for (const it of nouveaux){
+    const r = await createReserve({
+      objet: it.l,
+      zone: f.zone, entreprise: f.entreprise,
+      action: `Mise en conformité — ${f.name} (${f.ref})`,
+      date: f.date
+    });
+    r.ctrlItem = `${f.id}:${it.l}`;
+    await tx("reserves","readwrite", s => s.put(r));
+  }
+  toast(`${nouveaux.length} réserve(s) ouverte(s) depuis la fiche n°${f.num}`);
+}
+async function deleteCtrlForm(){
+  if (!curCtrl || !curCtrl.id) return;
+  if (!confirm(`Supprimer la fiche n°${curCtrl.num} — ${curCtrl.name} ?`)) return;
+  await tx("controls","readwrite", s => s.delete(curCtrl.id));
+  closeCtrlForm();
+  await openCtrl();
+  toast("Fiche supprimée");
 }
 
 /* ---- formulaire de réserve (création et modification), en remplacement des boîtes système ---- */
@@ -2768,6 +3221,69 @@ async function pdfForVisit(visit, photos, settings){
     y -= 14;
   }
 
+  /* ---- fiches de contrôle / points d'arrêt de la visite ---- */
+  const fiches = CUR ? await visitControls(visit.id) : [];
+  if (fiches.length){
+    if (y < 260) newPage();
+    band("FICHES DE CONTRÔLE ET POINTS D'ARRÊT", 23, FS.band);
+    cur.texts.push({x:40, y, size:FS.small, font:"F1", color:PDF_GREY,
+      text:`${fiches.length} fiche(s) établie(s) lors de cette visite. Les mesures sont comparées aux seuils contractuels.`});
+    y -= 18;
+    for (const f of fiches){
+      const st = ctrlStats(f), concl = ctrlConclusion(f);
+      ensure(40);
+      // en-tête de fiche + verdict
+      cur.rects.push({x:40, y:y-16, w:515.28, h:16, grad:PDF_G_LABEL});
+      cur.texts.push({x:44, y:y-11.5, size:FS.mini, font:"F2", color:PDF_NAVY,
+        text:`FICHE N°${f.num} — ${(f.name || "").toUpperCase().slice(0, 56)}`});
+      const cc = concl === "Conforme" ? PDF_G_STATUT.C : (concl === "Non conforme" ? PDF_G_STATUT.NC : PDF_G_STATUT.PA);
+      cur.rects.push({x:470, y:y-15.5, w:85, h:14, grad:cc});
+      cur.texts.push({x:474, y:y-11, size:FS.caption, font:"F2", color:"1 1 1", text:concl});
+      y -= 20;
+      cur.texts.push({x:40, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY,
+        text:`${f.ref || ""}${f.zone ? " · " + f.zone : ""}${f.entreprise ? " · " + f.entreprise : ""} · ${st.c} conforme(s), ${st.nc} non conforme(s), ${st.so} sans objet`});
+      y -= 16;
+      // points de contrôle
+      const PX = [40, 300, 400, 470];
+      ensure(14);
+      cur.rects.push({x:40, y:y-12, w:515.28, h:13, color:PDF_LABEL});
+      ["POINT DE CONTRÔLE","ATTENDU","RELEVÉ","RÉSULTAT"].forEach((h, k) =>
+        cur.texts.push({x:PX[k]+2, y:y-8.5, size:FS.micro, font:"F2", color:PDF_NAVY, text:h}));
+      y -= 15;
+      for (const it of f.items){
+        if (it.t === "t"){
+          if (!(it.obs || "").trim()) continue;
+          const ol = wrapText(it.obs.trim(), 92);
+          ensure(ol.length * 9.4 + 6);
+          cur.texts.push({x:PX[0]+2, y:y-8, size:FS.small, font:"F2", color:PDF_NAVY, text:it.l + " :"});
+          y -= 10;
+          for (const l of ol){ ensure(10); cur.texts.push({x:PX[0]+6, y:y-8, size:FS.small, font:"F1", text:l}); y -= 9.4; }
+          y -= 4;
+          continue;
+        }
+        const s = itemStatut(it);
+        const ll = wrapText(it.l, 56);
+        const rowH = Math.max(1, ll.length) * 9.4 + 5;
+        ensure(rowH);
+        let ly = y-8; for (const l of ll){ cur.texts.push({x:PX[0]+2, y:ly, size:FS.small, font:"F1", text:l}); ly -= 9.4; }
+        if (it.t === "m"){
+          const att = it.op === "between" ? `${it.min} à ${it.max} ${it.u||""}` :
+                      (it.op === "<=" ? `≤ ${it.seuil} ${it.u||""}` : `≥ ${it.seuil} ${it.u||""}`);
+          cur.texts.push({x:PX[1]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:att.trim()});
+          cur.texts.push({x:PX[2]+2, y:y-8, size:FS.small, font:"F2", text:(it.val || "—") + (it.val && it.u ? " " + it.u : "")});
+        } else {
+          cur.texts.push({x:PX[1]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:"conformité"});
+          cur.texts.push({x:PX[2]+2, y:y-8, size:FS.small, font:"F1", color:PDF_GREY, text:"—"});
+        }
+        if (s === "C" || s === "NC") pdfBadge(cur, PX[3]+2, y-4, s, 23, 12, FS.badge);
+        else cur.texts.push({x:PX[3]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text: s === "SO" ? "sans objet" : "non renseigné"});
+        cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+        y -= rowH;
+      }
+      y -= 14;
+    }
+  }
+
   /* ---- suivi photographique des réserves : avant / après entre visites ---- */
   const prog = await reserveProgress();
   if (prog.length){
@@ -3161,6 +3677,48 @@ async function docxForVisit(visit, photos, settings){
     body.push(wP("", `<w:spacing w:after="160"/>`));
   }
 
+  /* ---- fiches de contrôle / points d'arrêt de la visite ---- */
+  const fiches = CUR ? await visitControls(visit.id) : [];
+  if (fiches.length){
+    body.push(wP(wR("FICHES DE CONTRÔLE ET POINTS D'ARRÊT", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="60"/><w:ind w:left="113"/>`));
+    body.push(wP(wR(`${fiches.length} fiche(s) établie(s) lors de cette visite. Les mesures sont comparées aux seuils contractuels.`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="100"/>`));
+    const CSTC = {"Conforme":DOCX_STATUT.C, "Non conforme":DOCX_STATUT.NC, "En cours":DOCX_STATUT.PA};
+    for (const f of fiches){
+      const st = ctrlStats(f), concl = ctrlConclusion(f);
+      const cols = [4500, 1900, 1600, 1638];
+      const hdrP = `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>` +
+        `<w:r><w:rPr><w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/></w:rPr><w:t xml:space="preserve">${escXml(`Fiche n°${f.num} — ${f.name}`)}  </w:t></w:r>` +
+        `<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:shd w:val="clear" w:fill="${CSTC[concl]}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> ${concl} </w:t></w:r></w:p>` +
+        wP(wR(`${f.ref || ""}${f.zone ? " · " + f.zone : ""}${f.entreprise ? " · " + f.entreprise : ""} · ${st.c} conforme(s), ${st.nc} non conforme(s), ${st.so} sans objet`,
+          `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:before="40" w:after="0"/>`);
+      const head = `<w:tr>${wTc(9638, hdrP, {span:4, fill:DOCX_LABEL})}</w:tr>` +
+        `<w:tr>${["Point de contrôle","Attendu","Relevé","Résultat"].map((h,k) =>
+          wTc(cols[k], wP(wR(h, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})).join("")}</w:tr>`;
+      const rows = f.items.map(it => {
+        if (it.t === "t"){
+          if (!(it.obs || "").trim()) return "";
+          return `<w:tr>${wTc(9638,
+            wP(wR(it.l + " : ", `<w:b/><w:sz w:val="16"/>`) + wR(it.obs.trim(), `<w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`),
+            {span:4})}</w:tr>`;
+        }
+        const s = itemStatut(it);
+        const att = it.t === "m"
+          ? (it.op === "between" ? `${it.min} à ${it.max} ${it.u||""}` : (it.op === "<=" ? `≤ ${it.seuil} ${it.u||""}` : `≥ ${it.seuil} ${it.u||""}`)).trim()
+          : "conformité";
+        const rel = it.t === "m" ? ((it.val || "—") + (it.val && it.u ? " " + it.u : "")) : "—";
+        const res = (s === "C" || s === "NC")
+          ? `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${wStatBadge(s === "C" ? "C" : "NC", 15)}</w:p>`
+          : wP(wR(s === "SO" ? "sans objet" : "non renseigné", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
+        return `<w:tr>${wTc(cols[0], wP(wR(it.l, `<w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}` +
+          `${wTc(cols[1], wP(wR(att, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`))}` +
+          `${wTc(cols[2], wP(wR(rel, `<w:b/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}` +
+          `${wTc(cols[3], res)}</w:tr>`;
+      }).join("");
+      body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${cols.map(c=>`<w:gridCol w:w="${c}"/>`).join("")}</w:tblGrid>${head}${rows}</w:tbl>`);
+      body.push(wP("", `<w:spacing w:after="140"/>`));
+    }
+  }
+
   /* ---- suivi photographique des réserves : avant / après entre visites ---- */
   const prog = await reserveProgress();
   if (prog.length){
@@ -3381,6 +3939,7 @@ async function fullBackup(){
     const projects = await idbAll("projects");
     const visits = await idbAll("visits");
     const reserves = await idbAll("reserves");
+    const controls = await idbAll("controls");
     const photos = await idbAll("photos");
     const annexesRaw = await idbAll("annexes");
     const photoData = [];
@@ -3392,8 +3951,8 @@ async function fullBackup(){
     }
     const annexes = [];
     for (const a of annexesRaw){ const {blob, ...rest} = a; rest.b64 = blob ? await blobToBase64(blob) : null; annexes.push(rest); }
-    const data = { app:"notes-chantier", schema:4, exportedAt:new Date().toISOString(),
-      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, annexes, photos: photoData };
+    const data = { app:"notes-chantier", schema:5, exportedAt:new Date().toISOString(),
+      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, annexes, photos: photoData };
     const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
     const d = todayIso();
     const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde PCM-CAD");
@@ -3412,13 +3971,14 @@ async function restoreBackup(file){
     if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\n⚠️ Cela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
     // vider les stores
-    for (const st of ["photos","visits","reserves","projects","annexes"]){
+    for (const st of ["photos","visits","reserves","projects","annexes","controls"]){
       await new Promise((res, rej) => { const t = db.transaction(st,"readwrite"); t.objectStore(st).clear(); t.oncomplete = res; t.onerror = () => rej(t.error); });
     }
     // réinsérer avec les identifiants d'origine
     for (const p of data.projects) await tx("projects","readwrite", s => s.put(p));
     for (const v of (data.visits||[])) await tx("visits","readwrite", s => s.put(v));
     for (const r of (data.reserves||[])) await tx("reserves","readwrite", s => s.put(r));
+    for (const c of (data.controls||[])) await tx("controls","readwrite", s => s.put(c));
     for (const a of (data.annexes||[])){
       const {b64, ...rest} = a;
       if (b64){ const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
@@ -3630,6 +4190,11 @@ async function main(){
   $("#btnMoyensClose").addEventListener("click", () => { stopMic(); $("#moyensModal").classList.remove("on"); });
   $("#btnMoyensAdd").addEventListener("click", addMoyenRow);
   $("#btnMoyensSave").addEventListener("click", saveMoyens);
+  $("#btnCtrl").addEventListener("click", openCtrl);
+  $("#btnCtrlClose").addEventListener("click", () => $("#ctrlModal").classList.remove("on"));
+  $("#btnCtrlFormClose").addEventListener("click", () => { closeCtrlForm(); openCtrl(); });
+  $("#btnCtrlSave").addEventListener("click", saveCtrlForm);
+  $("#btnCtrlDelete").addEventListener("click", deleteCtrlForm);
   $("#btnRegBack").addEventListener("click", showHome);
   $("#btnRegAdd").addEventListener("click", () => openReserveForm(null));
   $("#btnResClose").addEventListener("click", closeReserveForm);

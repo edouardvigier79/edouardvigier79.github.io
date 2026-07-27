@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
 /* Application version 3.0 (révision 2 : PCM-CAD, solde depuis constat, avant/après) */
-const CACHE = "chantier-v27";
+const CACHE = "chantier-v28";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable.png", "./fond-plan.jpg"];
 
 self.addEventListener("install", e => {
@@ -17,7 +17,7 @@ self.addEventListener("activate", e => {
 /* même base locale que l'application — garder la MÊME version que index.html (4) pour éviter un VersionError */
 function openDb(){
   return new Promise((res, rej) => {
-    const rq = indexedDB.open("chantier-notes", 4);
+    const rq = indexedDB.open("chantier-notes", 5);
     rq.onupgradeneeded = e => {
       const d = e.target.result;
       if (!d.objectStoreNames.contains("visits")){
@@ -41,6 +41,11 @@ function openDb(){
       if (!d.objectStoreNames.contains("annexes")){
         const a = d.createObjectStore("annexes", {keyPath:"id", autoIncrement:true});
         a.createIndex("projectId","projectId");
+      }
+      if (!d.objectStoreNames.contains("controls")){
+        const c = d.createObjectStore("controls", {keyPath:"id", autoIncrement:true});
+        c.createIndex("projectId","projectId");
+        c.createIndex("visitId","visitId");
       }
     };
     rq.onsuccess = () => res(rq.result);
