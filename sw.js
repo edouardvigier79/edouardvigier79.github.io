@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
 /* Application version 3.0 (révision 2 : PCM-CAD, solde depuis constat, avant/après) */
-const CACHE = "chantier-v24";
+const CACHE = "chantier-v25";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./fond-plan.jpg"];
 
 self.addEventListener("install", e => {

@@ -497,7 +497,7 @@
       <button class="chip" id="btnPasteComment" hidden>📥 Coller le commentaire</button>
     </div>
 
-    <button class="btn block aibtn" id="btnAI" hidden>✨ Décrire le cliché (IA — éléments VRD uniquement)</button>
+    <button class="btn block aibtn" id="btnAI" hidden>✨ Décrire le cliché (IA — constat VRD)</button>
     <div class="hint" id="aiHint" hidden style="margin:-6px 4px 12px">
       L'IA analyse chaussée, bordures, tampons, réseaux, éclairage, mobilier…
       Elle ignore personnes, animaux et véhicules. Relisez toujours avant d'enregistrer.
@@ -579,6 +579,63 @@
     <div id="moyensList"></div>
     <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px">➕ Ajouter une entreprise</button>
     <button class="btn primary block" id="btnMoyensSave" style="margin-top:12px">Enregistrer</button>
+  </div>
+</div>
+
+<!-- ================= RÉSERVE (création / modification) ================= -->
+<div class="modal" id="resModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnResClose" aria-label="Fermer">←</button>
+      <b id="resTitle">Réserve</b>
+      <button class="btn primary" id="btnResSave" style="padding:9px 16px">Enregistrer</button>
+    </div>
+
+    <div class="field">
+      <label for="rObjet">Objet de la réserve</label>
+      <div class="microw">
+        <input type="text" id="rObjet" placeholder="Ex. : Épaufrure bordure Comblanchien">
+        <button type="button" class="micbtn" data-mic="rObjet" aria-label="Dictée vocale">🎤</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="rEnt">Entreprise / intervenant désigné</label>
+      <input type="text" id="rEnt" list="entsList" placeholder="Ex. : Colas (mandataire)">
+      <datalist id="entsList"></datalist>
+    </div>
+
+    <div class="field">
+      <label for="rAction">Action corrective / justification attendue</label>
+      <div class="microw">
+        <textarea id="rAction" placeholder="Ce que l'entreprise doit faire…"></textarea>
+        <button type="button" class="micbtn" data-mic="rAction" aria-label="Dictée vocale">🎤</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="rDate">Date limite d'exécution</label>
+      <input type="date" id="rDate">
+      <div class="hint">Facultatif. Passée la date, la réserve bascule automatiquement « En retard ».</div>
+    </div>
+
+    <div class="field">
+      <label for="rZone">Localisation / zone</label>
+      <input type="text" id="rZone" list="zonesList2" placeholder="Ex. : Carrefour av. du Château">
+      <datalist id="zonesList2"></datalist>
+    </div>
+
+    <div class="field">
+      <label>Statut</label>
+      <div class="chips" id="rStatutChips">
+        <button class="chip" data-v="En cours">En cours</button>
+        <button class="chip" data-v="Soldé">Soldé</button>
+      </div>
+    </div>
+
+    <div class="btnrow" id="rDelRow">
+      <button class="btn danger block" id="btnResDelete">Supprimer cette réserve</button>
+    </div>
   </div>
 </div>
 
@@ -719,6 +776,7 @@
       <button class="btn block" id="btnRestore" style="margin-top:10px">♻ Restaurer depuis une sauvegarde</button>
       <input type="file" id="fileRestore" accept="application/json,.json" hidden>
       <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px">⬇ Export léger (notes seules, sans photos)</button>
+      <div class="hint" id="storageState" style="margin-top:12px">Espace utilisé : calcul…</div>
     </div>
   </div>
 </div>
@@ -1091,6 +1149,7 @@ function showLock(){
   $("#editModal").classList.remove("on");
   $("#setModal").classList.remove("on");
   $("#moyensModal").classList.remove("on");
+  $("#resModal").classList.remove("on");
   closeAddSheet();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
@@ -1537,8 +1596,7 @@ async function renderRegister(){
       <div class="reg-meta">Ouverte le ${esc(frDate(r.date))}${r.zone ? " · " + esc(r.zone) : ""}${r.entreprise ? " · " + esc(r.entreprise) : ""}${r.dateLimite ? " · échéance " + esc(frDate(r.dateLimite)) : ""}${st === "Soldé" && r.dateSolde ? " · soldée le " + esc(frDate(r.dateSolde)) : ""}</div>
       ${r.action ? `<div class="reg-meta" style="margin-top:3px"><b>Action :</b> ${esc(r.action)}</div>` : ""}
       <div style="margin-top:8px; display:flex; gap:8px">
-        <button class="btn ghost" data-act="edit" style="padding:7px 12px; font-size:13px">Modifier</button>
-        <button class="btn danger" data-act="del" style="padding:7px 12px; font-size:13px">Supprimer</button>
+        <button class="btn ghost" data-act="edit" style="padding:7px 12px; font-size:13px">✎ Modifier</button>
       </div>
     </div>`;
   }).join("");
@@ -1552,38 +1610,69 @@ async function renderRegister(){
       await tx("reserves","readwrite", s => s.put(r));
       await renderRegister();
     });
-    card.querySelector('[data-act=edit]').addEventListener("click", () => editReserve(res.find(x => x.id === id)));
-    card.querySelector('[data-act=del]').addEventListener("click", async () => {
-      if (!confirm("Supprimer cette réserve du registre ?")) return;
-      await tx("reserves","readwrite", s => s.delete(id));
-      await renderRegister();
-    });
+    card.querySelector('[data-act=edit]').addEventListener("click", () => openReserveForm(res.find(x => x.id === id)));
   });
-}
-async function editReserve(r){
-  const objet = prompt("Objet du constat / de la réserve :", r.objet); if (objet === null) return;
-  const ent = prompt("Entreprise / intervenant désigné :", r.entreprise || ""); if (ent === null) return;
-  const action = prompt("Action corrective ou justification attendue :", r.action || ""); if (action === null) return;
-  const dl = prompt("Date limite d'exécution (JJ/MM/AAAA, vide si aucune) :", r.dateLimite ? frDate(r.dateLimite) : ""); if (dl === null) return;
-  const zone = prompt("Localisation / zone :", r.zone || ""); if (zone === null) return;
-  r.objet = objet.trim(); r.entreprise = ent.trim(); r.action = action.trim(); r.zone = zone.trim();
-  r.dateLimite = parseFrDate(dl.trim());
-  await tx("reserves","readwrite", s => s.put(r));
-  await renderRegister();
 }
 function parseFrDate(s){
   const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   return m ? `${m[3]}-${pad(m[2])}-${pad(m[1])}` : "";
 }
-async function addManualReserve(){
-  const objet = prompt("Objet du constat / de la réserve :", ""); if (objet === null) return;
-  const ent = prompt("Entreprise / intervenant désigné (facultatif) :", ""); if (ent === null) return;
-  const action = prompt("Action corrective ou justification attendue (facultatif) :", ""); if (action === null) return;
-  const dl = prompt("Date limite d'exécution (JJ/MM/AAAA, facultatif) :", ""); if (dl === null) return;
-  const zone = prompt("Localisation / zone (facultatif) :", ""); if (zone === null) return;
-  await createReserve({objet: objet.trim(), entreprise: ent.trim(), action: action.trim(), dateLimite: parseFrDate(dl.trim()), zone: zone.trim()});
+
+/* ---- formulaire de réserve (création et modification), en remplacement des boîtes système ---- */
+let curRes = null; // réserve en cours d'édition, null = création
+function openReserveForm(r){
+  curRes = r || null;
+  const s = getSettings();
+  $("#entsList").innerHTML = s.ents.map(z => `<option value="${esc(z)}">`).join("");
+  $("#zonesList2").innerHTML = s.zones.map(z => `<option value="${esc(z)}">`).join("");
+  $("#resTitle").textContent = r ? `Réserve n°${r.num}` : "Nouvelle réserve";
+  $("#rObjet").value = r ? (r.objet || "") : "";
+  $("#rEnt").value   = r ? (r.entreprise || "") : "";
+  $("#rAction").value= r ? (r.action || "") : "";
+  $("#rDate").value  = r ? (r.dateLimite || "") : "";
+  $("#rZone").value  = r ? (r.zone || "") : "";
+  const st = r ? (r.statut === "Soldé" ? "Soldé" : "En cours") : "En cours";
+  document.querySelectorAll("#rStatutChips .chip").forEach(c => c.classList.toggle("on", c.dataset.v === st));
+  $("#rDelRow").hidden = !r;
+  $("#resModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+function closeReserveForm(){ stopMic(); $("#resModal").classList.remove("on"); curRes = null; }
+async function saveReserveForm(){
+  const objet = $("#rObjet").value.trim();
+  if (!objet){ toast("Indiquez au moins l'objet de la réserve", true); $("#rObjet").focus(); return; }
+  const on = document.querySelector("#rStatutChips .chip.on");
+  const statut = on ? on.dataset.v : "En cours";
+  const data = {
+    objet, entreprise: $("#rEnt").value.trim(), action: $("#rAction").value.trim(),
+    dateLimite: $("#rDate").value || "", zone: $("#rZone").value.trim(), statut
+  };
+  if (curRes){
+    Object.assign(curRes, data);
+    if (statut === "Soldé"){ if (!curRes.dateSolde) curRes.dateSolde = todayIso(); }
+    else { curRes.dateSolde = ""; curRes.soldePhotoId = null; }
+    await tx("reserves","readwrite", s => s.put(curRes));
+    toast(`Réserve n°${curRes.num} enregistrée`);
+  } else {
+    const r = await createReserve(data);
+    if (statut === "Soldé"){ r.dateSolde = todayIso(); await tx("reserves","readwrite", s => s.put(r)); }
+    toast(`Réserve n°${r.num} ajoutée au registre`);
+  }
+  closeReserveForm();
   await renderRegister();
-  toast("Réserve ajoutée au registre");
+}
+async function deleteReserveForm(){
+  if (!curRes) return;
+  if (!confirm(`Supprimer la réserve n°${curRes.num} du registre ?`)) return;
+  const id = curRes.id;
+  // détacher les clichés qui y étaient rattachés, sinon ils pointeraient dans le vide
+  for (const p of await idbAll("photos")){
+    if (p.reserveId === id){ p.reserveId = null; p.reserveNum = null; await tx("photos","readwrite", s => s.put(p)); }
+  }
+  await tx("reserves","readwrite", s => s.delete(id));
+  closeReserveForm();
+  await renderRegister();
+  toast("Réserve supprimée");
 }
 
 async function renderPhotos(){
@@ -2008,6 +2097,12 @@ async function saveEdit(){
   toast("Commentaire enregistré" + regMsg);
 }
 
+/* Cliché illisible (fichier corrompu, format non décodable) : on ne fait pas échouer tout le
+   rapport — on renvoie null et le générateur pose un cadre « illisible » à la place. */
+async function safeJpeg(blob, maxDim, q){
+  try{ return await normalizeJpeg(blob, maxDim, q); }
+  catch{ return null; }
+}
 /* =============== image → JPEG normalisé =============== */
 async function normalizeJpeg(blob, maxDim, q){
   const bmp = await createImageBitmap(blob);
@@ -2556,6 +2651,7 @@ async function pdfForVisit(visit, photos, settings){
 
   /* ---- constats par zones automatiques ---- */
   let zn = 0, done = 0;
+  const badShots = []; // clichés illisibles : signalés à la fin plutôt que de bloquer l'export
   for (const c of clusters){
     zn++;
     if (y < 300) newPage();
@@ -2592,9 +2688,12 @@ async function pdfForVisit(visit, photos, settings){
       for (const p of row){
         done++;
         toast(`PDF : cliché ${done}/${photos.length}…`);
-        ims.push({p, im: await normalizeJpeg(p.blob, 900, 0.75)});
+        const im = await safeJpeg(p.blob, 900, 0.75);
+        if (!im) badShots.push(p.num);
+        ims.push({p, im});
       }
       const dims = ims.map(o => {
+        if (!o.im) return {dw: cellW, dh: 78};            // cadre de remplacement
         const sc = Math.min(cellW / o.im.w, 155 / o.im.h);
         return {dw: o.im.w * sc, dh: o.im.h * sc};
       });
@@ -2603,7 +2702,13 @@ async function pdfForVisit(visit, photos, settings){
       ims.forEach((o, k) => {
         const x0 = 40 + k * (cellW + gap);
         const cxImg = x0 + (cellW - dims[k].dw) / 2;
-        cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:cxImg, y:y - dims[k].dh, dw:dims[k].dw, dh:dims[k].dh});
+        if (o.im){
+          cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:cxImg, y:y - dims[k].dh, dw:dims[k].dw, dh:dims[k].dh});
+        } else {
+          cur.rects.push({x:cxImg, y:y - dims[k].dh, w:dims[k].dw, h:dims[k].dh, color:"0.94 0.94 0.95"});
+          cur.texts.push({x:cxImg + 6, y:y - dims[k].dh/2 - 6, size:FS.micro, font:"F2", color:PDF_STATUT.NC, text:"CLICHÉ"});
+          cur.texts.push({x:cxImg + 6, y:y - dims[k].dh/2 + 3, size:FS.micro, font:"F2", color:PDF_STATUT.NC, text:"ILLISIBLE"});
+        }
         cur.texts.push({x:cxImg, y:y - dims[k].dh - 9.5, size:FS.caption, font:"F2", color:PDF_NAVY,
           text:`n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}`});
         if (o.p.lat != null){
@@ -2652,7 +2757,8 @@ async function pdfForVisit(visit, photos, settings){
     y -= 18;
     const colW = 250, colX = [40, 305];
     for (const g of prog){
-      const ims = [await normalizeJpeg(g.before.p.blob, 900, 0.75), await normalizeJpeg(g.after.p.blob, 900, 0.75)];
+      const ims = [await safeJpeg(g.before.p.blob, 900, 0.75), await safeJpeg(g.after.p.blob, 900, 0.75)];
+      if (!ims[0] || !ims[1]) continue; // paire incomplète : on saute plutôt que de casser la mise en page
       const d = ims.map(im => { const sc = Math.min(colW / im.w, 165 / im.h); return {dw: im.w * sc, dh: im.h * sc}; });
       const blockH = Math.max(d[0].dh, d[1].dh) + 46;
       if (blockH + 8 > y - 56) newPage();
@@ -2709,6 +2815,17 @@ async function pdfForVisit(visit, photos, settings){
       y -= rowH;
     }
     y -= 10;
+  }
+
+  /* ---- avertissement clichés illisibles ---- */
+  if (badShots.length){
+    ensure(24);
+    y -= 4;
+    cur.rects.push({x:40, y:y-17, w:515.28, h:17, color:"0.99 0.92 0.90"});
+    // pas de pictogramme ici : l'encodage WinAnsi du PDF ne connaît pas « ⚠ » (rendu « ? »)
+    cur.texts.push({x:46, y:y-12, size:FS.mini, font:"F2", color:PDF_STATUT.NC,
+      text:`ATTENTION — Cliché(s) illisible(s) non intégré(s) : n°${badShots.join(", n°")}. Vérifiez ces fichiers dans l'application.`});
+    y -= 26;
   }
 
   /* ---- signature ---- */
@@ -2956,6 +3073,7 @@ async function docxForVisit(visit, photos, settings){
 
   /* ---- constats par zones automatiques (GPS ± 10 m) ---- */
   let zn = 0, done = 0, imgId = 0;
+  const badShots = []; // clichés illisibles : signalés en fin de document
   const wPhoto = (rid, cx, cy, id) => `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Photo${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Photo${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
   for (const c of clusters){
     zn++;
@@ -2974,19 +3092,25 @@ async function docxForVisit(visit, photos, settings){
     for (const p of c.items){
       done++; imgId++;
       toast(`Word : cliché ${done}/${photos.length}…`);
-      const im = await normalizeJpeg(p.blob, 800, 0.75);
+      const im = await safeJpeg(p.blob, 800, 0.75);
+      const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
+      const gps = p.lat != null ? `${p.gpsApprox ? "~" : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "";
+      const capP = wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
+        (gps ? wP(wR(gps, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="11"/>`), `<w:spacing w:after="40"/><w:jc w:val="center"/>`) : wP("", `<w:spacing w:after="40"/>`));
+      if (!im){ // cliché illisible : cadre de remplacement, le rapport sort quand même
+        badShots.push(p.num);
+        cells.push(wTc(1927,
+          wP(wR("CLICHÉ ILLISIBLE", `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/><w:sz w:val="14"/>`), `<w:spacing w:before="360" w:after="360"/><w:jc w:val="center"/>`) + capP));
+        continue;
+      }
       const rid = `rIdImg${imgId}`;
       media.push({name:`word/media/image${imgId}.jpg`, data:im.bytes});
       rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${imgId}.jpg"/>`);
       let cx = im.w * 9525, cy = im.h * 9525;
       const sc = Math.min(1, 1170000 / cx, 1680000 / cy); // ≈ 3,25 x 4,65 cm max
       cx = Math.round(cx * sc); cy = Math.round(cy * sc);
-      const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
-      const gps = p.lat != null ? `${p.gpsApprox ? "~" : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "";
       cells.push(wTc(1927,
-        `<w:p><w:pPr><w:spacing w:after="20"/><w:jc w:val="center"/></w:pPr>${wPhoto(rid, cx, cy, imgId)}</w:p>` +
-        wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
-        (gps ? wP(wR(gps, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="11"/>`), `<w:spacing w:after="40"/><w:jc w:val="center"/>`) : wP("", `<w:spacing w:after="40"/>`))));
+        `<w:p><w:pPr><w:spacing w:after="20"/><w:jc w:val="center"/></w:pPr>${wPhoto(rid, cx, cy, imgId)}</w:p>` + capP));
     }
     const gridRows = [];
     for (let i = 0; i < cells.length; i += 5){
@@ -3025,9 +3149,12 @@ async function docxForVisit(visit, photos, settings){
     body.push(wP(wR(`Évolution constatée d'une visite à l'autre pour ${prog.length} réserve(s) suivie(s).`, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="100"/>`));
     for (const g of prog){
       const cells = [];
+      const pair = [await safeJpeg(g.before.p.blob, 800, 0.75), await safeJpeg(g.after.p.blob, 800, 0.75)];
+      if (!pair[0] || !pair[1]) continue; // paire incomplète : bloc ignoré
+      let side_i = -1;
       for (const side of [g.before, g.after]){
-        imgId++;
-        const im = await normalizeJpeg(side.p.blob, 800, 0.75);
+        side_i++; imgId++;
+        const im = pair[side_i];
         const rid = `rIdImg${imgId}`;
         media.push({name:`word/media/image${imgId}.jpg`, data:im.bytes});
         rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image${imgId}.jpg"/>`);
@@ -3074,6 +3201,13 @@ async function docxForVisit(visit, photos, settings){
     }).join("");
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${cols.map(c=>`<w:gridCol w:w="${c}"/>`).join("")}</w:tblGrid>${regHead}${regRows}</w:tbl>`);
     body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  /* ---- avertissement clichés illisibles ---- */
+  if (badShots.length){
+    body.push(wP(wR(`⚠ Cliché(s) illisible(s) non intégré(s) : n°${badShots.join(", n°")} — vérifiez ces fichiers dans l'application.`,
+      `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/><w:sz w:val="17"/>`),
+      `<w:shd w:val="clear" w:fill="FCEAE7"/><w:spacing w:before="160" w:after="120"/><w:ind w:left="113" w:right="113"/>`));
   }
 
   /* ---- signature ---- */
@@ -3366,7 +3500,7 @@ async function describeAI(){
     toast("IA : " + (err && err.message || err), true);
   }finally{
     btn.classList.remove("busy");
-    btn.textContent = "✨ Décrire le cliché (IA — éléments VRD uniquement)";
+    btn.textContent = "✨ Décrire le cliché (IA — constat VRD)";
   }
 }
 
@@ -3390,6 +3524,7 @@ function openSettings(){
   $("#sAutoLock").value = String(autoLockDelay());
   refreshLogoState();
   renderAnnexeList();
+  refreshStorageState();
   $("#setModal").classList.add("on");
 }
 async function saveSettingsUI(){
@@ -3416,8 +3551,39 @@ async function saveSettingsUI(){
 }
 
 /* =============== branchements =============== */
+/* Stockage persistant : sans cela, Android peut vider IndexedDB quand l'espace manque.
+   Tout étant stocké sur le téléphone, c'est la principale protection contre la perte de données. */
+async function requestPersistence(){
+  try{
+    if (!navigator.storage || !navigator.storage.persist) return null;
+    if (await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  }catch{ return null; }
+}
+async function storageInfo(){
+  try{
+    const q = await navigator.storage.estimate();
+    const persisted = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+    return { usage:q.usage || 0, quota:q.quota || 0, persisted };
+  }catch{ return null; }
+}
+function fmtMo(n){ return n >= 1073741824 ? (n/1073741824).toFixed(1)+" Go" : Math.round(n/1048576)+" Mo"; }
+async function refreshStorageState(){
+  const el = $("#storageState");
+  if (!el) return;
+  const s = await storageInfo();
+  if (!s){ el.textContent = "Espace utilisé : information indisponible sur ce navigateur."; return; }
+  const pct = s.quota ? Math.round(s.usage / s.quota * 100) : 0;
+  const warn = pct >= 80 ? " ⚠️ Espace bientôt saturé : faites une sauvegarde et allégez d'anciens chantiers." : "";
+  el.innerHTML = `Espace utilisé : <b>${fmtMo(s.usage)}</b> sur ${fmtMo(s.quota)} (${pct} %).<br>` +
+    (s.persisted
+      ? `Stockage <b>persistant ✔</b> — Android ne peut pas effacer vos données pour libérer de l'espace.`
+      : `⚠️ Stockage <b>non persistant</b> : Android pourrait effacer vos données si le téléphone sature. Installez l'application sur l'écran d'accueil pour l'activer.`) + warn;
+}
+
 async function main(){
   db = await openDB();
+  await requestPersistence();
   const projects = await migrateToProjects();
   const savedId = Number(localStorage.getItem("currentProjectId"));
   setCurrentProject(projects.find(p => p.id === savedId) || projects[0]);
@@ -3445,7 +3611,16 @@ async function main(){
   $("#btnMoyensAdd").addEventListener("click", addMoyenRow);
   $("#btnMoyensSave").addEventListener("click", saveMoyens);
   $("#btnRegBack").addEventListener("click", showHome);
-  $("#btnRegAdd").addEventListener("click", addManualReserve);
+  $("#btnRegAdd").addEventListener("click", () => openReserveForm(null));
+  $("#btnResClose").addEventListener("click", closeReserveForm);
+  $("#btnResSave").addEventListener("click", saveReserveForm);
+  $("#btnResDelete").addEventListener("click", deleteReserveForm);
+  document.querySelectorAll("#rStatutChips .chip").forEach(c => c.addEventListener("click", () => {
+    document.querySelectorAll("#rStatutChips .chip").forEach(x => x.classList.remove("on"));
+    c.classList.add("on");
+  }));
+  document.querySelectorAll("#resModal .micbtn").forEach(btn =>
+    btn.addEventListener("click", () => micToField(btn, $("#" + btn.dataset.mic))));
   $("#btnNewProject").addEventListener("click", newProjectFlow);
   $("#btnProjCancel").addEventListener("click", closeProjectSheet);
 
