@@ -1,7 +1,7 @@
 {
-  "name": "PCM-CAD — Notes de chantier VRD",
-  "short_name": "PCM-CAD",
-  "description": "PCM-CAD (PCM Aménagement Urbain) : carnet de notes de chantier sécurisé — photos horodatées, constats VRD structurés, rapports PDF/Word partageables.",
+  "name": "abraCADabra — Notes de chantier VRD",
+  "short_name": "abraCADabra",
+  "description": "abraCADabra : carnet de notes de chantier sécurisé — photos horodatées, constats VRD structurés, fiches de contrôle, rapports PDF/Word partageables.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

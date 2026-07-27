@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>PCM-CAD — Notes de chantier VRD</title>
+<title>abraCADabra — Notes de chantier VRD</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#F4F1EA" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#14110E" media="(prefers-color-scheme: dark)">
@@ -129,20 +129,37 @@
   /* verrouillé : page de marque plein écran, aucun nom de chantier visible */
   body.locked header.top{display:none}
   .brand{display:flex; flex-direction:column; align-items:center; gap:2px; margin-bottom:22px}
-  .brand-org{
-    font-size:12.5px; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
-    color:var(--blue); text-align:center; line-height:1.3;
-  }
+  /* logotype : « abra » en serif clair, « CAD » en capitales dégradées — le jeu de mots devient visuel */
   .brand-app{
-    font-size:40px; font-weight:900; letter-spacing:.01em; line-height:1;
-    color:var(--accent);
+    display:flex; align-items:baseline; justify-content:center;
+    line-height:1; white-space:nowrap;
   }
-  .brand-rule{width:52px; height:3px; border-radius:99px; margin-top:8px;
-    background:linear-gradient(90deg, var(--accent), var(--blue))}
-  .brand-by{
+  .brand-app i{
     font-family:Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
-    font-style:italic; font-size:16px; font-weight:600; letter-spacing:.02em;
-    color:var(--blue-deep); margin-top:9px;
+    font-style:italic; font-weight:400; font-size:clamp(29px, 9.6vw, 38px); letter-spacing:-.01em;
+    color:var(--blue-deep);
+  }
+  .brand-app span{
+    font-family:system-ui, "Segoe UI", Roboto, sans-serif;
+    font-weight:900; font-size:clamp(35px, 11.6vw, 46px); letter-spacing:.02em; margin:0 .04em;
+    background:linear-gradient(160deg,#FFB454 0%,#F07E1A 45%,#D4560A 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 3px 10px rgba(217,106,11,.34));
+  }
+  @supports not ((-webkit-background-clip:text) or (background-clip:text)){
+    .brand-app span{color:var(--accent); filter:none}
+  }
+  .brand-rule{width:64px; height:3px; border-radius:99px; margin-top:12px;
+    background:linear-gradient(90deg, var(--accent), var(--blue))}
+  .brand-tag{
+    font-family:Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+    font-style:italic; font-size:14.5px; line-height:1.45; text-align:center;
+    color:var(--ink2); margin-top:11px; max-width:30ch;
+  }
+  .brand-seal{
+    margin-top:9px; font-size:10.5px; font-weight:800; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--blue-deep); background:var(--blue-soft); border:1px solid var(--blue-line);
+    border-radius:99px; padding:5px 13px;
   }
   .lockbox h1{font-size:20px; margin:4px 0 0; letter-spacing:-.01em}
   .lockbox p{color:var(--ink); font-weight:500; margin:2px 0 14px; max-width:34ch}
@@ -432,10 +449,10 @@
   <div class="wrap">
     <div class="lockbox">
       <div class="brand">
-        <div class="brand-org">PCM Aménagement Urbain</div>
-        <div class="brand-app">PCM-CAD</div>
+        <div class="brand-app"><i>abra</i><span>CAD</span><i>abra</i></div>
         <div class="brand-rule"></div>
-        <div class="brand-by">by Édouard Vigier</div>
+        <div class="brand-tag">Taillé pour satelliser le problème<br>et plier le jeu</div>
+        <div class="brand-seal">Garantie anti-boulette</div>
       </div>
       <div class="glyph">🔒</div>
       <p id="lockText">Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone.</p>
@@ -565,17 +582,18 @@
       </div>
     </div>
 
+    <!-- saisie au clavier uniquement : les valeurs mémorisées restent proposées en autocomplétion
+         (liste déroulante du champ), sans encombrer l'écran de pastilles -->
     <div class="field">
       <label for="fZone">Localisation / zone</label>
       <input type="text" id="fZone" list="zonesList" placeholder="Ex. : Carrefour av. du Château / av. de Paris">
       <datalist id="zonesList"></datalist>
-      <div class="chips" id="zoneChips" style="margin-top:7px"></div>
     </div>
 
     <div class="field">
       <label for="fEnt">Entreprise / lot concerné</label>
-      <input type="text" id="fEnt" placeholder="Ex. : Colas (mandataire)">
-      <div class="chips" id="entChips" style="margin-top:7px"></div>
+      <input type="text" id="fEnt" list="entsList3" placeholder="Ex. : Colas (mandataire)">
+      <datalist id="entsList3"></datalist>
     </div>
 
     <div class="field">
@@ -1197,50 +1215,66 @@ async function renderAnnexeList(){
 
 /* =============== base locale (IndexedDB) =============== */
 let db;
-const DB_STORES = ["visits","photos","inbox","projects","reserves","annexes","controls"];
-/* Ouvre la base, puis vérifie que tous les magasins existent. Si une montée de version a été
-   interrompue ou incomplète, on rouvre en version+1 pour créer ce qui manque plutôt que de planter. */
+/* Schéma attendu : magasin → index. Sert à la création ET au diagnostic de réparation. */
+const DB_SCHEMA = {
+  visits:   ["date"],
+  photos:   ["visitId"],
+  inbox:    [],
+  projects: [],
+  reserves: ["projectId"],
+  annexes:  ["projectId"],
+  controls: ["projectId","visitId"]
+};
+const DB_VERSION = 5;
+/* Ouvre la base puis vérifie magasins ET index. Une montée de version interrompue laissait
+   l'application inutilisable ; on rouvre alors en version+1 pour compléter ce qui manque. */
 async function openDB(){
+  // 1) ouverture sans numéro : on prend la version réellement présente sur l'appareil.
+  //    (Demander une version inférieure à l'existante lève une VersionError et bloquait tout
+  //     l'application après un retour à une version antérieure.)
   let d = await openDBVersion();
-  const manquants = DB_STORES.filter(s => !d.objectStoreNames.contains(s));
-  if (manquants.length){
+  // 2) montée de version si le code est plus récent que la base
+  if (d.version < DB_VERSION){
+    d.close();
+    d = await openDBVersion(DB_VERSION);
+  }
+  // 3) filet : magasin ou index manquant après une migration interrompue
+  if (dbIncomplet(d)){
     const v = d.version + 1;
     d.close();
     d = await openDBVersion(v);
   }
   return d;
 }
+function dbIncomplet(d){
+  for (const s in DB_SCHEMA){
+    if (!d.objectStoreNames.contains(s)) return true;
+  }
+  // vérification des index : nécessite une transaction de lecture
+  try{
+    const noms = Object.keys(DB_SCHEMA);
+    const t = d.transaction(noms, "readonly");
+    for (const s of noms){
+      const os = t.objectStore(s);
+      for (const idx of DB_SCHEMA[s]) if (!os.indexNames.contains(idx)) return true;
+    }
+    t.abort();
+  }catch{ return true; }
+  return false;
+}
 function openDBVersion(version){
   return new Promise((res, rej) => {
-    const rq = version ? indexedDB.open("chantier-notes", version) : indexedDB.open("chantier-notes", 5);
+    // sans argument : ouvre la version existante, quelle qu'elle soit
+    const rq = version ? indexedDB.open("chantier-notes", version) : indexedDB.open("chantier-notes");
     rq.onupgradeneeded = e => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains("visits")){
-        const v = d.createObjectStore("visits", {keyPath:"id", autoIncrement:true});
-        v.createIndex("date","date");
-      }
-      if (!d.objectStoreNames.contains("photos")){
-        const p = d.createObjectStore("photos", {keyPath:"id", autoIncrement:true});
-        p.createIndex("visitId","visitId");
-      }
-      if (!d.objectStoreNames.contains("inbox")){
-        d.createObjectStore("inbox", {keyPath:"id", autoIncrement:true});
-      }
-      if (!d.objectStoreNames.contains("projects")){
-        d.createObjectStore("projects", {keyPath:"id", autoIncrement:true});
-      }
-      if (!d.objectStoreNames.contains("reserves")){
-        const r = d.createObjectStore("reserves", {keyPath:"id", autoIncrement:true});
-        r.createIndex("projectId","projectId");
-      }
-      if (!d.objectStoreNames.contains("annexes")){
-        const a = d.createObjectStore("annexes", {keyPath:"id", autoIncrement:true});
-        a.createIndex("projectId","projectId");
-      }
-      if (!d.objectStoreNames.contains("controls")){
-        const c = d.createObjectStore("controls", {keyPath:"id", autoIncrement:true});
-        c.createIndex("projectId","projectId");
-        c.createIndex("visitId","visitId");
+      const d = e.target.result, t = e.target.transaction;
+      for (const s in DB_SCHEMA){
+        const os = d.objectStoreNames.contains(s)
+          ? t.objectStore(s)
+          : d.createObjectStore(s, {keyPath:"id", autoIncrement:true});
+        for (const idx of DB_SCHEMA[s]){
+          if (!os.indexNames.contains(idx)) os.createIndex(idx, idx);
+        }
       }
     };
     rq.onsuccess = () => res(rq.result);
@@ -1291,8 +1325,18 @@ function tx(store, mode, fn){
 function idbAll(store, indexName, key){
   return new Promise((res, rej) => {
     const t = db.transaction(store, "readonly");
-    let src = t.objectStore(store);
-    if (indexName) src = src.index(indexName);
+    const os = t.objectStore(store);
+    let src = os;
+    // index absent (base incomplète) : on retombe sur un balayage complet filtré, plutôt que d'échouer
+    if (indexName){
+      if (os.indexNames.contains(indexName)) src = os.index(indexName);
+      else {
+        const rq0 = os.getAll();
+        rq0.onsuccess = () => res(key === undefined ? rq0.result : rq0.result.filter(x => x && x[indexName] === key));
+        rq0.onerror = () => rej(rq0.error);
+        return;
+      }
+    }
     const rq = key !== undefined ? src.getAll(key) : src.getAll();
     rq.onsuccess = () => res(rq.result);
     rq.onerror = () => rej(rq.error);
@@ -1931,7 +1975,10 @@ async function openCtrl(){
         <span class="cc-verdict wip">Ouvrir</span></button>`).join("") + `</div>`;
   }).join("");
   box.querySelectorAll("[data-tpl]").forEach(b =>
-    b.addEventListener("click", () => newCtrl(b.dataset.tpl)));
+    b.addEventListener("click", async () => {
+      try{ await newCtrl(b.dataset.tpl); }
+      catch(err){ toast("Impossible d'ouvrir la fiche : " + (err && err.message || err), true); }
+    }));
   $("#ctrlModal").classList.add("on");
   window.scrollTo(0,0);
 }
@@ -1949,8 +1996,10 @@ async function renderCtrlList(){
   }).join("");
   list.querySelectorAll("[data-id]").forEach(b =>
     b.addEventListener("click", async () => {
-      const f = (await visitControls(curVisit.id)).find(x => x.id === Number(b.dataset.id));
-      if (f) openCtrlForm(f);
+      try{
+        const f = (await visitControls(curVisit.id)).find(x => x.id === Number(b.dataset.id));
+        if (f) openCtrlForm(f);
+      }catch(err){ toast("Ouverture impossible : " + (err && err.message || err), true); }
     }));
 }
 async function newCtrl(tplId){
@@ -2510,15 +2559,11 @@ function pasteComment(){
   $("#fEcheance").value = c.dateLimite || "";
   toast("Commentaire collé — relisez puis Enregistrer");
 }
+/* alimente uniquement l'autocomplétion des champs (aucune pastille affichée) */
 function buildQuickChips(){
   const s = getSettings();
   $("#zonesList").innerHTML = s.zones.map(z => `<option value="${esc(z)}">`).join("");
-  $("#zoneChips").innerHTML = s.zones.slice(0,7).map(z => `<button class="chip">${esc(z)}</button>`).join("");
-  $("#zoneChips").querySelectorAll(".chip").forEach(c =>
-    c.addEventListener("click", () => { $("#fZone").value = c.textContent; }));
-  $("#entChips").innerHTML = s.ents.map(z => `<button class="chip">${esc(z)}</button>`).join("");
-  $("#entChips").querySelectorAll(".chip").forEach(c =>
-    c.addEventListener("click", () => { $("#fEnt").value = c.textContent; }));
+  $("#entsList3").innerHTML = s.ents.map(z => `<option value="${esc(z)}">`).join("");
 }
 async function saveEdit(){
   if (!curEdit) return;
@@ -3059,7 +3104,7 @@ async function pdfForVisit(visit, photos, settings){
     lx += 30 + lib.length * 4.4 + 20;
   }
   y -= 22;
-  cur.texts.push({x:40, y, size:FS.caption, font:"F1", color:PDF_GREY, text:"Rapport généré par PCM-CAD (PCM Aménagement Urbain), à vérifier avant diffusion."});
+  cur.texts.push({x:40, y, size:FS.caption, font:"F1", color:PDF_GREY, text:"Rapport généré par abraCADabra, à vérifier avant diffusion."});
   y -= 14;
 
   /* ---- plan de situation (chargé, sinon généré automatiquement depuis le GPS) ---- */
@@ -3604,7 +3649,7 @@ async function docxForVisit(visit, photos, settings){
   body.push(`<w:tbl><w:tblPr><w:tblW w:w="9640" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${"<w:gridCol w:w=\"1928\"/>".repeat(5)}</w:tblGrid><w:tr>${wTc(9640, wP(wR("IDENTIFICATION & MÉTÉO", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:5, fill:DOCX_BAND})}</w:tr>${idHead}${idRow}</w:tbl>`);
   body.push(wP("", `<w:spacing w:after="80"/>`));
 
-  body.push(wP(wR("Rapport généré par PCM-CAD (PCM Aménagement Urbain), à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="120"/>`));
+  body.push(wP(wR("Rapport généré par abraCADabra, à vérifier avant diffusion.", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:before="120"/>`));
   body.push(`<w:p><w:r><w:br w:type="page"/></w:r></w:p>`);
 
   /* ---- constats par zones automatiques (GPS ± 10 m) ---- */
@@ -3955,7 +4000,7 @@ async function fullBackup(){
       currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, annexes, photos: photoData };
     const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
     const d = todayIso();
-    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde PCM-CAD");
+    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde abraCADabra");
     const mo = (blob.size/1048576).toFixed(1);
     toast(r === "saved" ? `Sauvegarde enregistrée ✔ (${mo} Mo)` :
           r === "shared" ? `Sauvegarde partagée ✔ (${mo} Mo)` :
@@ -4190,10 +4235,16 @@ async function main(){
   $("#btnMoyensClose").addEventListener("click", () => { stopMic(); $("#moyensModal").classList.remove("on"); });
   $("#btnMoyensAdd").addEventListener("click", addMoyenRow);
   $("#btnMoyensSave").addEventListener("click", saveMoyens);
-  $("#btnCtrl").addEventListener("click", openCtrl);
+  $("#btnCtrl").addEventListener("click", async () => {
+    try{ await openCtrl(); }
+    catch(err){ toast("Fiches de contrôle indisponibles : " + (err && err.message || err), true); }
+  });
   $("#btnCtrlClose").addEventListener("click", () => $("#ctrlModal").classList.remove("on"));
   $("#btnCtrlFormClose").addEventListener("click", () => { closeCtrlForm(); openCtrl(); });
-  $("#btnCtrlSave").addEventListener("click", saveCtrlForm);
+  $("#btnCtrlSave").addEventListener("click", async () => {
+    try{ await saveCtrlForm(); }
+    catch(err){ toast("Enregistrement impossible : " + (err && err.message || err), true); }
+  });
   $("#btnCtrlDelete").addEventListener("click", deleteCtrlForm);
   $("#btnRegBack").addEventListener("click", showHome);
   $("#btnRegAdd").addEventListener("click", () => openReserveForm(null));
