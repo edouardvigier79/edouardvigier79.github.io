@@ -311,6 +311,19 @@
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
   .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
+  /* ---- journal des modifications ---- */
+  .jrn-jour{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--blue); margin:16px 2px 7px}
+  .jrn-e{display:flex; gap:10px; padding:9px 12px; background:var(--card); border:1px solid var(--line);
+    border-radius:var(--r-md); margin-bottom:7px}
+  .jrn-h{flex:none; width:44px; font-size:12px; font-weight:700; color:var(--ink2); font-variant-numeric:tabular-nums}
+  .jrn-c{flex:1; min-width:0}
+  .jrn-t{font-size:13.5px; font-weight:700}
+  .jrn-t .jrn-act{font-weight:800}
+  .jrn-t .jrn-act.sup{color:var(--nc)}
+  .jrn-t .jrn-act.new{color:var(--c)}
+  .jrn-d{font-size:12px; color:var(--ink2); margin-top:2px; word-break:break-word}
+  .jrn-w{font-size:11px; color:var(--ink2); margin-top:3px; font-style:italic}
   /* ---- extraction par entreprise ---- */
   .ext-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
     padding:13px 15px; margin-bottom:10px; box-shadow:var(--shadow)}
@@ -520,6 +533,28 @@
     </div>
   </div>
 </section>
+
+<!-- ================= JOURNAL DES MODIFICATIONS ================= -->
+<div class="modal" id="jrnModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnJrnClose" aria-label="Fermer">←</button>
+      <b>Journal des modifications</b>
+    </div>
+    <p class="hint" id="jrnInfo" style="margin:2px 2px 12px"></p>
+    <div class="chips" id="jrnFilters" style="margin-bottom:12px">
+      <button class="chip on" data-f="">Tout</button>
+      <button class="chip" data-f="Constat">Constats</button>
+      <button class="chip" data-f="Réserve">Réserves</button>
+      <button class="chip" data-f="Fiche de contrôle">Fiches</button>
+      <button class="chip" data-f="Visite">Visites</button>
+    </div>
+    <div id="jrnList"></div>
+    <div class="btnrow">
+      <button class="btn blue block" id="btnJrnCsv">📊 Exporter le journal (.csv)</button>
+    </div>
+  </div>
+</div>
 
 <!-- ================= EXTRACTION PAR ENTREPRISE ================= -->
 <div class="modal" id="extModal">
@@ -993,6 +1028,12 @@
     </div>
 
     <div class="settings-block">
+      <h3>Journal des modifications</h3>
+      <p>Trace horodatée de tout ce qui a été créé, modifié ou supprimé sur ce chantier. En cas de litige, elle établit qu'un constat n'a pas été retouché après coup.</p>
+      <button class="btn block" id="btnJournal">🕘 Consulter le journal</button>
+    </div>
+
+    <div class="settings-block">
       <h3>Sauvegarde &amp; restauration</h3>
       <p>Tout est stocké uniquement dans ce téléphone. Faites une sauvegarde complète régulièrement — c'est votre filet de sécurité (téléphone perdu, changement d'appareil).</p>
       <button class="btn primary block" id="btnBackupFull">💾 Sauvegarde complète (tous chantiers + photos)</button>
@@ -1342,9 +1383,10 @@ const DB_SCHEMA = {
   projects: [],
   reserves: ["projectId"],
   annexes:  ["projectId"],
-  controls: ["projectId","visitId"]
+  controls: ["projectId","visitId"],
+  journal:  ["projectId"]
 };
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 /* Ouvre la base puis vérifie magasins ET index. Une montée de version interrompue laissait
    l'application inutilisable ; on rouvre alors en version+1 pour compléter ce qui manque. */
 async function openDB(){
@@ -1567,6 +1609,7 @@ function showLock(){
   $("#tplModal").classList.remove("on");
   $("#tplFormModal").classList.remove("on");
   $("#extModal").classList.remove("on");
+  $("#jrnModal").classList.remove("on");
   closeAddSheet();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
@@ -1784,8 +1827,11 @@ async function renameVisit(){
   if (!curVisit) return;
   const val = prompt("Nom de la visite (laisser vide pour le nom par défaut) :", curVisit.label || "");
   if (val === null) return;
+  const avant = curVisit.label || "";
   curVisit.label = val.trim();
   await tx("visits","readwrite", s => s.put(curVisit));
+  if (avant !== curVisit.label)
+    await logAction("Visite", frDate(curVisit.date), "Renommée", `${avant || "(nom par défaut)"} → ${curVisit.label || "(nom par défaut)"}`);
   refreshVisitLabel();
   toast(curVisit.label ? "Visite renommée" : "Nom par défaut rétabli");
 }
@@ -1842,6 +1888,8 @@ async function saveMoyens(){
   });
   curVisit.intervenants = list;
   await tx("visits","readwrite", s => s.put(curVisit));
+  await logAction("Visite", frDate(curVisit.date), "Moyens sur site renseignés",
+    list.map(i => `${i.ent} : ${i.effectif || "—"} / ${i.engins || "—"}`));
   stopMic();
   $("#moyensModal").classList.remove("on");
   toast("Moyens sur site enregistrés");
@@ -1942,6 +1990,43 @@ async function actionTracking(){
   return rows;
 }
 
+/* =============== journal des modifications ===============
+   Trace horodatée de ce qui a été créé, modifié ou supprimé. En cas de litige, un constat
+   retouché après coup sans trace est contestable : le journal lève le doute. */
+function nowStamp(){
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+async function logAction(type, ref, action, detail){
+  if (!CUR || !db || !db.objectStoreNames.contains("journal")) return;
+  try{
+    await idbAdd("journal", {
+      projectId: CUR.id, at: nowStamp(), who: (getSettings().redac || "").trim() || "—",
+      type, ref: ref || "", action, detail: Array.isArray(detail) ? detail.join(" · ") : (detail || "")
+    });
+  }catch{}   // la journalisation ne doit jamais faire échouer l'action elle-même
+}
+/* champs suivis : seuls ceux qui engagent le contenu du constat */
+const CHAMPS_PHOTO = {statut:"Statut", titre:"Titre", description:"Description",
+  suite:"Suite à donner", zone:"Localisation", entreprise:"Entreprise", dateLimite:"Échéance"};
+const CHAMPS_RES = {objet:"Objet", entreprise:"Entreprise", action:"Action attendue",
+  dateLimite:"Échéance", zone:"Zone", statut:"Statut"};
+/* une date ISO est affichée au format français dans le journal */
+const lisible = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? frDate(v) : String(v);
+function diffChamps(avant, apres, champs){
+  const out = [];
+  for (const k in champs){
+    const a = String((avant && avant[k]) ?? "" ), b = String((apres && apres[k]) ?? "");
+    if (a !== b) out.push(`${champs[k]} : ${a ? lisible(a) : "—"} → ${b ? lisible(b) : "—"}`);
+  }
+  return out;
+}
+async function projectJournal(){
+  if (!CUR) return [];
+  return (await idbAll("journal","projectId",CUR.id))
+    .sort((a,b) => a.at === b.at ? (b.id - a.id) : (a.at < b.at ? 1 : -1));  // plus récent d'abord
+}
+
 /* =============== extraction par entreprise =============== */
 const normEnt = s => (s || "").trim().toLowerCase();
 
@@ -2022,6 +2107,8 @@ async function createReserve({objet, zone, statut, entreprise, action, dateLimit
     zone: zone || "", objet: objet || "", entreprise: entreprise || "", action: action || "",
     dateLimite: dateLimite || "", statut: statut || "En cours", dateSolde: "", createdAt: Date.now() };
   rec.id = await idbAdd("reserves", rec);
+  await logAction("Réserve", `n°${rec.num}`, "Ouverte",
+    [rec.objet, rec.entreprise, rec.dateLimite ? "échéance " + frDate(rec.dateLimite) : ""].filter(Boolean));
   return rec;
 }
 /* statut affiché : « En retard » dérivé quand la date limite est dépassée et non soldé */
@@ -2068,6 +2155,7 @@ async function renderRegister(){
       r.dateSolde = r.statut === "Soldé" ? todayIso() : "";
       if (r.statut !== "Soldé") r.soldePhotoId = null;
       await tx("reserves","readwrite", s => s.put(r));
+      await logAction("Réserve", `n°${r.num}`, r.statut === "Soldé" ? "Soldée" : "Réouverte", "depuis le registre");
       await renderRegister();
     });
     card.querySelector('[data-act=edit]').addEventListener("click", () => openReserveForm(res.find(x => x.id === id)));
@@ -2295,8 +2383,16 @@ async function saveCtrlForm(){
   curCtrl.signRedac = getSettings().redac || "";
   if ((curCtrl.signMoe || curCtrl.signEnt) && !curCtrl.signedAt) curCtrl.signedAt = todayIso();
   if (!curCtrl.signMoe && !curCtrl.signEnt) curCtrl.signedAt = "";
+  const creation = !curCtrl.id;
+  const avantConcl = creation ? "" : (curCtrl.conclusionAvant || "");
   if (curCtrl.id) await tx("controls","readwrite", s => s.put(curCtrl));
   else curCtrl.id = await idbAdd("controls", curCtrl);
+  const nc = curCtrl.items.filter(it => it.t !== "t" && itemStatut(it) === "NC").map(it => it.l);
+  await logAction("Fiche de contrôle", `n°${curCtrl.num}`, creation ? "Établie" : "Modifiée",
+    [curCtrl.name, `conclusion : ${curCtrl.conclusion}`,
+     nc.length ? `non conformes : ${nc.join(", ")}` : "",
+     (curCtrl.signMoe || curCtrl.signEnt) ? `signée (${[curCtrl.signMoe ? "MOE" : "", curCtrl.signEnt ? "entreprise" : ""].filter(Boolean).join(" + ")})` : ""
+    ].filter(Boolean));
   const fiche = curCtrl;
   closeCtrlForm();
   await proposeReservesFromCtrl(fiche);
@@ -2327,10 +2423,67 @@ async function proposeReservesFromCtrl(f){
 async function deleteCtrlForm(){
   if (!curCtrl || !curCtrl.id) return;
   if (!confirm(`Supprimer la fiche n°${curCtrl.num} — ${curCtrl.name} ?`)) return;
+  await logAction("Fiche de contrôle", `n°${curCtrl.num}`, "Supprimée", curCtrl.name || "");
   await tx("controls","readwrite", s => s.delete(curCtrl.id));
   closeCtrlForm();
   await openCtrl();
   toast("Fiche supprimée");
+}
+
+/* =============== écran du journal =============== */
+let jrnFiltre = "";
+async function openJournal(){
+  if (!CUR) return;
+  jrnFiltre = "";
+  document.querySelectorAll("#jrnFilters .chip").forEach(c => c.classList.toggle("on", !c.dataset.f));
+  await renderJournal();
+  $("#setModal").classList.remove("on");
+  $("#jrnModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+async function renderJournal(){
+  const tout = await projectJournal();
+  const ents = jrnFiltre ? tout.filter(e => e.type === jrnFiltre) : tout;
+  $("#jrnInfo").textContent = `${tout.length} entrée(s) sur ce chantier${jrnFiltre ? ` · ${ents.length} affichée(s)` : ""}.`
+    + (tout.length ? ` Depuis le ${frDate(tout[tout.length-1].at.split("T")[0])}.` : "");
+  const box = $("#jrnList");
+  if (!ents.length){
+    box.innerHTML = `<div class="empty"><span class="glyph">🕘</span>Aucune entrée.<br>Le journal se remplit dès la première saisie.</div>`;
+    return;
+  }
+  let html = "", jourCourant = "";
+  for (const e of ents){
+    const [jour, heure] = e.at.split("T");
+    if (jour !== jourCourant){
+      jourCourant = jour;
+      html += `<div class="jrn-jour">${esc(frDate(jour))} — ${esc(frDayName(jour))}</div>`;
+    }
+    const cls = /Supprim/.test(e.action) ? " sup" : (/Ouverte|Établie|Renseigné|import/i.test(e.action) ? " new" : "");
+    html += `<div class="jrn-e">
+      <span class="jrn-h">${esc(heure)}</span>
+      <span class="jrn-c">
+        <div class="jrn-t">${esc(e.type)} ${esc(e.ref)} — <span class="jrn-act${cls}">${esc(e.action)}</span></div>
+        ${e.detail ? `<div class="jrn-d">${esc(e.detail)}</div>` : ""}
+        <div class="jrn-w">${esc(e.who || "—")}</div>
+      </span></div>`;
+  }
+  box.innerHTML = html;
+}
+async function exportJournalCsv(){
+  try{
+    const ents = await projectJournal();
+    if (!ents.length){ toast("Journal vide.", true); return; }
+    const esc2 = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lignes = [["Date","Heure","Auteur","Élément","Référence","Action","Détail"].join(";")];
+    for (const e of ents){
+      const [j, h] = e.at.split("T");
+      lignes.push([frDate(j), h, e.who, e.type, e.ref, e.action, e.detail].map(esc2).join(";"));
+    }
+    const blob = new Blob(["﻿" + lignes.join("\r\n")], {type:"text/csv;charset=utf-8"});
+    const name = `Journal ${sanitizeFilename(CUR.name)} — ${shortDate(todayIso())}.csv`;
+    const r = await shareOrDownload([new File([blob], name, {type:"text/csv"})], name);
+    toast(r === "shared" ? "Journal partagé ✔" : r === "downloaded" ? "Journal dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur export journal : " + (err && err.message || err), true); }
 }
 
 /* =============== écran d'extraction par entreprise =============== */
@@ -2622,10 +2775,13 @@ async function saveReserveForm(){
     dateLimite: $("#rDate").value || "", zone: $("#rZone").value.trim(), statut
   };
   if (curRes){
+    const avant = {}; for (const k in CHAMPS_RES) avant[k] = curRes[k];
     Object.assign(curRes, data);
     if (statut === "Soldé"){ if (!curRes.dateSolde) curRes.dateSolde = todayIso(); }
     else { curRes.dateSolde = ""; curRes.soldePhotoId = null; }
     await tx("reserves","readwrite", s => s.put(curRes));
+    const chgs = diffChamps(avant, curRes, CHAMPS_RES);
+    if (chgs.length) await logAction("Réserve", `n°${curRes.num}`, "Modifiée", chgs);
     toast(`Réserve n°${curRes.num} enregistrée`);
   } else {
     const r = await createReserve(data);
@@ -2638,6 +2794,7 @@ async function saveReserveForm(){
 async function deleteReserveForm(){
   if (!curRes) return;
   if (!confirm(`Supprimer la réserve n°${curRes.num} du registre ?`)) return;
+  await logAction("Réserve", `n°${curRes.num}`, "Supprimée", curRes.objet || "");
   const id = curRes.id;
   // détacher les clichés qui y étaient rattachés, sinon ils pointeraient dans le vide
   for (const p of await idbAll("photos")){
@@ -2758,6 +2915,7 @@ async function solderReserve(reserveId, photoId){
   if (!r) return;
   r.statut = "Soldé"; r.dateSolde = todayIso(); r.soldePhotoId = photoId;
   await tx("reserves","readwrite", s => s.put(r));
+  await logAction("Réserve", `n°${r.num}`, "Soldée", `levée constatée sur un cliché du ${frDate(curVisit ? curVisit.date : todayIso())}`);
   await renderPhotos();
   toast(`Réserve n°${r.num} soldée — levée constatée sur ce cliché`);
 }
@@ -2766,6 +2924,7 @@ async function reopenReserve(reserveId){
   if (!r) return;
   r.statut = "En cours"; r.dateSolde = ""; r.soldePhotoId = null;
   await tx("reserves","readwrite", s => s.put(r));
+  await logAction("Réserve", `n°${r.num}`, "Réouverte", "solde annulé");
   await renderPhotos();
   toast(`Réserve n°${r.num} réouverte`);
 }
@@ -2912,6 +3071,9 @@ async function importFiles(files, opts){
     if (levee) await solderReserve(levee.id, newId);
   }
   await renderPhotos();
+  await logAction("Constat", files.length > 1 ? `n°${num - files.length + 1} à n°${num}` : `n°${num}`,
+    levee ? "Photo de levée ajoutée" : "Cliché(s) importé(s)",
+    `${files.length} cliché(s) · visite du ${frDate(curVisit.date)}`);
   if (levee){
     toast(`Photo de levée enregistrée — réserve n°${levee.num} soldée. Relisez le constat si besoin.`);
     return;
@@ -2931,11 +3093,14 @@ function askLeveePhoto(reserveId){
 }
 
 /* =============== éditeur =============== */
-let editURL = null;
+let editURL = null, editAvant = null;
 async function openEditor(id){
   const photos = await idbAll("photos","visitId",curVisit.id);
   curEdit = photos.find(p => p.id === id);
   if (!curEdit) return;
+  // état de référence pour le journal (le cliché lui-même n'est pas cloné)
+  editAvant = {}; for (const k in CHAMPS_PHOTO) editAvant[k] = curEdit[k];
+  editAvant.reserveNum = curEdit.reserveNum || "";
   $("#editModal").classList.add("on");
   $("#editTitle").textContent = `Cliché n°${curEdit.num}`;
   if (editURL) URL.revokeObjectURL(editURL);
@@ -3061,6 +3226,15 @@ async function saveEdit(){
     curEdit.reserveId = null; curEdit.reserveNum = null;
   }
   await tx("photos","readwrite", s => s.put(curEdit));
+  // journal : on ne consigne que s'il y a réellement eu un changement
+  const chgs = diffChamps(editAvant, curEdit, CHAMPS_PHOTO);
+  if ((editAvant && String(editAvant.reserveNum || "")) !== String(curEdit.reserveNum || ""))
+    chgs.push(`Réserve rattachée : ${editAvant && editAvant.reserveNum || "aucune"} → ${curEdit.reserveNum || "aucune"}`);
+  if (chgs.length){
+    const vierge = !Object.keys(CHAMPS_PHOTO).some(k => String((editAvant||{})[k] ?? ""));
+    await logAction("Constat", `n°${curEdit.num}`, vierge ? "Renseigné" : "Modifié", chgs);
+  }
+  editAvant = null;
   stopMic();
   $("#editModal").classList.remove("on");
   await renderPhotos();
@@ -4691,6 +4865,7 @@ async function fullBackup(){
     const visits = await idbAll("visits");
     const reserves = await idbAll("reserves");
     const controls = await idbAll("controls");
+    const journal = await idbAll("journal");
     const photos = await idbAll("photos");
     const annexesRaw = await idbAll("annexes");
     const photoData = [];
@@ -4702,8 +4877,8 @@ async function fullBackup(){
     }
     const annexes = [];
     for (const a of annexesRaw){ const {blob, ...rest} = a; rest.b64 = blob ? await blobToBase64(blob) : null; annexes.push(rest); }
-    const data = { app:"notes-chantier", schema:5, exportedAt:new Date().toISOString(),
-      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, annexes, photos: photoData };
+    const data = { app:"notes-chantier", schema:6, exportedAt:new Date().toISOString(),
+      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, journal, annexes, photos: photoData };
     const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
     const d = todayIso();
     const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde abraCADabra");
@@ -4722,7 +4897,7 @@ async function restoreBackup(file){
     if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\n⚠️ Cela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
     // vider les stores
-    for (const st of ["photos","visits","reserves","projects","annexes","controls"]){
+    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal"]){
       await new Promise((res, rej) => { const t = db.transaction(st,"readwrite"); t.objectStore(st).clear(); t.oncomplete = res; t.onerror = () => rej(t.error); });
     }
     // réinsérer avec les identifiants d'origine
@@ -4730,6 +4905,7 @@ async function restoreBackup(file){
     for (const v of (data.visits||[])) await tx("visits","readwrite", s => s.put(v));
     for (const r of (data.reserves||[])) await tx("reserves","readwrite", s => s.put(r));
     for (const c of (data.controls||[])) await tx("controls","readwrite", s => s.put(c));
+    for (const j of (data.journal||[])) await tx("journal","readwrite", s => s.put(j));
     for (const a of (data.annexes||[])){
       const {b64, ...rest} = a;
       if (b64){ const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
@@ -5023,6 +5199,8 @@ async function main(){
   $("#btnDelPhoto").addEventListener("click", async () => {
     if (!curEdit) return;
     if (!confirm(`Supprimer définitivement le cliché n°${curEdit.num} ?`)) return;
+    await logAction("Constat", `n°${curEdit.num}`, "Supprimé",
+      [curEdit.statut || "sans statut", curEdit.titre || "sans titre"].join(" · "));
     await tx("photos","readwrite", s => s.delete(curEdit.id));
     $("#editModal").classList.remove("on");
     await renderPhotos();
@@ -5055,6 +5233,16 @@ async function main(){
     $("#lockText").textContent = "Saisissez d'abord le code actuel.";
     $("#btnUnlock").textContent = "Continuer";
   });
+  $("#btnJournal").addEventListener("click", async () => {
+    try{ await openJournal(); }catch(e){ toast("Journal indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnJrnClose").addEventListener("click", () => { $("#jrnModal").classList.remove("on"); openSettings(); });
+  $("#btnJrnCsv").addEventListener("click", exportJournalCsv);
+  document.querySelectorAll("#jrnFilters .chip").forEach(c => c.addEventListener("click", async () => {
+    document.querySelectorAll("#jrnFilters .chip").forEach(x => x.classList.remove("on"));
+    c.classList.add("on"); jrnFiltre = c.dataset.f || "";
+    await renderJournal();
+  }));
   $("#btnBackupJson").addEventListener("click", backupJson);
   $("#btnBackupFull").addEventListener("click", fullBackup);
   $("#btnRestore").addEventListener("click", () => $("#fileRestore").click());
