@@ -311,6 +311,30 @@
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
   .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
+  /* ---- éditeur de modèles ---- */
+  .ti{border:1px solid var(--line); border-radius:var(--r-md); padding:10px 12px; margin-bottom:9px; background:var(--card)}
+  .ti-top{display:flex; align-items:center; gap:7px; margin-bottom:7px}
+  .ti-top input{flex:1; min-width:0; font:inherit; font-size:14px; color:var(--ink); background:var(--bg);
+    border:1.5px solid var(--line); border-radius:var(--r-sm); padding:8px 10px}
+  .ti-btn{flex:none; border:none; background:transparent; font-size:16px; cursor:pointer; color:var(--ink2); padding:2px 4px}
+  .ti-btn.del{color:var(--nc)}
+  .ti-row{display:flex; align-items:center; gap:7px; flex-wrap:wrap}
+  .ti-row select, .ti-row input{font:inherit; font-size:13px; color:var(--ink); background:var(--bg);
+    border:1.5px solid var(--line); border-radius:var(--r-sm); padding:7px 9px}
+  .ti-row .num{width:82px} .ti-row .unit{width:74px}
+  .ti-row span{font-size:12.5px; color:var(--ink2)}
+  /* ---- signature ---- */
+  .sigbox{border:1.5px solid var(--line); border-radius:var(--r-lg); padding:12px 13px; margin-bottom:12px; background:var(--card)}
+  .sig-lab{font-size:11px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--ink2); margin-bottom:7px}
+  .sig-lab small{display:block; font-weight:600; font-size:12px; letter-spacing:0; text-transform:none; color:var(--ink)}
+  .sigbox input{width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--bg);
+    border:1.5px solid var(--line); border-radius:var(--r-sm); padding:9px 11px; margin-bottom:8px}
+  .sigpad{display:block; width:100%; height:150px; background:#fff; border:1.5px dashed var(--blue-line);
+    border-radius:var(--r-md); touch-action:none; cursor:crosshair}
+  .sig-act{display:flex; align-items:center; gap:10px; margin-top:8px}
+  .sig-act .btn{padding:7px 13px; font-size:12.5px}
+  .sig-state{font-size:12.5px; font-weight:700; color:var(--ink2)}
+  .sig-state.ok{color:var(--c)}
   /* compteur de clichés à compléter */
   .todo-chip{display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit;
     margin:0 0 12px; padding:12px 15px; border-radius:var(--r-lg); cursor:pointer; color:var(--ink);
@@ -655,6 +679,54 @@
     <div id="ctrlList"></div>
     <div class="sect-label" style="margin-top:18px">Ouvrir une nouvelle fiche</div>
     <div id="ctrlPicker"></div>
+    <button class="btn ghost block" id="btnTplEdit" style="margin-top:14px">✎ Modifier les modèles de fiches</button>
+    <div class="hint">Les seuils proposés sont des valeurs de référence courantes. Adaptez-les à votre CCTP : les modèles appartiennent à ce chantier.</div>
+  </div>
+</div>
+
+<!-- ================= MODÈLES DE FICHES : liste ================= -->
+<div class="modal" id="tplModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnTplClose" aria-label="Fermer">←</button>
+      <b>Modèles de fiches</b>
+    </div>
+    <p class="hint" style="margin:2px 2px 12px">Propres à ce chantier. Les fiches déjà établies ne sont pas modifiées.</p>
+    <div id="tplList"></div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnTplNew">➕ Nouveau modèle</button>
+      <button class="btn danger block" id="btnTplReset">↺ Restaurer la bibliothèque d'origine</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODÈLE DE FICHE : édition ================= -->
+<div class="modal" id="tplFormModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnTplFormClose" aria-label="Fermer">←</button>
+      <b id="tplFormTitle">Modèle</b>
+      <button class="btn primary" id="btnTplSave" style="padding:9px 16px">Enregistrer</button>
+    </div>
+    <div class="field">
+      <label for="tName">Intitulé de la fiche</label>
+      <input type="text" id="tName" placeholder="Ex. : Réception de couche de roulement">
+    </div>
+    <div class="field">
+      <label for="tRef">Référence (fascicule, norme)</label>
+      <input type="text" id="tRef" placeholder="Ex. : Fasc. 27 · NF P 98-150-1">
+    </div>
+    <div class="field">
+      <label for="tFam">Famille</label>
+      <input type="text" id="tFam" list="famList" placeholder="Ex. : Chaussée">
+      <datalist id="famList"></datalist>
+    </div>
+    <div class="sect-label" style="margin-top:16px">Points de contrôle</div>
+    <div id="tplItems"></div>
+    <button class="btn ghost block" id="btnTplAddItem" style="margin-top:8px">➕ Ajouter un point</button>
+    <div class="btnrow" id="tDelRow">
+      <button class="btn danger block" id="btnTplDelete">Supprimer ce modèle</button>
+    </div>
   </div>
 </div>
 
@@ -679,6 +751,26 @@
     </div>
     <div id="ctrlItems"></div>
     <div class="ctrl-concl" id="ctrlConcl"></div>
+
+    <div class="sect-label" style="margin-top:18px">Signatures — PV contradictoire</div>
+    <p class="hint" style="margin:0 2px 10px">Signez sur place : la fiche devient un procès-verbal contradictoire, daté et signé des deux parties.</p>
+    <div class="sigbox">
+      <div class="sig-lab">Maîtrise d'œuvre <small id="sigMoeNom"></small></div>
+      <canvas class="sigpad" id="sigMoe" height="150"></canvas>
+      <div class="sig-act">
+        <button class="btn ghost" data-clear="sigMoe">Effacer</button>
+        <span class="sig-state" id="sigMoeState">non signé</span>
+      </div>
+    </div>
+    <div class="sigbox">
+      <div class="sig-lab">Entreprise</div>
+      <input type="text" id="sigEntNom" placeholder="Nom et qualité du signataire">
+      <canvas class="sigpad" id="sigEnt" height="150"></canvas>
+      <div class="sig-act">
+        <button class="btn ghost" data-clear="sigEnt">Effacer</button>
+        <span class="sig-state" id="sigEntState">non signé</span>
+      </div>
+    </div>
     <div class="btnrow" id="cDelRow">
       <button class="btn danger block" id="btnCtrlDelete">Supprimer cette fiche</button>
     </div>
@@ -1445,6 +1537,8 @@ function showLock(){
   $("#resModal").classList.remove("on");
   $("#ctrlModal").classList.remove("on");
   $("#ctrlFormModal").classList.remove("on");
+  $("#tplModal").classList.remove("on");
+  $("#tplFormModal").classList.remove("on");
   closeAddSheet();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
@@ -1961,17 +2055,33 @@ async function visitControls(visitId){
   return (await idbAll("controls","visitId",visitId)).sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
 }
 
+/* ---- modèles propres au chantier : copiés de la bibliothèque au premier usage, puis modifiables ---- */
+async function ensureTemplates(){
+  if (!CUR) return [];
+  if (!Array.isArray(CUR.templates) || !CUR.templates.length){
+    CUR.templates = JSON.parse(JSON.stringify(CTRL_LIB));
+    await saveCurrentProject();
+  }
+  return CUR.templates;
+}
+function templateFams(tpls){
+  const vus = [];
+  for (const t of tpls){ const f = t.fam || "Autres"; if (!vus.includes(f)) vus.push(f); }
+  return vus;
+}
+
 /* ---- écran liste + choix du modèle ---- */
 async function openCtrl(){
   if (!curVisit) return;
   await renderCtrlList();
+  const tpls = await ensureTemplates();
   const box = $("#ctrlPicker");
-  box.innerHTML = CTRL_FAMS.map(fam => {
-    const items = CTRL_LIB.filter(t => t.fam === fam);
+  box.innerHTML = templateFams(tpls).map(fam => {
+    const items = tpls.filter(t => (t.fam || "Autres") === fam);
     if (!items.length) return "";
     return `<div class="ctrl-fam"><h5>${esc(fam)}</h5>` +
-      items.map(t => `<button class="ctrl-card" data-tpl="${t.id}">
-        <span class="cc-txt"><b>${esc(t.name)}</b><small>${esc(t.ref)} · ${t.items.filter(i=>i.t!=="t").length} points</small></span>
+      items.map(t => `<button class="ctrl-card" data-tpl="${esc(t.id)}">
+        <span class="cc-txt"><b>${esc(t.name)}</b><small>${esc(t.ref || "")} · ${t.items.filter(i=>i.t!=="t").length} points</small></span>
         <span class="cc-verdict wip">Ouvrir</span></button>`).join("") + `</div>`;
   }).join("");
   box.querySelectorAll("[data-tpl]").forEach(b =>
@@ -2003,7 +2113,7 @@ async function renderCtrlList(){
     }));
 }
 async function newCtrl(tplId){
-  const t = CTRL_LIB.find(x => x.id === tplId);
+  const t = (await ensureTemplates()).find(x => x.id === tplId);
   if (!t) return;
   const f = {
     projectId: CUR.id, visitId: curVisit.id, templateId: t.id, num: await nextCtrlNum(),
@@ -2030,7 +2140,25 @@ function openCtrlForm(f){
   renderCtrlItems();
   $("#ctrlModal").classList.remove("on");
   $("#ctrlFormModal").classList.add("on");
+  // signatures : les pavés doivent être dimensionnés une fois le modal visible
+  $("#sigMoeNom").textContent = s.redac || "";
+  $("#sigEntNom").value = curCtrl.signEntNom || "";
+  requestAnimationFrame(() => {
+    ["sigMoe","sigEnt"].forEach(id => {
+      const cv = $("#" + id);
+      if (!cv.__ready){ setupSigPad(cv, refreshSigState); cv.__ready = true; }
+      sigRestore(cv, id === "sigMoe" ? curCtrl.signMoe : curCtrl.signEnt);
+    });
+    refreshSigState();
+  });
   window.scrollTo(0,0);
+}
+function refreshSigState(){
+  [["sigMoe","sigMoeState"],["sigEnt","sigEntState"]].forEach(([c, s]) => {
+    const vide = sigVide($("#" + c));
+    $("#" + s).textContent = vide ? "non signé" : "signé ✔";
+    $("#" + s).className = "sig-state" + (vide ? "" : " ok");
+  });
 }
 function renderCtrlItems(){
   const box = $("#ctrlItems");
@@ -2087,6 +2215,15 @@ async function saveCtrlForm(){
   curCtrl.zone = $("#cZone").value.trim();
   curCtrl.entreprise = $("#cEnt").value.trim();
   curCtrl.conclusion = ctrlConclusion(curCtrl);
+  // signatures
+  curCtrl.signMoe = sigToStored($("#sigMoe")) || curCtrl.signMoe || null;
+  curCtrl.signEnt = sigToStored($("#sigEnt")) || curCtrl.signEnt || null;
+  if (sigVide($("#sigMoe"))) curCtrl.signMoe = null;
+  if (sigVide($("#sigEnt"))) curCtrl.signEnt = null;
+  curCtrl.signEntNom = $("#sigEntNom").value.trim();
+  curCtrl.signRedac = getSettings().redac || "";
+  if ((curCtrl.signMoe || curCtrl.signEnt) && !curCtrl.signedAt) curCtrl.signedAt = todayIso();
+  if (!curCtrl.signMoe && !curCtrl.signEnt) curCtrl.signedAt = "";
   if (curCtrl.id) await tx("controls","readwrite", s => s.put(curCtrl));
   else curCtrl.id = await idbAdd("controls", curCtrl);
   const fiche = curCtrl;
@@ -2123,6 +2260,201 @@ async function deleteCtrlForm(){
   closeCtrlForm();
   await openCtrl();
   toast("Fiche supprimée");
+}
+
+/* =============== éditeur de modèles de fiches =============== */
+async function openTplList(){
+  const tpls = await ensureTemplates();
+  const box = $("#tplList");
+  box.innerHTML = templateFams(tpls).map(fam => {
+    const items = tpls.filter(t => (t.fam || "Autres") === fam);
+    return `<div class="ctrl-fam"><h5>${esc(fam)}</h5>` + items.map(t =>
+      `<div class="ctrl-card" style="cursor:default">
+         <span class="cc-txt"><b>${esc(t.name)}</b><small>${esc(t.ref || "")} · ${t.items.length} point(s)</small></span>
+         <button class="btn ghost" data-dup="${esc(t.id)}" style="padding:7px 10px;font-size:12px">Dupliquer</button>
+         <button class="btn blue" data-edit="${esc(t.id)}" style="padding:7px 12px;font-size:12px">✎</button>
+       </div>`).join("") + `</div>`;
+  }).join("");
+  box.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openTplForm(b.dataset.edit)));
+  box.querySelectorAll("[data-dup]").forEach(b => b.addEventListener("click", async () => {
+    const src = (await ensureTemplates()).find(x => x.id === b.dataset.dup);
+    if (!src) return;
+    const copie = JSON.parse(JSON.stringify(src));
+    copie.id = "tpl-" + Date.now();
+    copie.name = src.name + " (copie)";
+    CUR.templates.push(copie);
+    await saveCurrentProject();
+    await openTplList();
+    toast("Modèle dupliqué");
+  }));
+  $("#ctrlModal").classList.remove("on");
+  $("#tplModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+let curTpl = null;
+async function openTplForm(id){
+  const tpls = await ensureTemplates();
+  const t = id ? tpls.find(x => x.id === id) : null;
+  curTpl = t ? JSON.parse(JSON.stringify(t))
+             : { id:"tpl-" + Date.now(), name:"", ref:"", fam:"Autres", items:[{l:"", t:"v"}] };
+  $("#tplFormTitle").textContent = t ? "Modifier le modèle" : "Nouveau modèle";
+  $("#tName").value = curTpl.name || "";
+  $("#tRef").value = curTpl.ref || "";
+  $("#tFam").value = curTpl.fam || "";
+  $("#famList").innerHTML = templateFams(tpls).map(f => `<option value="${esc(f)}">`).join("");
+  $("#tDelRow").hidden = !t;
+  renderTplItems();
+  $("#tplModal").classList.remove("on");
+  $("#tplFormModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+function renderTplItems(){
+  const box = $("#tplItems");
+  box.innerHTML = curTpl.items.map((it, k) => {
+    const mes = it.t === "m";
+    const op = it.op || ">=";
+    return `<div class="ti">
+      <div class="ti-top">
+        <input type="text" data-k="${k}" data-f="l" value="${esc(it.l || "")}" placeholder="Libellé du point de contrôle">
+        <button class="ti-btn" data-up="${k}" title="Monter">↑</button>
+        <button class="ti-btn" data-down="${k}" title="Descendre">↓</button>
+        <button class="ti-btn del" data-del="${k}" title="Supprimer">✕</button>
+      </div>
+      <div class="ti-row">
+        <select data-k="${k}" data-f="t">
+          <option value="v"${it.t==="v"?" selected":""}>Vérification (C/NC/SO)</option>
+          <option value="m"${mes?" selected":""}>Mesure avec seuil</option>
+          <option value="t"${it.t==="t"?" selected":""}>Texte libre</option>
+        </select>
+        ${mes ? `<select data-k="${k}" data-f="op">
+            <option value=">="${op===">="?" selected":""}>≥ au moins</option>
+            <option value="<="${op==="<="?" selected":""}>≤ au plus</option>
+            <option value="between"${op==="between"?" selected":""}>entre</option>
+          </select>
+          ${op === "between"
+            ? `<input class="num" type="text" inputmode="decimal" data-k="${k}" data-f="min" value="${esc(it.min ?? "")}" placeholder="min">
+               <span>et</span>
+               <input class="num" type="text" inputmode="decimal" data-k="${k}" data-f="max" value="${esc(it.max ?? "")}" placeholder="max">`
+            : `<input class="num" type="text" inputmode="decimal" data-k="${k}" data-f="seuil" value="${esc(it.seuil ?? "")}" placeholder="seuil">`}
+          <input class="unit" type="text" data-k="${k}" data-f="u" value="${esc(it.u || "")}" placeholder="unité">` : ""}
+      </div></div>`;
+  }).join("");
+  const num = v => { const n = parseFloat(String(v).replace(",", ".")); return isFinite(n) ? n : ""; };
+  box.querySelectorAll("input[data-f], select[data-f]").forEach(el => {
+    const k = Number(el.dataset.k), f = el.dataset.f;
+    const maj = () => {
+      curTpl.items[k][f] = (f === "seuil" || f === "min" || f === "max") ? num(el.value) : el.value;
+      if (f === "t" || f === "op") renderTplItems();   // la structure change → on redessine
+    };
+    el.addEventListener(el.tagName === "SELECT" ? "change" : "input", maj);
+  });
+  box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => {
+    curTpl.items.splice(Number(b.dataset.del), 1); renderTplItems();
+  }));
+  box.querySelectorAll("[data-up]").forEach(b => b.addEventListener("click", () => {
+    const k = Number(b.dataset.up); if (!k) return;
+    [curTpl.items[k-1], curTpl.items[k]] = [curTpl.items[k], curTpl.items[k-1]]; renderTplItems();
+  }));
+  box.querySelectorAll("[data-down]").forEach(b => b.addEventListener("click", () => {
+    const k = Number(b.dataset.down); if (k >= curTpl.items.length - 1) return;
+    [curTpl.items[k+1], curTpl.items[k]] = [curTpl.items[k], curTpl.items[k+1]]; renderTplItems();
+  }));
+}
+async function saveTplForm(){
+  if (!curTpl) return;
+  curTpl.name = $("#tName").value.trim();
+  curTpl.ref  = $("#tRef").value.trim();
+  curTpl.fam  = $("#tFam").value.trim() || "Autres";
+  if (!curTpl.name){ toast("Donnez un intitulé au modèle", true); $("#tName").focus(); return; }
+  curTpl.items = curTpl.items.filter(it => (it.l || "").trim());
+  if (!curTpl.items.length){ toast("Ajoutez au moins un point de contrôle", true); return; }
+  const tpls = await ensureTemplates();
+  const i = tpls.findIndex(x => x.id === curTpl.id);
+  if (i >= 0) tpls[i] = curTpl; else tpls.push(curTpl);
+  await saveCurrentProject();
+  curTpl = null;
+  $("#tplFormModal").classList.remove("on");
+  await openTplList();
+  toast("Modèle enregistré");
+}
+async function deleteTplForm(){
+  if (!curTpl) return;
+  if (!confirm(`Supprimer le modèle « ${curTpl.name} » ?\n\nLes fiches déjà établies avec ce modèle sont conservées.`)) return;
+  CUR.templates = (await ensureTemplates()).filter(x => x.id !== curTpl.id);
+  await saveCurrentProject();
+  curTpl = null;
+  $("#tplFormModal").classList.remove("on");
+  await openTplList();
+  toast("Modèle supprimé");
+}
+async function resetTemplates(){
+  if (!confirm("Restaurer la bibliothèque d'origine ?\n\nVos modèles personnalisés de ce chantier seront remplacés. Les fiches déjà établies sont conservées.")) return;
+  CUR.templates = JSON.parse(JSON.stringify(CTRL_LIB));
+  await saveCurrentProject();
+  await openTplList();
+  toast("Bibliothèque restaurée");
+}
+
+/* =============== signature à l'écran =============== */
+/* Le tracé est aplati sur fond blanc et exporté en JPEG : c'est le seul format que sait
+   embarquer notre générateur PDF (DCTDecode), et Word l'accepte aussi. */
+function setupSigPad(canvas, onChange){
+  const ctx = canvas.getContext("2d");
+  const fit = () => {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const prev = canvas.__trace || [];
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, r.width, r.height);
+    ctx.strokeStyle = "#12283F"; ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    for (const seg of prev){                        // on redessine ce qui existait
+      ctx.beginPath();
+      seg.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+      ctx.stroke();
+    }
+  };
+  canvas.__trace = canvas.__trace || [];
+  fit();
+  let seg = null;
+  const pos = e => { const r = canvas.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; };
+  canvas.addEventListener("pointerdown", e => {
+    canvas.setPointerCapture(e.pointerId);
+    seg = [pos(e)]; canvas.__trace.push(seg);
+    ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y);
+  });
+  canvas.addEventListener("pointermove", e => {
+    if (!seg) return;
+    const p = pos(e); seg.push(p);
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+  });
+  const fin = () => { if (seg){ seg = null; onChange && onChange(); } };
+  canvas.addEventListener("pointerup", fin);
+  canvas.addEventListener("pointercancel", fin);
+  canvas.addEventListener("pointerleave", fin);
+  canvas.__fit = fit;
+}
+function sigVide(canvas){ return !canvas.__trace || !canvas.__trace.length; }
+function sigClear(canvas){
+  canvas.__trace = [];
+  if (canvas.__fit) canvas.__fit();
+}
+function sigToStored(canvas){
+  if (sigVide(canvas)) return null;
+  const d = canvas.toDataURL("image/jpeg", 0.85);
+  return {d, w:canvas.width, h:canvas.height};
+}
+function sigRestore(canvas, stored){
+  sigClear(canvas);
+  if (!stored || !stored.d) return;
+  const img = new Image();
+  img.onload = () => {
+    const r = canvas.getBoundingClientRect();
+    canvas.getContext("2d").drawImage(img, 0, 0, r.width, r.height);
+    canvas.__trace = [[]]; // marque « signé » sans re-tracer le détail
+  };
+  img.src = stored.d;
 }
 
 /* ---- formulaire de réserve (création et modification), en remplacement des boîtes système ---- */
@@ -3325,6 +3657,29 @@ async function pdfForVisit(visit, photos, settings){
         cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
         y -= rowH;
       }
+      // signatures : la fiche devient un PV contradictoire
+      if (f.signMoe || f.signEnt){
+        ensure(78);
+        y -= 6;
+        const SW = 250, SX = [40, 305];
+        [["Maîtrise d'œuvre", f.signMoe, f.signRedac || settings.redac || ""],
+         ["Entreprise", f.signEnt, f.signEntNom || f.entreprise || ""]].forEach(([lab, sig, nom], k) => {
+          cur.rects.push({x:SX[k], y:y-62, w:SW, h:62, grad:PDF_G_LABEL});
+          cur.texts.push({x:SX[k]+6, y:y-11, size:FS.micro, font:"F2", color:PDF_NAVY, text:lab.toUpperCase()});
+          if (sig && sig.d){
+            const bytes = Uint8Array.from(atob(sig.d.split(",")[1]), c => c.charCodeAt(0));
+            const sc = Math.min((SW - 14) / sig.w, 34 / sig.h);
+            cur.images.push({bytes, w:sig.w, h:sig.h, x:SX[k]+7, y:y-52, dw:sig.w*sc, dh:sig.h*sc});
+          } else {
+            cur.texts.push({x:SX[k]+7, y:y-34, size:FS.mini, font:"F1", color:PDF_GREY, text:"non signé"});
+          }
+          cur.texts.push({x:SX[k]+6, y:y-58, size:FS.micro, font:"F1", color:PDF_GREY, text:(nom || "—").slice(0, 44)});
+        });
+        y -= 68;
+        cur.texts.push({x:40, y:y-8, size:FS.micro, font:"F1", color:PDF_GREY,
+          text:`Procès-verbal signé sur site le ${frDate(f.signedAt || f.date)} — vaut constat contradictoire.`});
+        y -= 16;
+      }
       y -= 14;
     }
   }
@@ -3760,6 +4115,31 @@ async function docxForVisit(visit, photos, settings){
           `${wTc(cols[3], res)}</w:tr>`;
       }).join("");
       body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${cols.map(c=>`<w:gridCol w:w="${c}"/>`).join("")}</w:tblGrid>${head}${rows}</w:tbl>`);
+      // signatures : PV contradictoire
+      if (f.signMoe || f.signEnt){
+        const cell = (lab, sig, nom) => {
+          let img = wP(wR("non signé", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:before="120" w:after="120"/>`);
+          if (sig && sig.d){
+            imgId++;
+            const rid = `rIdSig${imgId}`;
+            media.push({name:`word/media/sig${imgId}.jpg`, data: Uint8Array.from(atob(sig.d.split(",")[1]), c => c.charCodeAt(0))});
+            rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/sig${imgId}.jpg"/>`);
+            let cx = sig.w * 9525, cy = sig.h * 9525;
+            const sc = Math.min(1, 2600000 / cx, 620000 / cy);
+            cx = Math.round(cx * sc); cy = Math.round(cy * sc);
+            img = `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${wPhoto(rid, cx, cy, 4000 + imgId)}</w:p>`;
+          }
+          return wTc(4819,
+            wP(wR(lab, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="40"/>`) + img +
+            wP(wR(nom || "—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:before="40" w:after="0"/>`),
+            {fill:DOCX_LABEL});
+        };
+        body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid><w:tr>` +
+          cell("Maîtrise d'œuvre", f.signMoe, f.signRedac || settings.redac || "") +
+          cell("Entreprise", f.signEnt, f.signEntNom || f.entreprise || "") + `</w:tr></w:tbl>`);
+        body.push(wP(wR(`Procès-verbal signé sur site le ${frDate(f.signedAt || f.date)} — vaut constat contradictoire.`,
+          `<w:i/><w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:before="60" w:after="0"/>`));
+      }
       body.push(wP("", `<w:spacing w:after="140"/>`));
     }
   }
@@ -4246,6 +4626,23 @@ async function main(){
     catch(err){ toast("Enregistrement impossible : " + (err && err.message || err), true); }
   });
   $("#btnCtrlDelete").addEventListener("click", deleteCtrlForm);
+  // modèles de fiches
+  $("#btnTplEdit").addEventListener("click", async () => {
+    try{ await openTplList(); }catch(e){ toast("Modèles indisponibles : " + (e && e.message || e), true); }
+  });
+  $("#btnTplClose").addEventListener("click", () => { $("#tplModal").classList.remove("on"); openCtrl(); });
+  $("#btnTplNew").addEventListener("click", () => openTplForm(null));
+  $("#btnTplReset").addEventListener("click", resetTemplates);
+  $("#btnTplFormClose").addEventListener("click", () => { curTpl = null; $("#tplFormModal").classList.remove("on"); openTplList(); });
+  $("#btnTplSave").addEventListener("click", async () => {
+    try{ await saveTplForm(); }catch(e){ toast("Enregistrement impossible : " + (e && e.message || e), true); }
+  });
+  $("#btnTplDelete").addEventListener("click", deleteTplForm);
+  $("#btnTplAddItem").addEventListener("click", () => { curTpl.items.push({l:"", t:"v"}); renderTplItems(); });
+  // signatures
+  document.querySelectorAll("[data-clear]").forEach(b => b.addEventListener("click", () => {
+    sigClear($("#" + b.dataset.clear)); refreshSigState();
+  }));
   $("#btnRegBack").addEventListener("click", showHome);
   $("#btnRegAdd").addEventListener("click", () => openReserveForm(null));
   $("#btnResClose").addEventListener("click", closeReserveForm);
