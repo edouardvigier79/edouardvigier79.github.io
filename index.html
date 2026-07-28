@@ -311,6 +311,18 @@
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
   .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
+  /* ---- axe de repérage linéaire ---- */
+  .ax-pt{display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line);
+    border-radius:var(--r-sm); margin-bottom:6px; background:var(--card)}
+  .ax-pt .ax-n{flex:none; width:26px; height:26px; border-radius:50%; background:var(--grad-blue); color:#fff;
+    font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center}
+  .ax-pt .ax-c{flex:1; min-width:0; font-size:12.5px; font-family:ui-monospace,Menlo,Consolas,monospace}
+  .ax-pt .ax-k{font-size:11.5px; color:var(--ink2); font-weight:700}
+  .ax-pt .ax-del{flex:none; border:none; background:transparent; color:var(--nc); font-size:16px; cursor:pointer}
+  /* repère PK affiché sur les clichés */
+  .pk-chip{display:inline-flex; align-items:center; gap:5px; background:var(--blue-soft);
+    border:1px solid var(--blue-line); color:var(--blue-deep); border-radius:99px;
+    padding:3px 10px; font-size:12px; font-weight:800; margin-top:6px}
   /* ---- journal des modifications ---- */
   .jrn-jour{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
     color:var(--blue); margin:16px 2px 7px}
@@ -1024,6 +1036,34 @@
           <option value="3600">Après 1 heure</option>
         </select>
         <div class="hint">Reverrouille le carnet après ce délai d'inactivité, ou quand l'application reste en arrière-plan aussi longtemps. Protège vos constats si le téléphone est perdu ou prêté sur chantier.</div>
+      </div>
+    </div>
+
+    <div class="settings-block">
+      <h3>Repérage linéaire (PR / PK)</h3>
+      <p>Repérez vos constats le long de l'axe du chantier plutôt que par une adresse. Définissez l'origine et suivez le tracé : chaque cliché reçoit son abscisse, du type « PK 2+340 ».</p>
+      <div class="field">
+        <label for="axMode">Système de repérage</label>
+        <select id="axMode">
+          <option value="none">Aucun — repérage par adresse (par défaut)</option>
+          <option value="PK">PK — point kilométrique</option>
+          <option value="PR">PR — point repère</option>
+        </select>
+      </div>
+      <div id="axCfg" hidden>
+        <div class="field">
+          <label for="axOrigin">Abscisse à l'origine</label>
+          <input type="text" id="axOrigin" placeholder="Ex. : 2+100 (ou 2100)">
+          <div class="hint">Valeur portée par le premier point de l'axe. Laissez 0 si le chantier commence au PK 0.</div>
+        </div>
+        <div class="hint" id="axState" style="margin-bottom:8px"></div>
+        <div class="btnrow" style="margin:0">
+          <button class="btn primary block" id="axSetOrigin">📍 Définir l'origine ici</button>
+          <button class="btn blue block" id="axAddPoint">➕ Ajouter un point d'axe ici</button>
+          <button class="btn ghost block" id="axFromPhotos">Reconstituer l'axe depuis les clichés</button>
+          <button class="btn danger block" id="axClear">Effacer l'axe</button>
+        </div>
+        <div id="axList" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -1990,6 +2030,158 @@ async function actionTracking(){
   return rows;
 }
 
+/* =============== repérage linéaire PR / PK ===============
+   Le VRD se repère le long d'un axe, pas sur un plan d'étage. On définit un axe (polyligne de
+   points GPS) et une abscisse à l'origine ; la position de chaque cliché est projetée sur cet axe.
+   Projection équirectangulaire locale : l'écart reste très inférieur au mètre sur quelques km. */
+function axisOf(){
+  const a = CUR && CUR.axis;
+  if (!a || !a.mode || a.mode === "none") return null;
+  const pts = [a.origin, ...(a.points || [])].filter(p => p && p.lat != null);
+  return pts.length >= 2 ? {...a, pts} : null;
+}
+/* « 2+100 » ou « 2100 » → 2100 m */
+function parseAbs(s){
+  const t = String(s || "").trim().replace(",", ".");
+  const m = t.match(/^(\d+)\s*\+\s*(\d+(?:\.\d+)?)$/);
+  if (m) return parseInt(m[1]) * 1000 + parseFloat(m[2]);
+  const n = parseFloat(t);
+  return isFinite(n) ? n : 0;
+}
+/* 2340 m → « PK 2+340 » */
+function fmtAbs(metres, mode){
+  if (metres == null || !isFinite(metres)) return "";
+  const neg = metres < 0, v = Math.abs(metres);
+  const km = Math.floor(v / 1000), m = Math.round(v - km * 1000);
+  return `${mode === "PR" ? "PR" : "PK"} ${neg ? "-" : ""}${km}+${String(m).padStart(3, "0")}`;
+}
+/* repère local en mètres autour d'une latitude de référence */
+function localXY(lat, lon, lat0, lon0){
+  const R = 6371000, rad = Math.PI / 180;
+  return { x: R * (lon - lon0) * rad * Math.cos(lat0 * rad), y: R * (lat - lat0) * rad };
+}
+/* projette un point sur l'axe : abscisse curviligne + écart latéral */
+function projectOnAxis(lat, lon, axe){
+  const a = axe || axisOf();
+  if (!a || lat == null || lon == null) return null;
+  const lat0 = a.pts[0].lat, lon0 = a.pts[0].lon;
+  const P = localXY(lat, lon, lat0, lon0);
+  const S = a.pts.map(p => localXY(p.lat, p.lon, lat0, lon0));
+  let best = null, cumul = 0;
+  for (let i = 0; i < S.length - 1; i++){
+    const A = S[i], B = S[i+1];
+    const dx = B.x - A.x, dy = B.y - A.y;
+    const len2 = dx*dx + dy*dy;
+    const L = Math.sqrt(len2);
+    let t = len2 ? ((P.x - A.x) * dx + (P.y - A.y) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));                       // on reste dans le segment
+    const px = A.x + t*dx, py = A.y + t*dy;
+    const d = Math.hypot(P.x - px, P.y - py);
+    if (!best || d < best.d) best = {d, abs: cumul + t * L};
+    cumul += L;
+  }
+  if (!best) return null;
+  return { abs: (a.originAbs || 0) + best.abs, offset: best.d, mode: a.mode };
+}
+function axisLength(){
+  const a = axisOf();
+  if (!a) return 0;
+  const lat0 = a.pts[0].lat, lon0 = a.pts[0].lon;
+  const S = a.pts.map(p => localXY(p.lat, p.lon, lat0, lon0));
+  let L = 0;
+  for (let i = 0; i < S.length - 1; i++) L += Math.hypot(S[i+1].x - S[i].x, S[i+1].y - S[i].y);
+  return L;
+}
+/* repère d'un cliché, prêt à afficher : « PK 2+340 » (+ écart si notable) */
+function photoAbs(p){
+  const r = projectOnAxis(p.lat, p.lon);
+  return r ? r : null;
+}
+function photoAbsText(p, avecEcart){
+  const r = photoAbs(p);
+  if (!r) return "";
+  const base = fmtAbs(r.abs, r.mode);
+  return (avecEcart && r.offset >= 2) ? `${base} · ${Math.round(r.offset)} m de l'axe` : base;
+}
+/* étendue d'une zone : « du PK 2+100 au PK 2+340 » */
+function clusterAbsRange(items){
+  const vals = items.map(p => photoAbs(p)).filter(Boolean).map(r => r.abs);
+  if (!vals.length) return "";
+  const a = Math.min(...vals), b = Math.max(...vals), mode = (photoAbs(items.find(p => photoAbs(p))) || {}).mode;
+  return Math.round(b - a) < 5 ? fmtAbs(a, mode) : `${fmtAbs(a, mode)} → ${fmtAbs(b, mode)}`;
+}
+
+/* ---- configuration de l'axe dans les réglages ---- */
+function ensureAxis(){
+  if (!CUR) return null;
+  if (!CUR.axis) CUR.axis = {mode:"none", origin:null, originAbs:0, points:[]};
+  if (!Array.isArray(CUR.axis.points)) CUR.axis.points = [];
+  return CUR.axis;
+}
+function refreshAxisUI(){
+  const a = ensureAxis();
+  if (!a) return;
+  $("#axMode").value = a.mode || "none";
+  $("#axCfg").hidden = (a.mode || "none") === "none";
+  $("#axOrigin").value = a.originAbs ? fmtAbs(a.originAbs, a.mode).replace(/^P[KR] /, "") : "";
+  const pts = [a.origin, ...(a.points || [])].filter(Boolean);
+  const pret = axisOf();
+  $("#axState").innerHTML = !a.origin
+    ? "⚠️ Origine non définie : placez-vous au point de départ et appuyez sur « Définir l'origine ici »."
+    : (pret
+        ? `Axe défini : <b>${pts.length} points</b> sur <b>${Math.round(axisLength())} m</b>. Repérage actif de ${esc(fmtAbs(a.originAbs||0, a.mode))} à ${esc(fmtAbs((a.originAbs||0)+axisLength(), a.mode))}.`
+        : "Origine posée. Ajoutez au moins un second point pour définir la direction de l'axe.");
+  $("#axList").innerHTML = pts.map((p, i) => `<div class="ax-pt">
+      <span class="ax-n">${i === 0 ? "O" : i}</span>
+      <span class="ax-c">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span>
+      <span class="ax-k">${i === 0 ? esc(fmtAbs(a.originAbs||0, a.mode)) : ""}</span>
+      ${i === 0 ? "" : `<button class="ax-del" data-i="${i-1}" aria-label="Retirer">✕</button>`}
+    </div>`).join("");
+  $("#axList").querySelectorAll(".ax-del").forEach(b => b.addEventListener("click", async () => {
+    a.points.splice(Number(b.dataset.i), 1);
+    await saveCurrentProject(); refreshAxisUI();
+  }));
+}
+async function axisCapture(role){
+  toast("Acquisition GPS…");
+  const pos = await devicePosition();
+  if (!pos){ toast("Position indisponible — vérifiez le GPS et l'autorisation de localisation.", true); return; }
+  const a = ensureAxis();
+  if (role === "origin") a.origin = {lat:pos.lat, lon:pos.lon};
+  else {
+    if (!a.origin){ toast("Définissez d'abord l'origine.", true); return; }
+    a.points.push({lat:pos.lat, lon:pos.lon});
+  }
+  await saveCurrentProject();
+  refreshAxisUI();
+  toast(role === "origin" ? "Origine de l'axe enregistrée" : `Point d'axe n°${a.points.length} ajouté`);
+}
+/* reconstitue un axe approché à partir des clichés déjà géolocalisés du chantier */
+async function axisFromPhotos(){
+  const a = ensureAxis();
+  const vmap = {}; (await projectVisits()).forEach(v => vmap[v.id] = v);
+  const pts = (await idbAll("photos"))
+    .filter(p => vmap[p.visitId] && p.lat != null && !p.gpsApprox)
+    .sort((x, y) => {
+      const dx = vmap[x.visitId].date, dy = vmap[y.visitId].date;
+      return dx < dy ? -1 : dx > dy ? 1 : x.num - y.num;
+    })
+    .map(p => ({lat:p.lat, lon:p.lon}));
+  if (pts.length < 2){ toast("Il faut au moins deux clichés géolocalisés.", true); return; }
+  // on ne garde qu'un point tous les 25 m pour lisser la marche
+  const gardes = [pts[0]];
+  for (const p of pts.slice(1)){
+    const d = distMeters(gardes[gardes.length-1].lat, gardes[gardes.length-1].lon, p.lat, p.lon);
+    if (d >= 25) gardes.push(p);
+  }
+  if (gardes.length < 2) gardes.push(pts[pts.length-1]);
+  a.origin = gardes[0];
+  a.points = gardes.slice(1);
+  await saveCurrentProject();
+  refreshAxisUI();
+  toast(`Axe reconstitué : ${gardes.length} points sur ${Math.round(axisLength())} m — vérifiez le tracé.`);
+}
+
 /* =============== journal des modifications ===============
    Trace horodatée de ce qui a été créé, modifié ou supprimé. En cas de litige, un constat
    retouché après coup sans trace est contestable : le journal lève le doute. */
@@ -2850,6 +3042,8 @@ async function renderPhotos(){
       meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.gpsApprox ? "≈ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
     }
     const fields = [];
+    const pk = photoAbsText(p, true);
+    if (pk) fields.push(`<div class="pk-chip">📏 ${esc(pk)}</div>`);
     if (p.zone) fields.push(`<div class="cap-field"><span class="k">Localisation</span>${esc(p.zone)}</div>`);
     if (p.entreprise) fields.push(`<div class="cap-field"><span class="k">Entreprise / lot</span>${esc(p.entreprise)}</div>`);
     if (p.description) fields.push(`<div class="cap-field"><span class="k">Description factuelle</span>${esc(p.description)}</div>`);
@@ -3109,6 +3303,8 @@ async function openEditor(id){
   const meta = [];
   if (curEdit.takenAt){ const [d,t] = curEdit.takenAt.split("T"); meta.push(`Pris le ${frDate(d)} à ${t}`); }
   if (curEdit.lat != null) meta.push(`GPS ${curEdit.gpsApprox ? "≈ (position à l'import) " : ""}${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
+  const pkEdit = photoAbsText(curEdit, true);
+  if (pkEdit) meta.push(pkEdit);
   $("#editMeta").textContent = meta.join(" — ") || "Pas de métadonnées EXIF trouvées";
   $("#fTitre").value = curEdit.titre || "";
   $("#fZone").value = curEdit.zone || "";
@@ -3211,9 +3407,11 @@ async function saveEdit(){
   const rv = $("#fReserve").value;
   let regMsg = "";
   if (rv === "new"){
+    const pkr = photoAbsText(curEdit, false);
     const r = await createReserve({
       objet: curEdit.titre || curEdit.description || `Constat cliché n°${curEdit.num}`,
-      zone: curEdit.zone, entreprise: curEdit.entreprise, action: curEdit.suite,
+      zone: [pkr, curEdit.zone].filter(Boolean).join(" — "),
+      entreprise: curEdit.entreprise, action: curEdit.suite,
       dateLimite: curEdit.dateLimite, statut: "En cours"
     });
     curEdit.reserveId = r.id; curEdit.reserveNum = r.num;
@@ -3313,7 +3511,8 @@ function zoneLabel(cluster, n){
   const freq = {};
   for (const p of cluster.items){ if (p.zone) freq[p.zone] = (freq[p.zone] || 0) + 1; }
   const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
-  return `Zone ${n}${top ? " — " + top[0] : ""}`;
+  const pk = clusterAbsRange(cluster.items);   // repérage linéaire si un axe est défini
+  return `Zone ${n}${pk ? " — " + pk : ""}${top ? " — " + top[0] : ""}`;
 }
 
 /* =============== plan de situation automatique (IGN, format bandeau 3,44:1) =============== */
@@ -3765,7 +3964,8 @@ async function pdfForEntreprise(data, scope, settings){
     y -= 17;
     for (const p of data.photos){
       const v = data.vmap[p.visitId];
-      const cl = wrapText([p.titre, p.description].filter(Boolean).join(" — ") || "—", 52);
+      const pkv = photoAbsText(p, false);
+      const cl = wrapText([pkv, p.titre, p.description].filter(Boolean).join(" — ") || "—", 52);
       const sl = wrapText(p.suite || "—", 40);
       const rowH = Math.max(cl.length, sl.length, 1) * 9.8 + 6;
       ensure(rowH);
@@ -4061,7 +4261,11 @@ async function pdfForVisit(visit, photos, settings){
         }
         cur.texts.push({x:cxImg, y:y - dims[k].dh - 9.5, size:FS.caption, font:"F2", color:PDF_NAVY,
           text:`n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}`});
-        if (o.p.lat != null){
+        // repérage linéaire s'il existe, sinon coordonnées brutes
+        const pkv = photoAbsText(o.p, false);
+        if (pkv){
+          cur.texts.push({x:cxImg, y:y - dims[k].dh - 17, size:FS.micro, font:"F2", color:PDF_STATUT.AC, text:pkv});
+        } else if (o.p.lat != null){
           cur.texts.push({x:cxImg, y:y - dims[k].dh - 17, size:FS.micro, font:"F1", color:PDF_GREY,
             text:`${o.p.gpsApprox ? "~" : ""}${o.p.lat.toFixed(5)}, ${o.p.lon.toFixed(5)}`});
         }
@@ -4079,6 +4283,8 @@ async function pdfForVisit(visit, photos, settings){
       const constat = [];
       if (p.titre) for (const l of wrapText(p.titre, 58)) constat.push({t:l, b:true});
       if (p.description) for (const l of wrapText(p.description, 62)) constat.push({t:l});
+      const pkp = photoAbsText(p, true);
+      if (pkp) constat.push({t:"Repérage : " + pkp, g:true});
       if (p.entreprise) constat.push({t:"Entreprise : " + p.entreprise, g:true});
       if (!constat.length) constat.push({t:"—", g:true});
       const suite = p.suite ? wrapText(p.suite, 41) : ["—"];
@@ -4530,9 +4736,12 @@ async function docxForVisit(visit, photos, settings){
       toast(`Word : cliché ${done}/${photos.length}…`);
       const im = await safeJpeg(p.blob, 800, 0.75);
       const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
-      const gps = p.lat != null ? `${p.gpsApprox ? "~" : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "";
+      const pkv = photoAbsText(p, false);
+      const sous = pkv || (p.lat != null ? `${p.gpsApprox ? "~" : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "");
+      const styleSous = pkv ? `<w:b/><w:color w:val="${DOCX_STATUT.AC}"/><w:sz w:val="12"/>`
+                            : `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="11"/>`;
       const capP = wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
-        (gps ? wP(wR(gps, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="11"/>`), `<w:spacing w:after="40"/><w:jc w:val="center"/>`) : wP("", `<w:spacing w:after="40"/>`));
+        (sous ? wP(wR(sous, styleSous), `<w:spacing w:after="40"/><w:jc w:val="center"/>`) : wP("", `<w:spacing w:after="40"/>`));
       if (!im){ // cliché illisible : cadre de remplacement, le rapport sort quand même
         badShots.push(p.num);
         cells.push(wTc(1927,
@@ -4563,6 +4772,8 @@ async function docxForVisit(visit, photos, settings){
       let constat = "";
       if (p.titre) constat += wP(wR(p.titre, `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
       if (p.description) constat += wP(wR(p.description, `<w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
+      const pkp = photoAbsText(p, true);
+      if (pkp) constat += wP(wR("Repérage : " + pkp, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
       if (p.entreprise) constat += wP(wR("Entreprise : " + p.entreprise, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
       if (!constat) constat = wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`);
       const numCell = wP(wR(String(p.num), `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
@@ -5032,6 +5243,7 @@ function openSettings(){
   refreshLogoState();
   renderAnnexeList();
   refreshStorageState();
+  refreshAxisUI();
   $("#setModal").classList.add("on");
 }
 async function saveSettingsUI(){
@@ -5232,6 +5444,24 @@ async function main(){
     $("#lockTitle").textContent = "Changer le code";
     $("#lockText").textContent = "Saisissez d'abord le code actuel.";
     $("#btnUnlock").textContent = "Continuer";
+  });
+  // repérage linéaire
+  $("#axMode").addEventListener("change", async () => {
+    const a = ensureAxis(); a.mode = $("#axMode").value;
+    await saveCurrentProject(); refreshAxisUI();
+    if (a.mode !== "none") toast("Repérage " + a.mode + " activé");
+  });
+  $("#axOrigin").addEventListener("change", async () => {
+    const a = ensureAxis(); a.originAbs = parseAbs($("#axOrigin").value);
+    await saveCurrentProject(); refreshAxisUI();
+  });
+  $("#axSetOrigin").addEventListener("click", () => axisCapture("origin"));
+  $("#axAddPoint").addEventListener("click", () => axisCapture("point"));
+  $("#axFromPhotos").addEventListener("click", axisFromPhotos);
+  $("#axClear").addEventListener("click", async () => {
+    if (!confirm("Effacer l'axe de repérage ?\n\nLes clichés ne perdent pas leur position GPS.")) return;
+    const a = ensureAxis(); a.origin = null; a.points = [];
+    await saveCurrentProject(); refreshAxisUI(); toast("Axe effacé");
   });
   $("#btnJournal").addEventListener("click", async () => {
     try{ await openJournal(); }catch(e){ toast("Journal indisponible : " + (e && e.message || e), true); }
