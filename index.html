@@ -311,6 +311,14 @@
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
   .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
+  /* ---- extraction par entreprise ---- */
+  .ext-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:13px 15px; margin-bottom:10px; box-shadow:var(--shadow)}
+  .ext-card b{display:block; font-size:15px}
+  .ext-card .ex-meta{font-size:12.5px; color:var(--ink2); margin-top:2px}
+  .ext-card .ex-meta .late{color:var(--nc); font-weight:700}
+  .ext-card .ex-act{display:flex; gap:8px; margin-top:10px}
+  .ext-card .ex-act .btn{flex:1; padding:9px 12px; font-size:13px}
   /* ---- éditeur de modèles ---- */
   .ti{border:1px solid var(--line); border-radius:var(--r-md); padding:10px 12px; margin-bottom:9px; background:var(--card)}
   .ti-top{display:flex; align-items:center; gap:7px; margin-bottom:7px}
@@ -508,9 +516,28 @@
     <div id="regList"></div>
     <div class="btnrow">
       <button class="btn block" id="btnRegAdd">+ Réserve manuelle</button>
+      <button class="btn blue block" id="btnExtract">📤 Extraire par entreprise</button>
     </div>
   </div>
 </section>
+
+<!-- ================= EXTRACTION PAR ENTREPRISE ================= -->
+<div class="modal" id="extModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnExtClose" aria-label="Fermer">←</button>
+      <b>Extraire par entreprise</b>
+    </div>
+    <p class="hint" style="margin:2px 2px 12px">Un relevé ne contenant que ce qui concerne l'intervenant : ses réserves, ses constats, ses fiches. À remettre en réunion de chantier.</p>
+    <div class="field">
+      <label for="extScope">Périmètre</label>
+      <select id="extScope">
+        <option value="all">Ensemble du chantier</option>
+      </select>
+    </div>
+    <div id="extList"></div>
+  </div>
+</div>
 
 <!-- feuille de bascule des chantiers -->
 <div class="addsheet" id="projSheet">
@@ -1539,6 +1566,7 @@ function showLock(){
   $("#ctrlFormModal").classList.remove("on");
   $("#tplModal").classList.remove("on");
   $("#tplFormModal").classList.remove("on");
+  $("#extModal").classList.remove("on");
   closeAddSheet();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
@@ -1914,6 +1942,49 @@ async function actionTracking(){
   return rows;
 }
 
+/* =============== extraction par entreprise =============== */
+const normEnt = s => (s || "").trim().toLowerCase();
+
+/* recense les intervenants du chantier avec ce qui les concerne */
+async function listEntreprises(){
+  if (!CUR) return [];
+  const vmap = {}; (await projectVisits()).forEach(v => vmap[v.id] = v);
+  const photos = (await idbAll("photos")).filter(p => vmap[p.visitId]);
+  const reserves = await idbAll("reserves","projectId",CUR.id);
+  const fiches = await idbAll("controls","projectId",CUR.id);
+  const map = {};
+  const push = (nom, cle) => {
+    const k = normEnt(nom);
+    if (!k) return;
+    if (!map[k]) map[k] = {nom: nom.trim(), constats:0, reserves:0, retard:0, fiches:0};
+    map[k][cle]++;
+  };
+  photos.forEach(p => push(p.entreprise, "constats"));
+  reserves.forEach(r => { push(r.entreprise, "reserves"); if (reserveStatut(r) === "En retard") push(r.entreprise, "retard"); });
+  fiches.forEach(f => push(f.entreprise, "fiches"));
+  return Object.values(map).sort((a,b) => (b.reserves + b.constats) - (a.reserves + a.constats));
+}
+
+/* rassemble tout ce qui concerne une entreprise. scope : "all" ou un identifiant de visite */
+async function entrepriseData(nom, scope){
+  const k = normEnt(nom);
+  const vmap = {}; (await projectVisits()).forEach(v => vmap[v.id] = v);
+  const dansPerimetre = visitId => scope === "all" ? !!vmap[visitId] : visitId === scope;
+  const photos = (await idbAll("photos"))
+    .filter(p => dansPerimetre(p.visitId) && normEnt(p.entreprise) === k)
+    .sort((a,b) => {
+      const da = vmap[a.visitId].date, db = vmap[b.visitId].date;
+      return da < db ? -1 : da > db ? 1 : a.num - b.num;
+    });
+  const reserves = (await idbAll("reserves","projectId",CUR.id))
+    .filter(r => normEnt(r.entreprise) === k)
+    .sort((a,b) => a.num - b.num);
+  const fiches = (await idbAll("controls","projectId",CUR.id))
+    .filter(f => dansPerimetre(f.visitId) && normEnt(f.entreprise) === k)
+    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  return {nom: nom.trim(), photos, reserves, fiches, vmap};
+}
+
 /* avant / après : réserves suivies sur plusieurs visites → 1er cliché vs cliché de levée (ou le dernier) */
 async function reserveProgress(){
   if (!CUR) return [];
@@ -2260,6 +2331,70 @@ async function deleteCtrlForm(){
   closeCtrlForm();
   await openCtrl();
   toast("Fiche supprimée");
+}
+
+/* =============== écran d'extraction par entreprise =============== */
+async function openExtract(){
+  if (!CUR) return;
+  const visits = (await projectVisits()).sort((a,b) => a.date < b.date ? 1 : -1);
+  $("#extScope").innerHTML = `<option value="all">Ensemble du chantier</option>` +
+    visits.map(v => `<option value="${v.id}">Visite du ${esc(frDate(v.date))}${v.label ? " — " + esc(v.label) : ""}</option>`).join("");
+  await renderExtractList();
+  $("#extScope").onchange = renderExtractList;
+  $("#extModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+async function renderExtractList(){
+  const scope = $("#extScope").value === "all" ? "all" : Number($("#extScope").value);
+  const ents = await listEntreprises();
+  const box = $("#extList");
+  if (!ents.length){
+    box.innerHTML = `<div class="empty"><span class="glyph">🏗</span>Aucun intervenant identifié.<br>Renseignez l'entreprise sur vos constats ou vos réserves.</div>`;
+    return;
+  }
+  // décompte réel dans le périmètre choisi
+  const cartes = [];
+  for (const e of ents){
+    const d = await entrepriseData(e.nom, scope);
+    const enCours = d.reserves.filter(r => reserveStatut(r) !== "Soldé").length;
+    const retard = d.reserves.filter(r => reserveStatut(r) === "En retard").length;
+    if (!d.reserves.length && !d.photos.length && !d.fiches.length) continue;
+    cartes.push(`<div class="ext-card">
+      <b>${esc(e.nom)}</b>
+      <div class="ex-meta">${enCours} réserve(s) en cours${retard ? ` · <span class="late">${retard} en retard</span>` : ""} · ${d.photos.length} constat(s) · ${d.fiches.length} fiche(s)</div>
+      <div class="ex-act">
+        <button class="btn primary" data-pdf="${esc(e.nom)}">📄 Relevé PDF</button>
+        <button class="btn ghost" data-csv="${esc(e.nom)}">📊 Réserves .csv</button>
+      </div></div>`);
+  }
+  box.innerHTML = cartes.length ? cartes.join("")
+    : `<div class="hint">Aucun intervenant concerné dans ce périmètre.</div>`;
+  box.querySelectorAll("[data-pdf]").forEach(b =>
+    b.addEventListener("click", () => exportEntreprisePdf(b.dataset.pdf, scope)));
+  box.querySelectorAll("[data-csv]").forEach(b =>
+    b.addEventListener("click", () => exportEntrepriseCsv(b.dataset.csv, scope)));
+}
+async function exportEntreprisePdf(nom, scope){
+  try{
+    toast("Préparation du relevé…");
+    const data = await entrepriseData(nom, scope);
+    const settings = getSettings();
+    const blob = await pdfForEntreprise(data, scope, settings);
+    const suffixe = scope === "all" ? "" : ` — visite du ${shortDate((data.vmap[scope]||{}).date || todayIso())}`;
+    const name = `Relevé ${sanitizeFilename(nom)}${suffixe} — ${shortDate(todayIso())}.pdf`;
+    const r = await shareOrDownload([new File([blob], name, {type:"application/pdf"})], name);
+    toast(r === "shared" ? "Relevé partagé ✔" : r === "downloaded" ? "Relevé dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur d'extraction : " + (err && err.message || err), true); }
+}
+async function exportEntrepriseCsv(nom, scope){
+  try{
+    const data = await entrepriseData(nom, scope);
+    if (!data.reserves.length){ toast("Aucune réserve pour cet intervenant.", true); return; }
+    const blob = csvForEntreprise(data);
+    const name = `Réserves ${sanitizeFilename(nom)} — ${shortDate(todayIso())}.csv`;
+    const r = await shareOrDownload([new File([blob], name, {type:"text/csv"})], name);
+    toast(r === "shared" ? "Tableau partagé ✔" : r === "downloaded" ? "Tableau dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur CSV : " + (err && err.message || err), true); }
 }
 
 /* =============== éditeur de modèles de fiches =============== */
@@ -3344,6 +3479,197 @@ function buildPdf(pages){
   }
   push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xrefPos}\nEOF`.replace("EOF", "%%EOF\n"));
   return new Blob(chunks, {type:"application/pdf"});
+}
+
+/* Relevé destiné à une seule entreprise : ses réserves, ses constats, ses fiches.
+   Volontairement plus court que le rapport de visite — c'est un document de relance. */
+async function pdfForEntreprise(data, scope, settings){
+  const pages = [];
+  let cur = null, y = 0;
+  const newPage = () => { cur = {images:[], rects:[], texts:[]}; pages.push(cur); y = 795; };
+  const ensure = h => { if (y - h < 50) newPage(); };
+  const band = (label, h, size) => {
+    ensure(h + 8);
+    cur.rects.push({x:40, y:y-h, w:515.28, h, grad:PDF_G_BAND});
+    cur.rects.push({x:40, y:y-h, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:48, y:y - h + (h - size) / 2 + 2.2, size, font:"F2", color:PDF_NAVY, text:label});
+    y -= h + 8;
+  };
+  newPage();
+
+  /* ---- en-tête ---- */
+  cur.rects.push({x:40, y:y-58, w:515.28, h:58, grad:PDF_G_TITLE});
+  cur.rects.push({x:40, y:y-58, w:515.28, h:2.4, grad:PDF_G_RULE, horiz:true});
+  cur.texts.push({x:52, y:y-22, size:FS.subtitle, font:"F1", color:"0.85 0.92 0.98", text:"RELEVÉ DE SITUATION PAR ENTREPRISE"});
+  cur.texts.push({x:52, y:y-45, size:FS.title, font:"F2", color:PDF_PEACH, text:data.nom.slice(0, 44)});
+  y -= 74;
+  cur.texts.push({x:40, y, size:FS.lead, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
+  const perim = scope === "all" ? "Ensemble du chantier" : `Visite du ${frDate((data.vmap[scope]||{}).date || todayIso())}`;
+  cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Périmètre : ${perim}`}); y -= 14;
+  cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Établi le ${frDate(todayIso())}${settings.redac ? " par " + settings.redac : ""}`}); y -= 20;
+
+  /* ---- synthèse ---- */
+  const enCours = data.reserves.filter(r => reserveStatut(r) === "En cours").length;
+  const retard  = data.reserves.filter(r => reserveStatut(r) === "En retard").length;
+  const soldees = data.reserves.filter(r => reserveStatut(r) === "Soldé").length;
+  band("SYNTHÈSE", 19, FS.bandSm);
+  const SY = [[40,"RÉSERVES EN COURS",String(enCours),PDF_G_STATUT.PA],
+              [175,"DONT EN RETARD",String(retard),PDF_G_STATUT.NC],
+              [310,"SOLDÉES",String(soldees),PDF_G_STATUT.C],
+              [445,"CONSTATS",String(data.photos.length),PDF_G_STATUT.AC]];
+  ensure(46);
+  SY.forEach(([x, lab, val, grad]) => {
+    cur.rects.push({x, y:y-40, w:120, h:40, grad});
+    cur.texts.push({x:x+9, y:y-17, size:19, font:"F2", color:"1 1 1", text:val});
+    cur.texts.push({x:x+9, y:y-33, size:FS.micro, font:"F2", color:"1 1 1", text:lab});
+  });
+  y -= 54;
+
+  /* ---- réserves ---- */
+  if (data.reserves.length){
+    band("RÉSERVES ET ACTIONS ATTENDUES", 21, FS.band);
+    const RX = [40, 66, 290, 400, 458];
+    ensure(16);
+    cur.rects.push({x:40, y:y-13, w:515.28, h:14, grad:PDF_G_LABEL});
+    ["N°","OBJET","ACTION ATTENDUE","ÉCHÉANCE","STATUT"].forEach((h, k) =>
+      cur.texts.push({x:RX[k]+2, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 17;
+    for (const r of data.reserves){
+      const ol = wrapText(r.objet || "—", 52);
+      const al = wrapText(r.action || "—", 26);
+      const rowH = Math.max(ol.length, al.length, 1) * 9.8 + 7;
+      ensure(rowH);
+      cur.texts.push({x:RX[0]+2, y:y-8, size:FS.body, font:"F2", text:String(r.num)});
+      let oy = y-8; for (const l of ol){ cur.texts.push({x:RX[1]+2, y:oy, size:FS.small, font:"F1", text:l}); oy -= 9.8; }
+      let ay = y-8; for (const l of al){ cur.texts.push({x:RX[2]+2, y:ay, size:FS.small, font:"F1", color:PDF_GREY, text:l}); ay -= 9.8; }
+      cur.texts.push({x:RX[3]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:r.dateLimite ? frDate(r.dateLimite) : "—"});
+      pdfPill(cur, RX[4]+1, y-11.5, 70, 13, reserveStatut(r), FS.caption);
+      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= rowH;
+    }
+    y -= 12;
+  }
+
+  /* ---- constats photographiques ---- */
+  if (data.photos.length){
+    if (y < 250) newPage();
+    band("CONSTATS PHOTOGRAPHIQUES", 21, FS.band);
+    const perRow = 4, gap = 6, cellW = (515 - gap * (perRow - 1)) / perRow;
+    for (let i = 0; i < data.photos.length; i += perRow){
+      const row = data.photos.slice(i, i + perRow);
+      const ims = [];
+      for (const p of row){
+        toast(`Extraction : cliché ${i + ims.length + 1}/${data.photos.length}…`);
+        ims.push({p, im: await safeJpeg(p.blob, 900, 0.75)});
+      }
+      const d = ims.map(o => {
+        if (!o.im) return {dw: cellW, dh: 80};
+        const sc = Math.min(cellW / o.im.w, 150 / o.im.h);
+        return {dw: o.im.w * sc, dh: o.im.h * sc};
+      });
+      const rowH = Math.max(...d.map(z => z.dh)) + 26;
+      ensure(rowH);
+      ims.forEach((o, k) => {
+        const x0 = 40 + k * (cellW + gap), cx = x0 + (cellW - d[k].dw) / 2;
+        if (o.im) cur.images.push({bytes:o.im.bytes, w:o.im.w, h:o.im.h, x:cx, y:y-d[k].dh, dw:d[k].dw, dh:d[k].dh});
+        else { cur.rects.push({x:cx, y:y-d[k].dh, w:d[k].dw, h:d[k].dh, color:"0.94 0.94 0.95"});
+               cur.texts.push({x:cx+5, y:y-d[k].dh/2, size:FS.micro, font:"F2", color:PDF_STATUT.NC, text:"ILLISIBLE"}); }
+        const v = data.vmap[o.p.visitId];
+        cur.texts.push({x:cx, y:y-d[k].dh-9, size:FS.caption, font:"F2", color:PDF_NAVY,
+          text:`n°${o.p.num}${o.p.statut ? ` [${o.p.statut}]` : ""}`});
+        cur.texts.push({x:cx, y:y-d[k].dh-17.5, size:FS.micro, font:"F1", color:PDF_GREY,
+          text:`visite du ${frDate(v ? v.date : "")}`});
+      });
+      y -= rowH;
+    }
+    y -= 6;
+    // rappel textuel des constats
+    ensure(16);
+    cur.rects.push({x:40, y:y-13, w:515.28, h:14, grad:PDF_G_LABEL});
+    ["N°","DATE","CONSTAT","SUITE À DONNER"].forEach((h, k) =>
+      cur.texts.push({x:[40,66,120,370][k]+2, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 17;
+    for (const p of data.photos){
+      const v = data.vmap[p.visitId];
+      const cl = wrapText([p.titre, p.description].filter(Boolean).join(" — ") || "—", 52);
+      const sl = wrapText(p.suite || "—", 40);
+      const rowH = Math.max(cl.length, sl.length, 1) * 9.8 + 6;
+      ensure(rowH);
+      cur.texts.push({x:42, y:y-8, size:FS.body, font:"F2", text:String(p.num)});
+      if (p.statut) pdfBadge(cur, 42, y-19, p.statut, 22, 11, FS.caption);
+      cur.texts.push({x:68, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:frDate(v ? v.date : "")});
+      let cy2 = y-8; for (const l of cl){ cur.texts.push({x:122, y:cy2, size:FS.small, font:"F1", text:l}); cy2 -= 9.8; }
+      let sy2 = y-8; for (const l of sl){ cur.texts.push({x:372, y:sy2, size:FS.small, font:"F1", color:PDF_GREY, text:l}); sy2 -= 9.8; }
+      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= rowH;
+    }
+    y -= 12;
+  }
+
+  /* ---- fiches de contrôle la concernant ---- */
+  if (data.fiches.length){
+    if (y < 180) newPage();
+    band("FICHES DE CONTRÔLE", 21, FS.band);
+    for (const f of data.fiches){
+      const st = ctrlStats(f), concl = ctrlConclusion(f);
+      ensure(30);
+      cur.rects.push({x:40, y:y-15, w:515.28, h:15, grad:PDF_G_LABEL});
+      cur.texts.push({x:44, y:y-11, size:FS.mini, font:"F2", color:PDF_NAVY,
+        text:`FICHE N°${f.num} — ${(f.name||"").toUpperCase().slice(0,50)}`});
+      const cc = concl === "Conforme" ? PDF_G_STATUT.C : (concl === "Non conforme" ? PDF_G_STATUT.NC : PDF_G_STATUT.PA);
+      cur.rects.push({x:470, y:y-14.5, w:85, h:13, grad:cc});
+      cur.texts.push({x:474, y:y-10.5, size:FS.caption, font:"F2", color:"1 1 1", text:concl});
+      y -= 19;
+      cur.texts.push({x:40, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY,
+        text:`${f.ref||""}${f.zone ? " · " + f.zone : ""} · visite du ${frDate(f.date)} · ${st.c} conforme(s), ${st.nc} non conforme(s)`});
+      y -= 14;
+      for (const it of f.items){
+        if (it.t === "t" || itemStatut(it) !== "NC") continue;   // on ne relance que sur les écarts
+        const ll = wrapText("• " + it.l + (it.t === "m" ? ` — relevé ${it.val || "—"} ${it.u||""} (attendu ${ctrlSeuilText(it).replace("Attendu : ","")})` : ""), 88);
+        ensure(ll.length * 9.6 + 4);
+        for (const l of ll){ cur.texts.push({x:46, y:y-8, size:FS.small, font:"F1", color:PDF_STATUT.NC, text:l}); y -= 9.6; }
+      }
+      y -= 12;
+    }
+  }
+
+  /* ---- visa ---- */
+  ensure(64);
+  y -= 8;
+  cur.rects.push({x:355, y:y-54, w:200, h:54, grad:PDF_G_LABEL});
+  cur.rects.push({x:355, y:y-54, w:200, h:1.4, grad:PDF_G_RULE, horiz:true});
+  cur.texts.push({x:362, y:y-13, size:FS.small, font:"F2", color:PDF_NAVY, text:"Maîtrise d'œuvre"});
+  if (settings.redac) cur.texts.push({x:362, y:y-28, size:FS.body, font:"F1", text:settings.redac.slice(0,34)});
+  cur.texts.push({x:362, y:y-46, size:FS.caption, font:"F1", color:PDF_GREY, text:`Le ${frDate(todayIso())}`});
+  y -= 62;
+  ensure(20);
+  cur.texts.push({x:40, y:y-8, size:FS.caption, font:"F1", color:PDF_GREY,
+    text:"Document extrait du registre de suivi. Les réserves restent ouvertes jusqu'à constat de levée par la maîtrise d'œuvre."});
+
+  /* ---- en-tête et pied de page ---- */
+  const HDR = "0.34 0.55 0.72";
+  pages.forEach((pg, i) => {
+    pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR, text:settings.proj.toUpperCase().slice(0,60)});
+    pg.texts.push({x:400, y:816, size:FS.caption, font:"F1", color:HDR, text:("RELEVÉ — " + data.nom).slice(0,32)});
+    pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR, text:`${settings.sub} — ${settings.proj}`.slice(0,88)});
+    pg.texts.push({x:503, y:26, size:FS.caption, font:"F1", color:HDR, text:`Page ${i+1} / ${pages.length}`});
+  });
+  return buildPdf(pages);
+}
+
+/* Réserves d'une entreprise en tableur (séparateur « ; » et BOM : ouverture directe dans Excel FR) */
+function csvForEntreprise(data){
+  const esc2 = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lignes = [["N°","Origine","Objet","Action attendue","Zone","Échéance","Statut","Date de solde"].join(";")];
+  for (const r of data.reserves){
+    lignes.push([r.num, frDate(r.date), r.objet || "", r.action || "", r.zone || "",
+      r.dateLimite ? frDate(r.dateLimite) : "", reserveStatut(r), r.dateSolde ? frDate(r.dateSolde) : ""]
+      .map(esc2).join(";"));
+  }
+  // ﻿ : sans ce BOM, Excel FR affiche « Ã© » à la place des accents
+  return new Blob(["﻿" + lignes.join("\r\n")], {type:"text/csv;charset=utf-8"});
 }
 
 async function pdfForVisit(visit, photos, settings){
@@ -4645,6 +4971,10 @@ async function main(){
   }));
   $("#btnRegBack").addEventListener("click", showHome);
   $("#btnRegAdd").addEventListener("click", () => openReserveForm(null));
+  $("#btnExtract").addEventListener("click", async () => {
+    try{ await openExtract(); }catch(e){ toast("Extraction indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnExtClose").addEventListener("click", () => $("#extModal").classList.remove("on"));
   $("#btnResClose").addEventListener("click", closeReserveForm);
   $("#btnResSave").addEventListener("click", saveReserveForm);
   $("#btnResDelete").addEventListener("click", deleteReserveForm);
