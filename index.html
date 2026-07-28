@@ -311,6 +311,46 @@
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
   .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
+  /* ---- tableau de bord ---- */
+  .kpis{display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-bottom:16px}
+  .kpi{border-radius:var(--r-lg); padding:13px 15px; color:#fff; box-shadow:var(--shadow)}
+  .kpi b{display:block; font-size:27px; line-height:1.05; font-variant-numeric:tabular-nums}
+  .kpi span{display:block; font-size:10.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; margin-top:3px; opacity:.95}
+  .kpi small{display:block; font-size:11px; margin-top:4px; opacity:.9}
+  .kpi.pa{background:linear-gradient(140deg,#E0A63A,#A87407)}
+  .kpi.nc{background:linear-gradient(140deg,#E06052,#B4271B)}
+  .kpi.c {background:linear-gradient(140deg,#5CB47C,#256B39)}
+  .kpi.ac{background:linear-gradient(140deg,#5E9AD0,#25507F)}
+  .dash-sect{font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--ink2); margin:20px 2px 9px; display:flex; align-items:center; gap:8px}
+  .dash-sect::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--grad-blue); flex:none}
+  .dash-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:13px 15px; margin-bottom:10px; box-shadow:var(--shadow)}
+  .ent-row{padding:11px 0; border-top:1px solid var(--line)}
+  .ent-row:first-child{border-top:none; padding-top:2px}
+  .ent-head{display:flex; align-items:baseline; gap:8px}
+  .ent-head b{flex:1; font-size:14.5px; min-width:0}
+  .ent-taux{font-size:16px; font-weight:800; font-variant-numeric:tabular-nums}
+  .ent-taux.bon{color:var(--c)} .ent-taux.moyen{color:var(--pa)} .ent-taux.faible{color:var(--nc)}
+  .ent-bar{height:8px; border-radius:99px; background:var(--chip); overflow:hidden; display:flex; margin:7px 0 5px}
+  .ent-bar i{display:block; height:100%}
+  .ent-bar i.s{background:var(--c)} .ent-bar i.o{background:var(--pa)} .ent-bar i.r{background:var(--nc)}
+  .ent-meta{font-size:12px; color:var(--ink2)}
+  .ent-meta .late{color:var(--nc); font-weight:700}
+  /* évolution : une colonne par visite */
+  .eplot{display:flex; align-items:flex-end; gap:5px; height:120px; margin:6px 0 4px; overflow-x:auto; padding-bottom:2px}
+  .ecol{flex:0 0 30px; display:flex; flex-direction:column; justify-content:flex-end; height:100%}
+  .ecol .st{display:flex; flex-direction:column; justify-content:flex-end; height:100%; gap:2px}
+  .ecol .st i{display:block; border-radius:3px 3px 0 0; min-height:2px}
+  .ecol .st i.o{background:var(--pa)} .ecol .st i.s{background:var(--c); border-radius:0 0 3px 3px}
+  .ecol em{display:block; font-style:normal; font-size:9.5px; color:var(--ink2); text-align:center; margin-top:4px}
+  .legende{display:flex; gap:14px; font-size:11.5px; color:var(--ink2); margin-top:6px; flex-wrap:wrap}
+  .legende i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px}
+  .rec-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line)}
+  .rec-row:first-child{border-top:none}
+  .rec-row .rn{flex:none; min-width:26px; height:26px; padding:0 7px; border-radius:99px; background:var(--nc); color:#fff;
+    font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center}
+  .rec-row span{flex:1; font-size:13.5px; min-width:0}
   /* ---- axe de repérage linéaire ---- */
   .ax-pt{display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line);
     border-radius:var(--r-sm); margin-bottom:6px; background:var(--card)}
@@ -545,6 +585,21 @@
     </div>
   </div>
 </section>
+
+<!-- ================= TABLEAU DE BORD ================= -->
+<div class="modal" id="dashModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnDashClose" aria-label="Fermer">←</button>
+      <b>Tableau de bord</b>
+    </div>
+    <p class="hint" id="dashInfo" style="margin:2px 2px 14px"></p>
+    <div id="dashBody"></div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnDashPdf">📄 Rapport de pilotage (PDF)</button>
+    </div>
+  </div>
+</div>
 
 <!-- ================= JOURNAL DES MODIFICATIONS ================= -->
 <div class="modal" id="jrnModal">
@@ -1055,6 +1110,18 @@
           <label for="axOrigin">Abscisse à l'origine</label>
           <input type="text" id="axOrigin" placeholder="Ex. : 2+100 (ou 2100)">
           <div class="hint">Valeur portée par le premier point de l'axe. Laissez 0 si le chantier commence au PK 0.</div>
+        </div>
+        <div class="field">
+          <label for="axGroup">Regroupement des zones dans les rapports</label>
+          <select id="axGroup">
+            <option value="0">Par proximité GPS (± 10 m) — par défaut</option>
+            <option value="50">Par tranches de 50 m d'axe</option>
+            <option value="100">Par tranches de 100 m d'axe</option>
+            <option value="200">Par tranches de 200 m d'axe</option>
+            <option value="500">Par tranches de 500 m d'axe</option>
+            <option value="1000">Par section entre deux PR (1 km)</option>
+          </select>
+          <div class="hint">Sur un chantier linéaire, le regroupement par proximité crée une zone par constat. Les tranches d'abscisse donnent des rapports bien plus lisibles.</div>
         </div>
         <div class="hint" id="axState" style="margin-bottom:8px"></div>
         <div class="btnrow" style="margin:0">
@@ -1650,6 +1717,7 @@ function showLock(){
   $("#tplFormModal").classList.remove("on");
   $("#extModal").classList.remove("on");
   $("#jrnModal").classList.remove("on");
+  $("#dashModal").classList.remove("on");
   closeAddSheet();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
@@ -1817,9 +1885,13 @@ async function showHome(){
   const ouvertes = reserves.filter(r => r.statut !== "Soldé").length;
   $("#homeProject").innerHTML =
     `<button class="proj-chip" id="btnSwitchProject"><span class="proj-name">${esc(CUR ? CUR.name : "—")}</span><span class="proj-caret">▾</span></button>` +
-    `<button class="reg-chip" id="btnRegister">Registre · ${reserves.length}${ouvertes ? ` <b>(${ouvertes} en cours)</b>` : ""}</button>`;
+    `<button class="reg-chip" id="btnRegister">Registre · ${reserves.length}${ouvertes ? ` <b>(${ouvertes} en cours)</b>` : ""}</button>` +
+    `<button class="reg-chip" id="btnDash" title="Tableau de bord" aria-label="Tableau de bord" style="padding:12px 14px">📊</button>`;
   $("#btnSwitchProject").addEventListener("click", openProjectSheet);
   $("#btnRegister").addEventListener("click", showRegister);
+  $("#btnDash").addEventListener("click", async () => {
+    try{ await openDashboard(); }catch(e){ toast("Tableau de bord indisponible : " + (e && e.message || e), true); }
+  });
   const list = $("#visitList");
   if (!visits.length){
     list.innerHTML = `<div class="empty"><span class="glyph">🚧</span>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
@@ -2124,37 +2196,56 @@ function refreshAxisUI(){
   $("#axMode").value = a.mode || "none";
   $("#axCfg").hidden = (a.mode || "none") === "none";
   $("#axOrigin").value = a.originAbs ? fmtAbs(a.originAbs, a.mode).replace(/^P[KR] /, "") : "";
+  $("#axGroup").value = String(a.group || 0);
   const pts = [a.origin, ...(a.points || [])].filter(Boolean);
   const pret = axisOf();
   $("#axState").innerHTML = !a.origin
     ? "⚠️ Origine non définie : placez-vous au point de départ et appuyez sur « Définir l'origine ici »."
     : (pret
-        ? `Axe défini : <b>${pts.length} points</b> sur <b>${Math.round(axisLength())} m</b>. Repérage actif de ${esc(fmtAbs(a.originAbs||0, a.mode))} à ${esc(fmtAbs((a.originAbs||0)+axisLength(), a.mode))}.`
+        ? (axisLength() < 5
+            ? `⚠️ Axe de <b>${Math.round(axisLength())} m</b> : les points sont quasiment confondus, le repérage ne peut pas fonctionner. Supprimez-les et reprenez en vous déplaçant réellement le long du chantier.`
+            : `Axe défini : <b>${pts.length} points</b> sur <b>${Math.round(axisLength())} m</b>. Repérage actif de ${esc(fmtAbs(a.originAbs||0, a.mode))} à ${esc(fmtAbs((a.originAbs||0)+axisLength(), a.mode))}.`)
         : "Origine posée. Ajoutez au moins un second point pour définir la direction de l'axe.");
-  $("#axList").innerHTML = pts.map((p, i) => `<div class="ax-pt">
+  $("#axList").innerHTML = pts.map((p, i) => {
+    const prec = p.acc != null ? `±${p.acc} m` : "";
+    const mauvais = p.acc != null && p.acc > 15;
+    return `<div class="ax-pt">
       <span class="ax-n">${i === 0 ? "O" : i}</span>
-      <span class="ax-c">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</span>
+      <span class="ax-c">${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}
+        ${prec ? `<em style="font-style:normal;color:${mauvais ? "var(--nc)" : "var(--ink2)"}"> · ${prec}</em>` : ""}</span>
       <span class="ax-k">${i === 0 ? esc(fmtAbs(a.originAbs||0, a.mode)) : ""}</span>
       ${i === 0 ? "" : `<button class="ax-del" data-i="${i-1}" aria-label="Retirer">✕</button>`}
-    </div>`).join("");
+    </div>`;
+  }).join("");
   $("#axList").querySelectorAll(".ax-del").forEach(b => b.addEventListener("click", async () => {
     a.points.splice(Number(b.dataset.i), 1);
     await saveCurrentProject(); refreshAxisUI();
   }));
 }
 async function axisCapture(role){
-  toast("Acquisition GPS…");
-  const pos = await devicePosition();
+  toast("Acquisition GPS — relevé neuf en cours…");
+  // maximumAge:0 : on refuse toute position mise en cache, sinon deux points saisis
+  // en marchant portent les mêmes coordonnées.
+  const pos = await devicePosition({maximumAge: 0, timeout: 20000});
   if (!pos){ toast("Position indisponible — vérifiez le GPS et l'autorisation de localisation.", true); return; }
   const a = ensureAxis();
-  if (role === "origin") a.origin = {lat:pos.lat, lon:pos.lon};
-  else {
+  const pt = {lat:pos.lat, lon:pos.lon, acc: pos.acc != null ? Math.round(pos.acc) : null};
+  if (role === "origin"){
+    a.origin = pt;
+  } else {
     if (!a.origin){ toast("Définissez d'abord l'origine.", true); return; }
-    a.points.push({lat:pos.lat, lon:pos.lon});
+    const prec = [a.origin, ...a.points].slice(-1)[0];
+    const d = distMeters(prec.lat, prec.lon, pt.lat, pt.lon);
+    if (d < 3){
+      toast(`Position identique au point précédent (${d.toFixed(1)} m). Éloignez-vous davantage ou attendez que le GPS se stabilise.`, true);
+      return;
+    }
+    a.points.push(pt);
   }
   await saveCurrentProject();
   refreshAxisUI();
-  toast(role === "origin" ? "Origine de l'axe enregistrée" : `Point d'axe n°${a.points.length} ajouté`);
+  const precision = pt.acc != null ? ` (précision ±${pt.acc} m)` : "";
+  toast((role === "origin" ? "Origine de l'axe enregistrée" : `Point d'axe n°${a.points.length} ajouté`) + precision);
 }
 /* reconstitue un axe approché à partir des clichés déjà géolocalisés du chantier */
 async function axisFromPhotos(){
@@ -2217,6 +2308,88 @@ async function projectJournal(){
   if (!CUR) return [];
   return (await idbAll("journal","projectId",CUR.id))
     .sort((a,b) => a.at === b.at ? (b.id - a.id) : (a.at < b.at ? 1 : -1));  // plus récent d'abord
+}
+
+/* =============== tableau de bord =============== */
+function joursEntre(a, b){
+  if (!a || !b) return null;
+  const d = (new Date(b + "T00:00") - new Date(a + "T00:00")) / 86400000;
+  return isFinite(d) ? Math.max(0, Math.round(d)) : null;
+}
+async function dashboardStats(){
+  if (!CUR) return null;
+  const visits = (await projectVisits()).sort((a,b) => a.date < b.date ? -1 : 1);
+  const vmap = {}; visits.forEach(v => vmap[v.id] = v);
+  const photos = (await idbAll("photos")).filter(p => vmap[p.visitId]);
+  const reserves = await idbAll("reserves","projectId",CUR.id);
+  const fiches = await idbAll("controls","projectId",CUR.id);
+
+  const soldees = reserves.filter(r => reserveStatut(r) === "Soldé");
+  const retard  = reserves.filter(r => reserveStatut(r) === "En retard");
+  const ouvertes = reserves.filter(r => reserveStatut(r) !== "Soldé");
+  const delais = soldees.map(r => joursEntre(r.date, r.dateSolde)).filter(d => d != null);
+  const moyenne = t => t.length ? Math.round(t.reduce((a,b) => a+b, 0) / t.length) : null;
+
+  const constats = {NC:0, PA:0, AC:0, C:0};
+  photos.forEach(p => { if (constats[p.statut] !== undefined) constats[p.statut]++; });
+
+  /* par entreprise : c'est le tableau qui fait bouger un mandataire */
+  const parEnt = {};
+  const clef = n => normEnt(n) || "—";
+  for (const r of reserves){
+    const k = clef(r.entreprise);
+    parEnt[k] = parEnt[k] || {nom: (r.entreprise || "Non attribué").trim(), ouvertes:0, retard:0, soldees:0, delais:[]};
+    const st = reserveStatut(r);
+    if (st === "Soldé"){ parEnt[k].soldees++; const d = joursEntre(r.date, r.dateSolde); if (d != null) parEnt[k].delais.push(d); }
+    else { parEnt[k].ouvertes++; if (st === "En retard") parEnt[k].retard++; }
+  }
+  const parEntreprise = Object.values(parEnt).map(e => {
+    const tot = e.ouvertes + e.soldees;
+    return {...e, total:tot, taux: tot ? Math.round(e.soldees / tot * 100) : 0, delai: moyenne(e.delais)};
+  }).sort((a,b) => b.retard - a.retard || b.ouvertes - a.ouvertes);
+
+  /* évolution : à la date de chaque visite, combien étaient ouvertes / soldées */
+  const parVisite = visits.map(v => ({
+    date: v.date,
+    ouvertes: reserves.filter(r => r.date <= v.date && !(r.dateSolde && r.dateSolde <= v.date)).length,
+    soldees:  reserves.filter(r => r.dateSolde && r.dateSolde <= v.date).length,
+    constats: photos.filter(p => p.visitId === v.id).length
+  }));
+
+  /* récurrence : les désordres qui reviennent */
+  const rec = {};
+  for (const r of reserves){
+    const k = (r.objet || "").trim().toLowerCase();
+    if (!k) continue;
+    rec[k] = rec[k] || {objet: r.objet.trim(), n:0};
+    rec[k].n++;
+  }
+  const recurrence = Object.values(rec).filter(x => x.n > 1).sort((a,b) => b.n - a.n).slice(0, 6);
+
+  /* points de contrôle non conformes les plus fréquents */
+  const pnc = {};
+  for (const f of fiches){
+    for (const it of (f.items || [])){
+      if (it.t === "t" || itemStatut(it) !== "NC") continue;
+      const k = (it.l || "").trim().toLowerCase();
+      pnc[k] = pnc[k] || {label: it.l, n:0};
+      pnc[k].n++;
+    }
+  }
+  const pointsNC = Object.values(pnc).sort((a,b) => b.n - a.n).slice(0, 6);
+
+  return {
+    visites: visits.length,
+    res: {total: reserves.length, ouvertes: ouvertes.length, retard: retard.length,
+          soldees: soldees.length,
+          taux: reserves.length ? Math.round(soldees.length / reserves.length * 100) : 0,
+          delai: moyenne(delais), delaiMax: delais.length ? Math.max(...delais) : null},
+    constats: {...constats, total: photos.length},
+    fiches: {total: fiches.length,
+             conformes: fiches.filter(f => ctrlConclusion(f) === "Conforme").length,
+             nonConformes: fiches.filter(f => ctrlConclusion(f) === "Non conforme").length},
+    parEntreprise, parVisite, recurrence, pointsNC
+  };
 }
 
 /* =============== extraction par entreprise =============== */
@@ -2620,6 +2793,237 @@ async function deleteCtrlForm(){
   closeCtrlForm();
   await openCtrl();
   toast("Fiche supprimée");
+}
+
+/* =============== écran du tableau de bord =============== */
+async function openDashboard(){
+  if (!CUR) return;
+  const s = await dashboardStats();
+  $("#dashInfo").textContent = `${CUR.name} · ${s.visites} visite(s) · ${s.constats.total} constat(s) · ${s.res.total} réserve(s)`;
+  const body = $("#dashBody");
+  if (!s.res.total && !s.constats.total){
+    body.innerHTML = `<div class="empty"><span class="glyph">📊</span>Pas encore de données.<br>Le tableau de bord se construit à partir de vos constats et réserves.</div>`;
+    $("#dashModal").classList.add("on"); window.scrollTo(0,0); return;
+  }
+  const nn = v => v == null ? "—" : v;
+  let h = "";
+
+  /* indicateurs clés */
+  h += `<div class="kpis">
+    <div class="kpi pa"><b>${s.res.ouvertes}</b><span>Réserves en cours</span><small>sur ${s.res.total} ouvertes au total</small></div>
+    <div class="kpi nc"><b>${s.res.retard}</b><span>En retard</span><small>${s.res.retard ? "échéance dépassée" : "aucun dépassement"}</small></div>
+    <div class="kpi c"><b>${s.res.taux} %</b><span>Taux de levée</span><small>${s.res.soldees} réserve(s) soldée(s)</small></div>
+    <div class="kpi ac"><b>${nn(s.res.delai)}${s.res.delai != null ? " j" : ""}</b><span>Délai moyen de levée</span><small>${s.res.delaiMax != null ? "maxi " + s.res.delaiMax + " j" : "aucune levée"}</small></div>
+  </div>`;
+
+  /* répartition des constats */
+  const ct = s.constats, tot = ct.total || 1;
+  h += `<div class="dash-sect">Constats</div><div class="dash-card">
+    <div class="ent-bar" style="height:12px">
+      <i class="r" style="width:${ct.NC/tot*100}%"></i><i class="o" style="width:${ct.PA/tot*100}%"></i>
+      <i style="width:${ct.AC/tot*100}%;background:var(--ac)"></i><i class="s" style="width:${ct.C/tot*100}%"></i>
+    </div>
+    <div class="legende">
+      <span><i style="background:var(--nc)"></i>${ct.NC} NC</span>
+      <span><i style="background:var(--pa)"></i>${ct.PA} PA</span>
+      <span><i style="background:var(--ac)"></i>${ct.AC} AC</span>
+      <span><i style="background:var(--c)"></i>${ct.C} C</span>
+    </div>
+    ${s.fiches.total ? `<div class="ent-meta" style="margin-top:9px">${s.fiches.total} fiche(s) de contrôle · ${s.fiches.conformes} conforme(s) · <span class="${s.fiches.nonConformes ? "late" : ""}">${s.fiches.nonConformes} non conforme(s)</span></div>` : ""}
+  </div>`;
+
+  /* par entreprise */
+  if (s.parEntreprise.length){
+    h += `<div class="dash-sect">Par entreprise</div><div class="dash-card">`;
+    for (const e of s.parEntreprise){
+      const t = e.total || 1;
+      const cls = e.taux >= 80 ? "bon" : (e.taux >= 50 ? "moyen" : "faible");
+      h += `<div class="ent-row">
+        <div class="ent-head"><b>${esc(e.nom)}</b><span class="ent-taux ${cls}">${e.taux} %</span></div>
+        <div class="ent-bar">
+          <i class="s" style="width:${e.soldees/t*100}%"></i>
+          <i class="o" style="width:${(e.ouvertes-e.retard)/t*100}%"></i>
+          <i class="r" style="width:${e.retard/t*100}%"></i>
+        </div>
+        <div class="ent-meta">${e.soldees} soldée(s) · ${e.ouvertes - e.retard} en cours${e.retard ? ` · <span class="late">${e.retard} en retard</span>` : ""}${e.delai != null ? ` · levée en ${e.delai} j en moyenne` : ""}</div>
+      </div>`;
+    }
+    h += `</div>`;
+  }
+
+  /* évolution dans le temps */
+  if (s.parVisite.length > 1){
+    const maxi = Math.max(1, ...s.parVisite.map(v => v.ouvertes + v.soldees));
+    h += `<div class="dash-sect">Évolution</div><div class="dash-card"><div class="eplot">`;
+    for (const v of s.parVisite){
+      const ho = Math.round(v.ouvertes / maxi * 100), hs = Math.round(v.soldees / maxi * 100);
+      h += `<div class="ecol"><div class="st">
+        <i class="o" style="height:${ho}%" title="${v.ouvertes} en cours"></i>
+        <i class="s" style="height:${hs}%" title="${v.soldees} soldées"></i>
+      </div><em>${esc(v.date.slice(8,10))}/${esc(v.date.slice(5,7))}</em></div>`;
+    }
+    h += `</div><div class="legende">
+      <span><i style="background:var(--pa)"></i>ouvertes à cette date</span>
+      <span><i style="background:var(--c)"></i>soldées cumulées</span></div></div>`;
+  }
+
+  /* récurrence */
+  if (s.recurrence.length){
+    h += `<div class="dash-sect">Désordres récurrents</div><div class="dash-card">` +
+      s.recurrence.map(r => `<div class="rec-row"><span class="rn">×${r.n}</span><span>${esc(r.objet)}</span></div>`).join("") +
+      `</div>`;
+  }
+  if (s.pointsNC.length){
+    h += `<div class="dash-sect">Points de contrôle les plus souvent non conformes</div><div class="dash-card">` +
+      s.pointsNC.map(r => `<div class="rec-row"><span class="rn">×${r.n}</span><span>${esc(r.label)}</span></div>`).join("") +
+      `</div>`;
+  }
+  body.innerHTML = h;
+  $("#dashModal").classList.add("on");
+  window.scrollTo(0,0);
+}
+
+/* rapport de pilotage : la synthèse chiffrée à poser sur la table en réunion */
+async function exportDashboardPdf(){
+  try{
+    toast("Préparation du rapport de pilotage…");
+    const s = await dashboardStats();
+    const settings = getSettings();
+    const pages = [];
+    let cur = null, y = 0;
+    const newPage = () => { cur = {images:[], rects:[], texts:[]}; pages.push(cur); y = 795; };
+    const ensure = h => { if (y - h < 50) newPage(); };
+    const band = (label, h, size) => {
+      ensure(h + 8);
+      cur.rects.push({x:40, y:y-h, w:515.28, h, grad:PDF_G_BAND});
+      cur.rects.push({x:40, y:y-h, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true});
+      cur.texts.push({x:48, y:y-h+(h-size)/2+2.2, size, font:"F2", color:PDF_NAVY, text:label});
+      y -= h + 8;
+    };
+    newPage();
+    cur.rects.push({x:40, y:y-58, w:515.28, h:58, grad:PDF_G_TITLE});
+    cur.rects.push({x:40, y:y-58, w:515.28, h:2.4, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:52, y:y-24, size:FS.title, font:"F2", color:PDF_PEACH, text:"RAPPORT DE PILOTAGE"});
+    cur.texts.push({x:52, y:y-45, size:FS.subtitle, font:"F1", color:"0.88 0.93 0.98", text:"Suivi des réserves et de la qualité d'exécution"});
+    y -= 74;
+    cur.texts.push({x:40, y, size:FS.lead, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
+    cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Situation au ${frDate(todayIso())} — ${s.visites} visite(s), ${s.constats.total} constat(s)`}); y -= 22;
+
+    /* indicateurs */
+    band("INDICATEURS", 19, FS.bandSm);
+    const K = [["RÉSERVES EN COURS", String(s.res.ouvertes), PDF_G_STATUT.PA],
+               ["DONT EN RETARD", String(s.res.retard), PDF_G_STATUT.NC],
+               ["TAUX DE LEVÉE", s.res.taux + " %", PDF_G_STATUT.C],
+               ["DÉLAI MOYEN", s.res.delai != null ? s.res.delai + " j" : "—", PDF_G_STATUT.AC]];
+    ensure(48);
+    K.forEach(([lab, val, grad], i) => {
+      const x = 40 + i * 135;
+      cur.rects.push({x, y:y-42, w:120, h:42, grad});
+      cur.texts.push({x:x+9, y:y-18, size:19, font:"F2", color:"1 1 1", text:val});
+      cur.texts.push({x:x+9, y:y-34, size:FS.micro, font:"F2", color:"1 1 1", text:lab});
+    });
+    y -= 56;
+
+    /* répartition des constats */
+    band("RÉPARTITION DES CONSTATS", 19, FS.bandSm);
+    ensure(26);
+    let bx = 40;
+    for (const k of ["NC","PA","AC","C"]){
+      const n = s.constats[k], w = s.constats.total ? Math.max(2, n / s.constats.total * 515.28) : 0;
+      if (n) cur.rects.push({x:bx, y:y-14, w, h:14, grad:PDF_G_STATUT[k]});
+      bx += w;
+    }
+    y -= 20;
+    cur.texts.push({x:40, y:y-6, size:FS.small, font:"F1", color:PDF_GREY,
+      text:`${s.constats.NC} NC · ${s.constats.PA} PA · ${s.constats.AC} AC · ${s.constats.C} C` +
+           (s.fiches.total ? `   |   ${s.fiches.total} fiche(s) de contrôle : ${s.fiches.conformes} conforme(s), ${s.fiches.nonConformes} non conforme(s)` : "")});
+    y -= 22;
+
+    /* par entreprise */
+    if (s.parEntreprise.length){
+      band("SUIVI PAR ENTREPRISE", 21, FS.band);
+      const EX = [40, 240, 310, 375, 445];
+      ensure(16);
+      cur.rects.push({x:40, y:y-13, w:515.28, h:14, grad:PDF_G_LABEL});
+      ["ENTREPRISE","SOLDÉES","EN COURS","EN RETARD","TAUX / DÉLAI"].forEach((h, k) =>
+        cur.texts.push({x:EX[k]+2, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+      y -= 17;
+      for (const e of s.parEntreprise){
+        ensure(14);
+        cur.texts.push({x:EX[0]+2, y:y-8, size:FS.body, font:"F2", text:e.nom.slice(0, 34)});
+        cur.texts.push({x:EX[1]+2, y:y-8, size:FS.body, font:"F1", color:PDF_STATUT.C, text:String(e.soldees)});
+        cur.texts.push({x:EX[2]+2, y:y-8, size:FS.body, font:"F1", text:String(e.ouvertes - e.retard)});
+        cur.texts.push({x:EX[3]+2, y:y-8, size:FS.body, font:"F2", color:e.retard ? PDF_STATUT.NC : PDF_GREY, text:String(e.retard)});
+        cur.texts.push({x:EX[4]+2, y:y-8, size:FS.small, font:"F2",
+          text:`${e.taux} %${e.delai != null ? ` · ${e.delai} j` : ""}`});
+        cur.rects.push({x:40, y:y-10, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+        y -= 14;
+      }
+      y -= 12;
+    }
+
+    /* évolution */
+    if (s.parVisite.length > 1){
+      band("ÉVOLUTION DES RÉSERVES", 21, FS.band);
+      const maxi = Math.max(1, ...s.parVisite.map(v => v.ouvertes + v.soldees));
+      const H = 90, W = Math.min(30, 515 / s.parVisite.length - 4);
+      ensure(H + 26);
+      let x = 40;
+      for (const v of s.parVisite){
+        const ho = v.ouvertes / maxi * H, hs = v.soldees / maxi * H;
+        if (hs) cur.rects.push({x, y:y-H, w:W, h:hs, grad:PDF_G_STATUT.C});
+        if (ho) cur.rects.push({x, y:y-H+hs, w:W, h:ho, grad:PDF_G_STATUT.PA});
+        cur.texts.push({x, y:y-H-9, size:FS.micro, font:"F1", color:PDF_GREY, text:v.date.slice(8,10)+"/"+v.date.slice(5,7)});
+        x += W + 4;
+      }
+      y -= H + 18;
+      cur.rects.push({x:40, y:y-8, w:9, h:9, grad:PDF_G_STATUT.PA});
+      cur.texts.push({x:53, y:y-6, size:FS.mini, font:"F1", color:PDF_GREY, text:"ouvertes à cette date"});
+      cur.rects.push({x:180, y:y-8, w:9, h:9, grad:PDF_G_STATUT.C});
+      cur.texts.push({x:193, y:y-6, size:FS.mini, font:"F1", color:PDF_GREY, text:"soldées cumulées"});
+      y -= 22;
+    }
+
+    /* récurrence */
+    if (s.recurrence.length || s.pointsNC.length){
+      band("RÉCURRENCES", 21, FS.band);
+      const bloc = (titre, arr, champ) => {
+        if (!arr.length) return;
+        ensure(16);
+        cur.texts.push({x:40, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:titre});
+        y -= 16;
+        for (const r of arr){
+          ensure(13);
+          cur.rects.push({x:40, y:y-11, w:26, h:12, grad:PDF_G_STATUT.NC});
+          cur.texts.push({x:45, y:y-8, size:FS.caption, font:"F2", color:"1 1 1", text:"x" + r.n});
+          cur.texts.push({x:74, y:y-8, size:FS.small, font:"F1", text:String(r[champ]).slice(0, 86)});
+          y -= 13;
+        }
+        y -= 8;
+      };
+      bloc("DÉSORDRES REVENANT PLUSIEURS FOIS", s.recurrence, "objet");
+      bloc("POINTS DE CONTRÔLE LES PLUS SOUVENT NON CONFORMES", s.pointsNC, "label");
+    }
+
+    ensure(20);
+    cur.texts.push({x:40, y:y-8, size:FS.caption, font:"F1", color:PDF_GREY,
+      text:"Synthèse établie à partir du registre des réserves et des fiches de contrôle. Le délai de levée court de l'ouverture au constat de levée."});
+
+    const HDR = "0.34 0.55 0.72", MARGE_D = 555.28;
+    pages.forEach((pg, i) => {
+      pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+      pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR, text:settings.proj.toUpperCase().slice(0,60)});
+      pg.texts.push({x:pdfRightX("PILOTAGE", FS.caption, false, MARGE_D), y:816, size:FS.caption, font:"F1", color:HDR, text:"PILOTAGE"});
+      pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+      pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR, text:`${settings.sub} — ${settings.proj}`.slice(0,88)});
+      const tp = `Page ${i+1} / ${pages.length}`;
+      pg.texts.push({x:pdfRightX(tp, FS.caption, false, MARGE_D), y:26, size:FS.caption, font:"F1", color:HDR, text:tp});
+    });
+    const blob = buildPdf(pages);
+    const name = `Pilotage ${sanitizeFilename(CUR.name)} — ${shortDate(todayIso())}.pdf`;
+    const r = await shareOrDownload([new File([blob], name, {type:"application/pdf"})], name);
+    toast(r === "shared" ? "Rapport partagé ✔" : r === "downloaded" ? "Rapport dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur pilotage : " + (err && err.message || err), true); }
 }
 
 /* =============== écran du journal =============== */
@@ -3128,13 +3532,15 @@ function openAddSheet(){ $("#addSheet").classList.add("on"); $("#scrim").classLi
 function closeAddSheet(){ $("#addSheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
 
 /* Position actuelle du téléphone (repli quand Android a supprimé le GPS de la photo). */
-function devicePosition(){
+/* opts permet d'exiger un relevé neuf : sans cela le navigateur peut renvoyer une position
+   mise en cache (jusqu'à maximumAge), et deux points saisis en marchant sont identiques. */
+function devicePosition(opts){
   return new Promise(res => {
     if (!navigator.geolocation) return res(null);
     navigator.geolocation.getCurrentPosition(
-      p => res({lat: p.coords.latitude, lon: p.coords.longitude}),
+      p => res({lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy}),
       () => res(null),
-      {enableHighAccuracy: true, timeout: 8000, maximumAge: 120000}
+      Object.assign({enableHighAccuracy: true, timeout: 8000, maximumAge: 30000}, opts || {})
     );
   });
 }
@@ -3481,7 +3887,25 @@ function distMeters(la1, lo1, la2, lo2){
   const y = (la2 - la1) * rad;
   return Math.sqrt(x * x + y * y) * R;
 }
+/* Regroupement par tranches d'abscisse : sur un linéaire, la proximité GPS crée une zone par
+   constat. On découpe alors le chantier en sections régulières le long de l'axe. */
+function clusterByAbs(photos, pas){
+  const groupes = new Map(), sansAxe = [];
+  for (const p of photos){
+    const r = photoAbs(p);
+    if (!r){ sansAxe.push(p); continue; }
+    const k = Math.floor(r.abs / pas);
+    if (!groupes.has(k)) groupes.set(k, {absKey:k, pas, mode:r.mode, items:[]});
+    groupes.get(k).items.push(p);
+  }
+  const clusters = [...groupes.values()].sort((a, b) => a.absKey - b.absKey);
+  if (sansAxe.length) clusters.push({noGps:true, items:sansAxe});
+  return clusters;
+}
 function clusterPhotos(photos){
+  // tranches d'abscisse si un axe est défini et le réglage activé
+  const pas = CUR && CUR.axis ? Number(CUR.axis.group || 0) : 0;
+  if (pas > 0 && axisOf()) return clusterByAbs(photos, pas);
   const clusters = [];
   for (const p of photos){
     if (p.lat == null){
@@ -3511,6 +3935,11 @@ function zoneLabel(cluster, n){
   const freq = {};
   for (const p of cluster.items){ if (p.zone) freq[p.zone] = (freq[p.zone] || 0) + 1; }
   const top = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+  // section d'axe : on annonce les bornes de la tranche, pas l'étendue des seuls clichés
+  if (cluster.absKey != null){
+    const d = cluster.absKey * cluster.pas, f = d + cluster.pas;
+    return `Section ${n} — ${fmtAbs(d, cluster.mode)} à ${fmtAbs(f, cluster.mode)}${top ? " — " + top[0] : ""}`;
+  }
   const pk = clusterAbsRange(cluster.items);   // repérage linéaire si un axe est défini
   return `Zone ${n}${pk ? " — " + pk : ""}${top ? " — " + top[0] : ""}`;
 }
@@ -3752,6 +4181,19 @@ function visitEntreprises(photos, visit){
       effectif: (m.effectif || "").trim() || "—", engins: (m.engins || "").trim() || "—" };
   });
 }
+/* Largeur d'un texte en points PDF. Helvetica et Arial partagent les mêmes métriques :
+   la mesure du canevas donne une valeur fiable pour caler un texte à droite. */
+let _mesureCtx = null;
+function pdfTextWidth(text, size, bold){
+  if (!_mesureCtx) _mesureCtx = document.createElement("canvas").getContext("2d");
+  _mesureCtx.font = `${bold ? "bold " : ""}${size}px Helvetica, Arial, sans-serif`;
+  return _mesureCtx.measureText(String(text ?? "")).width;
+}
+/* abscisse pour caler un texte à droite de xDroite */
+function pdfRightX(text, size, bold, xDroite){
+  return xDroite - pdfTextWidth(text, size, bold);
+}
+
 /* dégradé axial PDF (ShadingType 2). stops = ["r g b", …] 2 ou 3 arrêts, du haut vers le bas */
 function pdfShadingDict(r){
   const st = r.grad.map(c => `[${c}]`);
@@ -4021,14 +4463,16 @@ async function pdfForEntreprise(data, scope, settings){
     text:"Document extrait du registre de suivi. Les réserves restent ouvertes jusqu'à constat de levée par la maîtrise d'œuvre."});
 
   /* ---- en-tête et pied de page ---- */
-  const HDR = "0.34 0.55 0.72";
+  const HDR = "0.34 0.55 0.72", MARGE_D = 555.28;
   pages.forEach((pg, i) => {
     pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
     pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR, text:settings.proj.toUpperCase().slice(0,60)});
-    pg.texts.push({x:400, y:816, size:FS.caption, font:"F1", color:HDR, text:("RELEVÉ — " + data.nom).slice(0,32)});
+    const th = ("RELEVÉ — " + data.nom).slice(0,32);
+    pg.texts.push({x:pdfRightX(th, FS.caption, false, MARGE_D), y:816, size:FS.caption, font:"F1", color:HDR, text:th});
     pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
     pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR, text:`${settings.sub} — ${settings.proj}`.slice(0,88)});
-    pg.texts.push({x:503, y:26, size:FS.caption, font:"F1", color:HDR, text:`Page ${i+1} / ${pages.length}`});
+    const tp = `Page ${i+1} / ${pages.length}`;
+    pg.texts.push({x:pdfRightX(tp, FS.caption, false, MARGE_D), y:26, size:FS.caption, font:"F1", color:HDR, text:tp});
   });
   return buildPdf(pages);
 }
@@ -4522,13 +4966,16 @@ async function pdfForVisit(visit, photos, settings){
 
   /* ---- en-tête et pied de page (ligne pêche, texte bleu clair) ---- */
   const HDR_INK = "0.34 0.55 0.72"; // bleu moyen, lisible sur blanc
+  const MARGE_D = 555.28;           // bord droit de la zone de texte
   pages.forEach((pg, i) => {
     pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
     pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR_INK, text:settings.proj.toUpperCase().slice(0, 70)});
-    pg.texts.push({x:430, y:816, size:FS.caption, font:"F1", color:HDR_INK, text:"RAPPORT DE VISITE"});
+    const th = "RAPPORT DE VISITE";
+    pg.texts.push({x:pdfRightX(th, FS.caption, false, MARGE_D), y:816, size:FS.caption, font:"F1", color:HDR_INK, text:th});
     pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
     pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR_INK, text:`${settings.sub} — ${settings.proj}`.slice(0, 88)});
-    pg.texts.push({x:503, y:26, size:FS.caption, font:"F1", color:HDR_INK, text:`Page ${i + 1} / ${pages.length}`});
+    const tp = `Page ${i + 1} / ${pages.length}`;
+    pg.texts.push({x:pdfRightX(tp, FS.caption, false, MARGE_D), y:26, size:FS.caption, font:"F1", color:HDR_INK, text:tp});
   });
   return buildPdf(pages);
 }
@@ -5455,6 +5902,11 @@ async function main(){
     const a = ensureAxis(); a.originAbs = parseAbs($("#axOrigin").value);
     await saveCurrentProject(); refreshAxisUI();
   });
+  $("#axGroup").addEventListener("change", async () => {
+    const a = ensureAxis(); a.group = Number($("#axGroup").value) || 0;
+    await saveCurrentProject();
+    toast(a.group ? `Zones regroupées par tranches de ${a.group} m` : "Regroupement par proximité GPS rétabli");
+  });
   $("#axSetOrigin").addEventListener("click", () => axisCapture("origin"));
   $("#axAddPoint").addEventListener("click", () => axisCapture("point"));
   $("#axFromPhotos").addEventListener("click", axisFromPhotos);
@@ -5466,6 +5918,8 @@ async function main(){
   $("#btnJournal").addEventListener("click", async () => {
     try{ await openJournal(); }catch(e){ toast("Journal indisponible : " + (e && e.message || e), true); }
   });
+  $("#btnDashClose").addEventListener("click", () => $("#dashModal").classList.remove("on"));
+  $("#btnDashPdf").addEventListener("click", exportDashboardPdf);
   $("#btnJrnClose").addEventListener("click", () => { $("#jrnModal").classList.remove("on"); openSettings(); });
   $("#btnJrnCsv").addEventListener("click", exportJournalCsv);
   document.querySelectorAll("#jrnFilters .chip").forEach(c => c.addEventListener("click", async () => {
