@@ -1,0 +1,17 @@
+# Cloudflare Pages — en-têtes de service.
+# Ignoré par GitHub Pages, qui ne lit pas ce fichier : le déposer ne casse rien.
+
+# Le service worker et la page ne doivent jamais être figés par un cache
+# intermédiaire, sinon une mise à jour de l'application ne descend jamais
+# jusqu'au téléphone.
+/sw.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Le reste est versionné par le service worker lui-même.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

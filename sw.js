@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
 /* abraCADabra — application version 3.0 */
-const CACHE = "chantier-v40";
+const CACHE = "chantier-v41";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable.png",
   "./fond-plan.jpg", "./pdf.min.js", "./pdf.worker.min.js"];
 
@@ -86,13 +86,70 @@ self.addEventListener("fetch", e => {
 
   if (e.request.method !== "GET") return;
   if (url.origin !== location.origin) return; // API Anthropic, BAN, liens externes : réseau direct
+
+  /* Ouverture de l'application : réseau d'abord, cache en secours.
+     C'est ce qui rend le portail d'authentification réellement utile — sans cela un appareil
+     déjà installé rouvrirait l'application depuis son cache même après retrait de l'autorisation.
+     En secours immédiat sur coupure ou signal trop faible : le chantier reste prioritaire. */
+  if (e.request.mode === "navigate"){
+    e.respondWith(ouverture(e.request));
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request, {ignoreSearch:true}).then(hit =>
       hit || fetch(e.request).then(resp => {
-        const copy = resp.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
+        if (cacheable(e.request, resp)){
+          const copy = resp.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy));
+        }
         return resp;
       })
     )
   );
 });
+
+const DELAI_RESEAU = 3500; // au-delà, on ouvre depuis le cache : pas d'attente sur un signal faible
+
+async function ouverture(req){
+  let resp;
+  try{
+    resp = await Promise.race([
+      fetch(req),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("délai dépassé")), DELAI_RESEAU))
+    ]);
+  }catch{
+    /* hors ligne, ou réseau trop lent : l'application mise en cache */
+    const hit = await caches.match(req, {ignoreSearch:true})
+             || await caches.match("./index.html")
+             || await caches.match("./");
+    if (hit) return hit;
+    return new Response("Application indisponible hors ligne.", {status:503, headers:{"content-type":"text/plain; charset=utf-8"}});
+  }
+  /* renvoyé vers la page de connexion du portail : y conduire le navigateur.
+     On reconstruit la redirection, une réponse « redirected » étant refusée pour une navigation. */
+  if (resp.redirected) return Response.redirect(resp.url, 302);
+  /* refus explicite du portail (403) : afficher le refus, surtout pas le cache */
+  if (!resp.ok) return resp;
+  if (cacheable(req, resp)){
+    const copie = resp.clone();
+    caches.open(CACHE).then(c => c.put(req, copie)).catch(() => {});
+  }
+  return resp;
+}
+
+/* Ne mémoriser qu'une vraie réponse du site.
+   Derrière un portail d'authentification (Cloudflare Access), une session expirée
+   renvoie la page de connexion à la place du fichier : la mettre en cache sous le nom
+   de index.html ou de pdf.min.js casserait l'application de façon irrécupérable. */
+function cacheable(req, resp){
+  if (!resp || !resp.ok) return false;                 // 4xx/5xx, y compris le 302 suivi jusqu'à une erreur
+  if (resp.redirected) return false;                   // redirigé ailleurs : ce n'est pas la ressource demandée
+  if (resp.type !== "basic") return false;             // opaque, cors, opaqueredirect
+  const ct = (resp.headers.get("content-type") || "").toLowerCase();
+  const path = new URL(req.url).pathname;
+  const estPage = req.mode === "navigate" || /\/$|\.html?$/i.test(path);
+  /* du HTML servi à la place d'un script, d'une image ou du manifeste = page d'interstitiel */
+  if (!estPage && ct.includes("text/html")) return false;
+  return true;
+}
