@@ -38,6 +38,8 @@
     --grad-blue:linear-gradient(135deg,#74C2F1 0%,#3D95D4 55%,#2F86C5 100%);
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  /* nos règles .btn/.chip posent un display explicite, qui l'emporterait sur l'attribut hidden */
+  [hidden]{display:none !important}
   html,body{margin:0; padding:0}
   html{background:var(--bg)}
   body{
@@ -311,6 +313,39 @@
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
   .ctrl-concl small{display:block; font-weight:600; font-size:12.5px; color:var(--ink2); margin-top:4px}
+  /* ---- pointage sur plan ---- */
+  #planModal{display:none}
+  #planModal.on{display:flex; flex-direction:column}
+  .planwrap{flex:1; position:relative; overflow:hidden; background:#2A2622; touch-action:none; min-height:40dvh}
+  .planwrap canvas{display:block; width:100%; height:100%}
+  /* viseur fixe : le plan glisse dessous, le doigt ne masque jamais la cible */
+  .viseur{position:absolute; inset:0; pointer-events:none}
+  .viseur .v-h, .viseur .v-v{position:absolute; background:rgba(217,106,11,.85)}
+  .viseur .v-h{left:0; right:0; top:50%; height:1.5px; transform:translateY(-50%)}
+  .viseur .v-v{top:0; bottom:0; left:50%; width:1.5px; transform:translateX(-50%)}
+  .viseur .v-o{position:absolute; left:50%; top:50%; width:38px; height:38px; margin:-19px 0 0 -19px;
+    border:2.5px solid var(--accent); border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.55), 0 2px 10px rgba(0,0,0,.4)}
+  .viseur .v-o::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px;
+    background:var(--accent); border-radius:50%}
+  .planbar{flex:none; background:var(--bg); border-top:1px solid var(--line)}
+  .plan-queue{display:flex; align-items:center; gap:10px; padding:10px 0 2px; font-size:13.5px}
+  .plan-queue .pq-n{flex:none; width:32px; height:32px; border-radius:50%; background:var(--grad); color:#fff;
+    font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center}
+  .plan-queue .pq-t{flex:1; min-width:0}
+  .plan-queue .pq-t b{display:block}
+  .plan-queue .pq-t small{color:var(--ink2); font-size:12px}
+  .plan-empty{padding:14px 0; color:var(--ink2); font-size:13.5px; text-align:center}
+  #planMarks .field input{width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--card);
+    border:1.5px solid var(--line); border-radius:var(--r-md); padding:11px 13px}
+  #planMarks .field input:focus{border-color:var(--blue); outline:none}
+  .mk-row{display:flex; align-items:center; gap:9px; padding:7px 0; border-top:1px solid var(--line)}
+  .mk-row:first-child{border-top:none}
+  .mk-row span{flex:1; min-width:0; font-size:13.5px}
+  /* après .mk-row span, sinon la pastille hérite du flex:1 et s'étire */
+  .mk-row .mk-l{flex:0 0 26px; width:26px; height:26px; border-radius:50%; background:var(--blue); color:#fff;
+    font-size:12.5px; font-weight:800; display:flex; align-items:center; justify-content:center}
+  .mk-row button{flex:none; border:none; background:transparent; font-size:16px; cursor:pointer; padding:2px 5px}
+  .mk-row .mk-go{color:var(--blue-deep)} .mk-row .mk-del{color:var(--nc)}
   /* ---- tableau de bord ---- */
   .kpis{display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-bottom:16px}
   .kpi{border-radius:var(--r-lg); padding:13px 15px; color:#fff; box-shadow:var(--shadow)}
@@ -586,6 +621,43 @@
   </div>
 </section>
 
+<!-- ================= POINTAGE SUR PLAN ================= -->
+<div class="modal" id="planModal">
+  <div class="wrap" style="padding-bottom:0">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnPlanClose" aria-label="Fermer">←</button>
+      <b id="planTitle">Plan</b>
+      <button class="iconbtn" id="btnPlanFit" title="Vue d'ensemble" aria-label="Vue d'ensemble">⛶</button>
+    </div>
+  </div>
+  <div class="planwrap" id="planWrap">
+    <canvas id="planCanvas"></canvas>
+    <div class="viseur" id="planViseur" hidden>
+      <div class="v-h"></div><div class="v-v"></div><div class="v-o"></div>
+    </div>
+  </div>
+  <div class="planbar">
+    <div class="wrap" style="padding-bottom:0">
+      <div id="planQueue" class="plan-queue"></div>
+      <div class="btnrow" style="margin:8px 0 10px">
+        <button class="btn primary block" id="btnPlanPose" hidden>📍 Poser le repère ici</button>
+        <button class="btn ghost block" id="btnPlanSkip" hidden>Passer ce constat</button>
+      </div>
+      <!-- repères libres : annotations du plan, indépendantes des clichés -->
+      <div id="planMarks" hidden>
+        <div class="field" style="margin-bottom:8px">
+          <input type="text" id="markLab" placeholder="Intitulé du repère (ex. : emprise de travaux)">
+        </div>
+        <div class="btnrow" style="margin:0 0 10px">
+          <button class="btn blue block" id="btnMarkPose">🔤 Poser ce repère libre ici</button>
+        </div>
+        <div id="markList"></div>
+      </div>
+      <button class="btn ghost block" id="btnMarkToggle" style="margin:0 0 12px">➕ Repères libres</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================= TABLEAU DE BORD ================= -->
 <div class="modal" id="dashModal">
   <div class="wrap">
@@ -660,7 +732,8 @@
       <button class="iconbtn" id="btnRenameVisit" title="Renommer la visite" aria-label="Renommer la visite" style="width:34px; height:34px; font-size:14px">✎</button>
     </div>
     <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 8px">👷 Moyens sur site (effectif, engins)</button>
-    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 12px">📋 Fiches de contrôle / points d'arrêt</button>
+    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 8px">📋 Fiches de contrôle / points d'arrêt</button>
+    <button class="btn ghost block" id="btnPlanScreen" style="margin:0 0 12px">🗺 Pointer les constats sur le plan</button>
     <div id="photoList"></div>
     <div class="btnrow">
       <button class="btn primary block" id="btnPdf">📄 Rapport PDF</button>
@@ -763,6 +836,12 @@
         <textarea id="fSuite" placeholder="Action attendue, registre, relance…"></textarea>
         <button type="button" class="micbtn" data-mic="fSuite" aria-label="Dictée vocale">🎤</button>
       </div>
+    </div>
+
+    <div class="field">
+      <label>Position sur le plan</label>
+      <button class="btn ghost block" id="btnPlacePin" type="button">🗺 Placer ce constat sur le plan</button>
+      <div class="hint" id="pinState"></div>
     </div>
 
     <div class="field">
@@ -1032,12 +1111,20 @@
           <option value="image">Image chargée ci-dessous</option>
         </select>
         <div class="chips" style="margin-top:8px">
-          <button class="chip" id="btnPlan">Choisir une image…</button>
+          <button class="chip" id="btnPlan">Choisir un plan…</button>
           <button class="chip" id="btnPlanClear">Retirer l'image</button>
         </div>
         <div class="hint" id="planState"></div>
-        <div class="hint">Le sélecteur ouvre <b>Fichiers</b> (Google Drive, Photos, stockage du téléphone).</div>
+        <div class="hint"><b>Image ou PDF</b> — un PDF est converti en image à l'import (1re page). Le sélecteur ouvre <b>Fichiers</b> : Google Drive, Photos, stockage du téléphone.</div>
         <input type="file" id="filePlan" hidden>
+      </div>
+      <div class="field">
+        <label for="sPlanSections">Extrait de plan par section</label>
+        <select id="sPlanSections">
+          <option value="1">Oui — chaque section porte son extrait recadré</option>
+          <option value="0">Non — vue d'ensemble seule</option>
+        </select>
+        <div class="hint">Recadre le plan sur chaque section, avec ses seuls repères. Rapport plus lisible sur un linéaire, mais plus long à produire — en vue aérienne, chaque extrait télécharge ses tuiles.</div>
       </div>
       <div class="field">
         <label for="sPlanZoom">Échelle du plan automatique</label>
@@ -1397,7 +1484,8 @@ function normSettings(s){
     cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
     contacts: Array.isArray(s.contacts) ? s.contacts : [],
     planZoom: s.planZoom || "300",
-    planMode: s.planMode || "auto"
+    planMode: s.planMode || "auto",
+    planSections: s.planSections === undefined ? true : !!s.planSections
   };
 }
 
@@ -1428,7 +1516,60 @@ async function imgToStored(file, maxDim, q){
   return {d: cv.toDataURL("image/jpeg", q), w, h};
 }
 async function storeLogo(key, file){ if (!CUR) return; CUR[key] = await imgToStored(file, 160, 0.92); await saveCurrentProject(); }
-async function storePlan(file){ if (!CUR) return; CUR.planImg = await imgToStored(file, 1600, 0.85); await saveCurrentProject(); }
+/* Rend la 1re page d'un PDF en image haute définition. pdf.js n'est chargé qu'à cet instant :
+   le PDF n'est qu'un format d'entrée, tout le reste de l'application travaille sur une image. */
+let _pdfjsPret = null;
+function chargerPdfJs(){
+  if (_pdfjsPret) return _pdfjsPret;
+  _pdfjsPret = new Promise((res, rej) => {
+    if (window.pdfjsLib) return res(window.pdfjsLib);
+    const s = document.createElement("script");
+    s.src = "pdf.min.js";
+    s.onload = () => {
+      if (!window.pdfjsLib) return rej(new Error("moteur PDF indisponible"));
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = "pdf.worker.min.js";
+      res(window.pdfjsLib);
+    };
+    s.onerror = () => rej(new Error("moteur PDF introuvable — redéployez pdf.min.js"));
+    document.head.appendChild(s);
+  });
+  return _pdfjsPret;
+}
+async function pdfPremierePageEnImage(file, largeurCible){
+  const lib = await chargerPdfJs();
+  const doc = await lib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
+  const page = await doc.getPage(1);
+  const base = page.getViewport({scale: 1});
+  const scale = Math.min(4, Math.max(1, (largeurCible || 2200) / base.width));
+  const vp = page.getViewport({scale});
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, cv.width, cv.height);   // les PDF sont transparents
+  await page.render({canvasContext: ctx, viewport: vp}).promise;
+  const nbPages = doc.numPages;
+  try{ await doc.destroy(); }catch{}
+  return {canvas: cv, nbPages};
+}
+function estPdf(f){ return /pdf/i.test(f.type || "") || /\.pdf$/i.test(f.name || ""); }
+
+async function storePlan(file){
+  if (!CUR) return;
+  if (estPdf(file)){
+    toast("Rendu du plan PDF…");
+    const {canvas, nbPages} = await pdfPremierePageEnImage(file, 2200);
+    // on repasse par imgToStored pour homogénéiser le stockage (JPEG, fond blanc)
+    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.9));
+    CUR.planImg = await imgToStored(new File([blob], "plan.jpg", {type:"image/jpeg"}), 2200, 0.88);
+    CUR.planImg.src = "pdf"; CUR.planImg.nom = file.name || "plan.pdf";
+    await saveCurrentProject();
+    if (nbPages > 1) toast(`Plan importé — 1re page sur ${nbPages}. Pour une autre page, exportez-la seule depuis votre PDF.`, true);
+    return;
+  }
+  CUR.planImg = await imgToStored(file, 2200, 0.88);
+  CUR.planImg.src = "image"; CUR.planImg.nom = file.name || "";
+  await saveCurrentProject();
+}
 /* logos de droite : jusqu'à 3, tous à la même hauteur (l'ancien logoR unique est repris automatiquement) */
 function getLogosR(){
   if (!CUR) return [];
@@ -2164,9 +2305,15 @@ function axisLength(){
   for (let i = 0; i < S.length - 1; i++) L += Math.hypot(S[i+1].x - S[i].x, S[i+1].y - S[i].y);
   return L;
 }
+/* Position effective d'un cliché : la position rectifiée à la main si elle existe, sinon le GPS.
+   La mesure d'origine est toujours conservée — elle seule fait foi en contradictoire. */
+function photoLat(p){ return p && p.latFix != null ? p.latFix : (p ? p.lat : null); }
+function photoLon(p){ return p && p.lonFix != null ? p.lonFix : (p ? p.lon : null); }
+function photoRectifie(p){ return !!(p && p.latFix != null); }
+
 /* repère d'un cliché, prêt à afficher : « PK 2+340 » (+ écart si notable) */
 function photoAbs(p){
-  const r = projectOnAxis(p.lat, p.lon);
+  const r = projectOnAxis(photoLat(p), photoLon(p));
   return r ? r : null;
 }
 function photoAbsText(p, avecEcart){
@@ -2252,12 +2399,12 @@ async function axisFromPhotos(){
   const a = ensureAxis();
   const vmap = {}; (await projectVisits()).forEach(v => vmap[v.id] = v);
   const pts = (await idbAll("photos"))
-    .filter(p => vmap[p.visitId] && p.lat != null && !p.gpsApprox)
+    .filter(p => vmap[p.visitId] && photoLat(p) != null && (!p.gpsApprox || photoRectifie(p)))
     .sort((x, y) => {
       const dx = vmap[x.visitId].date, dy = vmap[y.visitId].date;
       return dx < dy ? -1 : dx > dy ? 1 : x.num - y.num;
     })
-    .map(p => ({lat:p.lat, lon:p.lon}));
+    .map(p => ({lat:photoLat(p), lon:photoLon(p)}));
   if (pts.length < 2){ toast("Il faut au moins deux clichés géolocalisés.", true); return; }
   // on ne garde qu'un point tous les 25 m pour lisser la marche
   const gardes = [pts[0]];
@@ -2793,6 +2940,302 @@ async function deleteCtrlForm(){
   closeCtrlForm();
   await openCtrl();
   toast("Fiche supprimée");
+}
+
+/* =============== pointage sur plan ===============
+   Le repère d'un constat est stocké en coordonnées relatives (0→1) : il reste juste même si
+   le plan est remplacé par une version de définition différente. */
+const PLAN = {
+  img: null, cv: null, ctx: null,
+  vue: {x:0, y:0, k:1},      // décalage en pixels écran + facteur d'échelle
+  photos: [], file: [], idx: -1,
+  geo: null                  // renseigné en vue aérienne : permet de rectifier une position
+};
+/* position d'affichage d'un constat sur le plan courant, en relatif (0→1) */
+function planPinRel(p){
+  if (PLAN.geo) return photoLat(p) != null ? relFromGeo(PLAN.geo, photoLat(p), photoLon(p)) : null;
+  return planPhotoPin(p);
+}
+function planPhotoPin(p){ return p.planPin && p.planPin.x != null ? p.planPin : null; }
+
+/* Repères libres : annotations du plan (emprise, accès, limite de phase…). Ils appartiennent au
+   chantier, pas à une visite : ils figurent donc sur tous les rapports tant qu'on ne les retire pas. */
+function planMarks(){
+  if (!CUR) return [];
+  if (!Array.isArray(CUR.marks)) CUR.marks = [];
+  return CUR.marks;
+}
+/* 0 → A, 25 → Z, 26 → AA */
+function markLetter(i){
+  let s = "", n = i + 1;
+  while (n > 0){ const r = (n - 1) % 26; s = String.fromCharCode(65 + r) + s; n = Math.floor((n - 1) / 26); }
+  return s;
+}
+
+async function openPlanScreen(cible){
+  if (!CUR) return;
+  if (!curVisit){ toast("Ouvrez une visite.", true); return; }
+  const s = getSettings();
+  const charge = getLogo("planImg");
+  PLAN.geo = null;
+  let plan = null;
+  // vue aérienne géoréférencée si le chantier est en mode automatique
+  if (s.planMode !== "image"){
+    const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+    const cl = clusterPhotos(photos);
+    if (cl.some(c => !c.noGps)){
+      toast("Chargement de la vue aérienne…");
+      const auto = await buildAutoPlan(cl, s.planZoom).catch(() => null);
+      if (auto && auto.dataUrl){ plan = {d: auto.dataUrl, nom: "Vue aérienne IGN"}; PLAN.geo = auto.geo; }
+    }
+  }
+  if (!plan && charge) plan = charge;
+  if (!plan){
+    toast(s.planMode === "image"
+      ? "Chargez d'abord un plan dans les Réglages."
+      : "Vue aérienne indisponible — chargez un plan ou vérifiez le réseau.", true);
+    return;
+  }
+  PLAN.img = await chargerImage(plan.d);
+  PLAN.cv = $("#planCanvas"); PLAN.ctx = PLAN.cv.getContext("2d");
+  PLAN.photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+  // file d'attente : les constats sans repère, ou celui qu'on vient demander explicitement
+  // en vue aérienne les constats ont déjà une position : la file ne sert qu'à corriger,
+  // ou à situer un cliché dépourvu de GPS.
+  PLAN.file = cible ? [cible]
+    : (PLAN.geo ? PLAN.photos.filter(p => photoLat(p) == null).map(p => p.id)
+                : PLAN.photos.filter(p => !planPhotoPin(p)).map(p => p.id));
+  PLAN.idx = PLAN.file.length ? 0 : -1;
+  $("#planTitle").textContent = plan.nom ? `Plan — ${plan.nom}`.slice(0, 40) : "Plan";
+  $("#planModal").classList.add("on");
+  planToggleMarks(false);
+  $("#markLab").value = "";
+  requestAnimationFrame(() => { planFit(); planSetupGestes(); planMajFile(); });
+}
+function chargerImage(src){
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error("plan illisible"));
+    im.src = src;
+  });
+}
+function planDims(){
+  const w = $("#planWrap");
+  const r = w.getBoundingClientRect();
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (PLAN.cv.width !== Math.round(r.width*dpr) || PLAN.cv.height !== Math.round(r.height*dpr)){
+    PLAN.cv.width = Math.round(r.width*dpr); PLAN.cv.height = Math.round(r.height*dpr);
+  }
+  return {w:r.width, h:r.height, dpr};
+}
+function planFit(){
+  const d = planDims();
+  const k = Math.min(d.w / PLAN.img.width, d.h / PLAN.img.height);
+  PLAN.vue.k = k;
+  PLAN.vue.x = (d.w - PLAN.img.width * k) / 2;
+  PLAN.vue.y = (d.h - PLAN.img.height * k) / 2;
+  planDessine();
+}
+function planDessine(){
+  const d = planDims(), g = PLAN.ctx, v = PLAN.vue;
+  g.setTransform(d.dpr, 0, 0, d.dpr, 0, 0);
+  g.fillStyle = "#2A2622"; g.fillRect(0, 0, d.w, d.h);
+  g.imageSmoothingQuality = "high";
+  g.drawImage(PLAN.img, v.x, v.y, PLAN.img.width * v.k, PLAN.img.height * v.k);
+  // repères libres d'abord, pour que les constats restent au-dessus
+  planMarks().forEach((m, i) => {
+    planPastille(g, v.x + m.x * PLAN.img.width * v.k, v.y + m.y * PLAN.img.height * v.k,
+      markLetter(i), "#2F86C5", 1);
+  });
+  // repères de constats
+  for (const p of PLAN.photos){
+    const pin = planPinRel(p);
+    if (!pin) continue;
+    const enCours = PLAN.idx >= 0 && PLAN.file[PLAN.idx] === p.id;
+    planPastille(g, v.x + pin.x * PLAN.img.width * v.k, v.y + pin.y * PLAN.img.height * v.k,
+      String(p.num), STATUT_CSS[p.statut] || "#8A8A8A", enCours ? 0.35 : 1);
+  }
+}
+const STATUT_CSS = {C:"#2E7D45", NC:"#C0392B", PA:"#A87407", AC:"#3D6E9E"};
+function planPastille(g, x, y, txt, couleur, alpha){
+  g.save(); g.globalAlpha = alpha == null ? 1 : alpha;
+  g.beginPath(); g.arc(x, y, 13, 0, 7);
+  g.fillStyle = couleur; g.fill();
+  g.lineWidth = 2.5; g.strokeStyle = "#fff"; g.stroke();
+  g.fillStyle = "#fff"; g.font = "bold 13px system-ui,sans-serif";
+  g.textAlign = "center"; g.textBaseline = "middle";
+  g.fillText(txt, x, y + 0.5);
+  g.restore();
+}
+/* déplacement à un doigt, zoom à deux doigts */
+function planSetupGestes(){
+  const w = $("#planWrap");
+  if (w.__pret) return;
+  w.__pret = true;
+  const pts = new Map();
+  let base = null;
+  const centre = () => {
+    const t = [...pts.values()];
+    return {x:(t[0].x + t[1].x)/2, y:(t[0].y + t[1].y)/2, d:Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y)};
+  };
+  w.addEventListener("pointerdown", e => {
+    w.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (pts.size === 2) base = {...centre(), k:PLAN.vue.k, vx:PLAN.vue.x, vy:PLAN.vue.y};
+  });
+  w.addEventListener("pointermove", e => {
+    if (!pts.has(e.pointerId)) return;
+    const av = pts.get(e.pointerId);
+    pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (pts.size === 1){
+      PLAN.vue.x += e.clientX - av.x; PLAN.vue.y += e.clientY - av.y;
+      planDessine();
+    } else if (pts.size === 2 && base){
+      const c = centre();
+      const r = w.getBoundingClientRect();
+      const f = Math.max(0.15, Math.min(14, base.k * (c.d / (base.d || 1))));
+      // on zoome autour du centre des deux doigts
+      const cx = base.x - r.left, cy = base.y - r.top;
+      PLAN.vue.k = f;
+      PLAN.vue.x = (c.x - r.left) - (cx - base.vx) * (f / base.k);
+      PLAN.vue.y = (c.y - r.top)  - (cy - base.vy) * (f / base.k);
+      planDessine();
+    }
+  });
+  const fin = e => { pts.delete(e.pointerId); if (pts.size < 2) base = null; };
+  w.addEventListener("pointerup", fin);
+  w.addEventListener("pointercancel", fin);
+  w.addEventListener("pointerleave", fin);
+  window.addEventListener("resize", () => { if ($("#planModal").classList.contains("on")) planDessine(); });
+}
+/* position du viseur, en coordonnées relatives au plan */
+function planViseurRel(){
+  const d = planDims(), v = PLAN.vue;
+  return {
+    x: ((d.w/2) - v.x) / (PLAN.img.width * v.k),
+    y: ((d.h/2) - v.y) / (PLAN.img.height * v.k)
+  };
+}
+function planMajFile(){
+  const enCours = PLAN.idx >= 0 && PLAN.idx < PLAN.file.length;
+  // le viseur reste actif si le panneau des repères libres est ouvert
+  $("#planViseur").hidden = !enCours && !planMarksVisible();
+  $("#btnPlanPose").hidden = !enCours;
+  $("#btnPlanSkip").hidden = !enCours;
+  const q = $("#planQueue");
+  if (!enCours){
+    const restants = PLAN.photos.filter(p => !planPinRel(p)).length;
+    q.innerHTML = `<div class="plan-empty">${
+      restants ? `${restants} constat(s) sans position — rouvrez le plan pour les placer.`
+      : (PLAN.geo ? "Positions issues du GPS. Pour en corriger une, ouvrez le cliché puis « Placer ce constat sur le plan »."
+                  : "Tous les constats de cette visite sont placés ✔")}</div>`;
+    planDessine();
+    return;
+  }
+  const p = PLAN.photos.find(x => x.id === PLAN.file[PLAN.idx]);
+  q.innerHTML = `<span class="pq-n">${p.num}</span>
+    <span class="pq-t"><b>${esc(p.titre || "Constat n°" + p.num)}</b>
+      <small>${esc(p.statut || "à qualifier")}${p.zone ? " · " + esc(p.zone) : ""} — ${PLAN.idx+1} sur ${PLAN.file.length}</small></span>`;
+  // on centre le viseur sur la position existante s'il y en a une
+  const pin = planPinRel(p);
+  if (pin){
+    const d = planDims();
+    PLAN.vue.x = d.w/2 - pin.x * PLAN.img.width * PLAN.vue.k;
+    PLAN.vue.y = d.h/2 - pin.y * PLAN.img.height * PLAN.vue.k;
+  }
+  planDessine();
+}
+/* ---- repères libres ---- */
+function planMarksVisible(){ return !$("#planMarks").hidden; }
+function planToggleMarks(forcer){
+  const box = $("#planMarks");
+  const ouvre = forcer != null ? forcer : box.hidden;
+  box.hidden = !ouvre;
+  $("#btnMarkToggle").textContent = ouvre ? "▲ Masquer les repères libres" : "➕ Repères libres";
+  // le viseur sert aussi à poser un repère libre
+  if (ouvre && PLAN.idx < 0) $("#planViseur").hidden = false;
+  if (!ouvre && PLAN.idx < 0) $("#planViseur").hidden = true;
+  if (ouvre) planMajMarks();
+}
+function planMajMarks(){
+  const box = $("#markList");
+  const ms = planMarks();
+  box.innerHTML = ms.length
+    ? ms.map((m, i) => `<div class="mk-row">
+        <span class="mk-l">${markLetter(i)}</span>
+        <span>${esc(m.lab || "(sans intitulé)")}</span>
+        <button class="mk-go" data-go="${i}" aria-label="Centrer">◎</button>
+        <button class="mk-del" data-del="${i}" aria-label="Supprimer">✕</button>
+      </div>`).join("")
+    : `<div class="hint">Aucun repère libre. Saisissez un intitulé puis posez-le au viseur.</div>`;
+  box.querySelectorAll("[data-go]").forEach(b => b.addEventListener("click", () => {
+    const m = planMarks()[Number(b.dataset.go)], d = planDims();
+    PLAN.vue.x = d.w/2 - m.x * PLAN.img.width * PLAN.vue.k;
+    PLAN.vue.y = d.h/2 - m.y * PLAN.img.height * PLAN.vue.k;
+    planDessine();
+  }));
+  box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", async () => {
+    const i = Number(b.dataset.del), m = planMarks()[i];
+    if (!confirm(`Supprimer le repère ${markLetter(i)} — ${m.lab || "(sans intitulé)"} ?`)) return;
+    CUR.marks.splice(i, 1);
+    await saveCurrentProject();
+    await logAction("Plan", markLetter(i), "Repère libre supprimé", m.lab || "");
+    planMajMarks(); planDessine();
+    toast("Repère supprimé");
+  }));
+}
+async function planPoserMark(){
+  const lab = $("#markLab").value.trim();
+  if (!lab){ toast("Donnez un intitulé au repère.", true); $("#markLab").focus(); return; }
+  const rel = planViseurRel();
+  if (rel.x < 0 || rel.x > 1 || rel.y < 0 || rel.y > 1){
+    toast("Le viseur est hors du plan — recadrez avant de poser.", true); return;
+  }
+  planMarks().push({lab, x:+rel.x.toFixed(5), y:+rel.y.toFixed(5), at: nowStamp()});
+  await saveCurrentProject();
+  await logAction("Plan", markLetter(CUR.marks.length - 1), "Repère libre posé", lab);
+  $("#markLab").value = "";
+  planMajMarks(); planDessine();
+  toast(`Repère ${markLetter(CUR.marks.length - 1)} posé`);
+}
+
+async function planPoser(){
+  if (PLAN.idx < 0) return;
+  const id = PLAN.file[PLAN.idx];
+  const p = (await idbAll("photos","visitId",curVisit.id)).find(x => x.id === id);
+  if (!p) return;
+  const rel = planViseurRel();
+  if (rel.x < 0 || rel.x > 1 || rel.y < 0 || rel.y > 1){
+    toast("Le viseur est hors du plan — recadrez avant de poser.", true); return;
+  }
+  if (PLAN.geo){
+    // vue aérienne : le repère donne de vraies coordonnées. On rectifie la position sans
+    // effacer la mesure GPS d'origine, qui reste seule opposable.
+    const g = geoFromRel(PLAN.geo, rel.x, rel.y);
+    const avantLa = photoLat(p), avantLo = photoLon(p);
+    const ecart = (avantLa != null) ? Math.round(distMeters(avantLa, avantLo, g.lat, g.lon)) : null;
+    p.latFix = +g.lat.toFixed(6); p.lonFix = +g.lon.toFixed(6); p.fixAt = nowStamp();
+    await tx("photos","readwrite", s => s.put(p));
+    await logAction("Constat", `n°${p.num}`, "Position rectifiée sur la vue aérienne",
+      [`GPS d'origine ${p.lat != null ? p.lat.toFixed(5)+", "+p.lon.toFixed(5) : "absent"}`,
+       `rectifiée ${p.latFix.toFixed(5)}, ${p.lonFix.toFixed(5)}`,
+       ecart != null ? `écart ${ecart} m` : ""].filter(Boolean));
+    const loc = PLAN.photos.find(x => x.id === id);
+    if (loc){ loc.latFix = p.latFix; loc.lonFix = p.lonFix; loc.fixAt = p.fixAt; }
+    toast(`Position du constat n°${p.num} rectifiée${ecart != null ? ` (${ecart} m)` : ""}`);
+  } else {
+    const avant = planPhotoPin(p);
+    p.planPin = {x: +rel.x.toFixed(5), y: +rel.y.toFixed(5), at: nowStamp()};
+    await tx("photos","readwrite", s => s.put(p));
+    await logAction("Constat", `n°${p.num}`, avant ? "Repère déplacé sur le plan" : "Repère posé sur le plan",
+      `x ${Math.round(rel.x*100)} % · y ${Math.round(rel.y*100)} %`);
+    const loc = PLAN.photos.find(x => x.id === id); if (loc) loc.planPin = p.planPin;
+  }
+  PLAN.idx++;
+  if (PLAN.idx >= PLAN.file.length){ PLAN.idx = -1; toast("Tous les repères de la file sont posés ✔"); }
+  planMajFile();
+  await renderPhotos();
 }
 
 /* =============== écran du tableau de bord =============== */
@@ -3442,8 +3885,9 @@ async function renderPhotos(){
   list.innerHTML = openHtml + todoHtml + photos.map(p => {
     const meta = [];
     if (p.takenAt){ const [d, t] = p.takenAt.split("T"); meta.push(`${frDate(d)} ${t}`); }
-    if (p.lat != null){
-      meta.push(`<a href="https://maps.google.com/?q=${p.lat.toFixed(6)},${p.lon.toFixed(6)}" target="_blank" rel="noopener">📍 ${p.gpsApprox ? "≈ " : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}</a>`);
+    if (photoLat(p) != null){
+      const la = photoLat(p), lo = photoLon(p);
+      meta.push(`<a href="https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}" target="_blank" rel="noopener">📍 ${photoRectifie(p) ? "✎ " : (p.gpsApprox ? "≈ " : "")}${la.toFixed(5)}, ${lo.toFixed(5)}</a>`);
     }
     const fields = [];
     const pk = photoAbsText(p, true);
@@ -3708,7 +4152,10 @@ async function openEditor(id){
   $("#editImg").src = editURL;
   const meta = [];
   if (curEdit.takenAt){ const [d,t] = curEdit.takenAt.split("T"); meta.push(`Pris le ${frDate(d)} à ${t}`); }
-  if (curEdit.lat != null) meta.push(`GPS ${curEdit.gpsApprox ? "≈ (position à l'import) " : ""}${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
+  if (photoLat(curEdit) != null) meta.push(
+    photoRectifie(curEdit)
+      ? `Position rectifiée ${photoLat(curEdit).toFixed(5)}, ${photoLon(curEdit).toFixed(5)} (GPS d'origine ${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)})`
+      : `GPS ${curEdit.gpsApprox ? "≈ (position à l'import) " : ""}${curEdit.lat.toFixed(5)}, ${curEdit.lon.toFixed(5)}`);
   const pkEdit = photoAbsText(curEdit, true);
   if (pkEdit) meta.push(pkEdit);
   $("#editMeta").textContent = meta.join(" — ") || "Pas de métadonnées EXIF trouvées";
@@ -3718,6 +4165,13 @@ async function openEditor(id){
   $("#fDesc").value = curEdit.description || "";
   $("#fSuite").value = curEdit.suite || "";
   $("#fEcheance").value = curEdit.dateLimite || "";
+  const pin = planPhotoPin(curEdit);
+  $("#pinState").textContent = photoRectifie(curEdit)
+    ? `Position rectifiée le ${frDate((curEdit.fixAt||"").split("T")[0] || todayIso())} — appuyez pour la corriger à nouveau.`
+    : (pin ? `Repère posé le ${frDate((pin.at||"").split("T")[0] || todayIso())} — appuyez pour le déplacer.`
+           : (getSettings().planMode === "image" && !getLogo("planImg")
+                ? "Chargez d'abord un plan dans les Réglages."
+                : "Position issue du GPS — appuyez pour la corriger sur la vue aérienne."));
   document.querySelectorAll("#statutChips .chip").forEach(c =>
     c.classList.toggle("on", c.dataset.v === curEdit.statut));
   buildQuickChips();
@@ -3908,7 +4362,7 @@ function clusterPhotos(photos){
   if (pas > 0 && axisOf()) return clusterByAbs(photos, pas);
   const clusters = [];
   for (const p of photos){
-    if (p.lat == null){
+    if (photoLat(p) == null){
       let c = clusters.find(k => k.noGps);
       if (!c){ c = {noGps:true, items:[]}; clusters.push(c); }
       c.items.push(p);
@@ -3917,15 +4371,15 @@ function clusterPhotos(photos){
     let best = null, bestD = Infinity;
     for (const c of clusters){
       if (c.noGps) continue;
-      const d = distMeters(c.lat, c.lon, p.lat, p.lon);
+      const d = distMeters(c.lat, c.lon, photoLat(p), photoLon(p));
       if (d < bestD){ bestD = d; best = c; }
     }
     if (best && bestD <= 12){ // ± 10 m avec tolérance de mesure
       best.items.push(p);
-      best.lat += (p.lat - best.lat) / best.items.length; // centroïde glissant
-      best.lon += (p.lon - best.lon) / best.items.length;
+      best.lat += (photoLat(p) - best.lat) / best.items.length; // centroïde glissant
+      best.lon += (photoLon(p) - best.lon) / best.items.length;
     } else {
-      clusters.push({lat: p.lat, lon: p.lon, items:[p]});
+      clusters.push({lat: photoLat(p), lon: photoLon(p), items:[p]});
     }
   }
   return clusters;
@@ -4031,8 +4485,113 @@ async function buildAutoPlan(clusters, widthMeters){
   ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(W - ctx.measureText(igLbl).width - 14*F, H - 18*F, ctx.measureText(igLbl).width + 14*F, 18*F);
   ctx.fillStyle = "#444"; ctx.fillText(igLbl, W - 7*F, H - 5*F);
   const blob = await new Promise(r => cv.toBlob(r, "image/jpeg", 0.85));
-  return {bytes: new Uint8Array(await blob.arrayBuffer()), w: W, h: H, auto: true};
+  // géoréférencement : permet de retrouver des coordonnées depuis un point de l'image
+  return {bytes: new Uint8Array(await blob.arrayBuffer()), w: W, h: H, auto: true,
+          geo: {z, n, px0, py0, k, W, H}, dataUrl: cv.toDataURL("image/jpeg", 0.85)};
 }
+/* position relative (0→1) sur un plan aérien → coordonnées géographiques */
+function geoFromRel(geo, rx, ry){
+  if (!geo) return null;
+  const tpx = geo.px0 + (rx * geo.W) / geo.k;
+  const tpy = geo.py0 + (ry * geo.H) / geo.k;
+  const lon = tpx / (geo.n * 256) * 360 - 180;
+  const lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * tpy / (geo.n * 256)))) * 180 / Math.PI;
+  return {lat, lon};
+}
+/* coordonnées → position relative (0→1) sur le plan aérien */
+function relFromGeo(geo, lat, lon){
+  if (!geo) return null;
+  const lr = lat * Math.PI / 180;
+  const tpx = (lon + 180) / 360 * geo.n * 256;
+  const tpy = (1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * geo.n * 256;
+  return { x: ((tpx - geo.px0) * geo.k) / geo.W, y: ((tpy - geo.py0) * geo.k) / geo.H };
+}
+/* Extrait de plan recadré sur une section, avec ses seuls repères.
+   Vue aérienne : on refabrique une mosaïque resserrée sur la section (plus net qu'un simple zoom).
+   Plan chargé : on découpe autour des repères de la section. Renvoie null si rien à montrer. */
+async function planExtraitSection(cluster, settings){
+  if (cluster.noGps && !cluster.items.some(planPhotoPin)) return null;
+  const charge = getLogo("planImg");
+
+  // --- vue aérienne
+  if (settings.planMode !== "image"){
+    const pts = cluster.items.filter(p => photoLat(p) != null)
+      .map(p => ({lat: photoLat(p), lon: photoLon(p)}));
+    if (!pts.length) return null;
+    // largeur : étendue de la section + marge, bornée pour rester lisible
+    let etendue = 0;
+    for (const a of pts) for (const b of pts) etendue = Math.max(etendue, distMeters(a.lat, a.lon, b.lat, b.lon));
+    const largeur = Math.min(600, Math.max(60, Math.round(etendue * 1.8 + 50)));
+    const faux = [{lat: pts.reduce((s,p)=>s+p.lat,0)/pts.length,
+                   lon: pts.reduce((s,p)=>s+p.lon,0)/pts.length,
+                   items: cluster.items}];
+    const auto = await buildAutoPlan(faux, String(largeur)).catch(() => null);
+    return auto ? {bytes: auto.bytes, w: auto.w, h: auto.h, auto: true, largeur} : null;
+  }
+
+  // --- plan chargé : découpe autour des repères de la section
+  if (!charge) return null;
+  const pins = cluster.items.filter(planPhotoPin).map(p => ({p, pin: planPhotoPin(p)}));
+  if (!pins.length) return null;
+  const im = await chargerImage(charge.d);
+  let x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+  for (const {pin} of pins){ x0 = Math.min(x0, pin.x); x1 = Math.max(x1, pin.x); y0 = Math.min(y0, pin.y); y1 = Math.max(y1, pin.y); }
+  const margeX = Math.max(0.06, (x1 - x0) * 0.5), margeY = Math.max(0.06, (y1 - y0) * 0.5);
+  let rx0 = Math.max(0, x0 - margeX), ry0 = Math.max(0, y0 - margeY);
+  let rx1 = Math.min(1, x1 + margeX), ry1 = Math.min(1, y1 + margeY);
+  const sx = rx0 * im.width, sy = ry0 * im.height;
+  const sw = Math.max(40, (rx1 - rx0) * im.width), sh = Math.max(40, (ry1 - ry0) * im.height);
+  const cv = document.createElement("canvas");
+  cv.width = Math.round(sw); cv.height = Math.round(sh);
+  const g = cv.getContext("2d");
+  g.drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+  const r = Math.max(12, Math.round(Math.min(cv.width, cv.height) * 0.035));
+  for (const {p, pin} of pins){
+    const x = (pin.x - rx0) / (rx1 - rx0) * cv.width, y = (pin.y - ry0) / (ry1 - ry0) * cv.height;
+    g.beginPath(); g.arc(x, y, r, 0, 7);
+    g.fillStyle = STATUT_CSS[p.statut] || "#8A8A8A"; g.fill();
+    g.lineWidth = Math.max(2, r * 0.2); g.strokeStyle = "#fff"; g.stroke();
+    g.fillStyle = "#fff"; g.font = `bold ${Math.round(r * 1.15)}px system-ui, sans-serif`;
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(String(p.num), x, y + r * 0.05);
+  }
+  const blob = await new Promise(res => cv.toBlob(res, "image/jpeg", 0.88));
+  return {bytes: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height, auto: false};
+}
+
+/* Incruste sur le plan chargé les repères posés à la main. Renvoie null si aucun repère,
+   pour laisser le plan d'origine intact. */
+async function planAvecReperes(planStocke, clusters){
+  const photos = clusters.flatMap(c => c.items).filter(planPhotoPin);
+  const marks = planMarks();
+  if (!photos.length && !marks.length) return null;
+  const im = await chargerImage(planStocke.d);
+  const cv = document.createElement("canvas");
+  cv.width = im.width; cv.height = im.height;
+  const g = cv.getContext("2d");
+  g.drawImage(im, 0, 0);
+  // pastilles dimensionnées d'après la largeur du plan pour rester lisibles à l'impression
+  const r = Math.max(14, Math.round(Math.min(cv.width, cv.height) * 0.018));
+  const pastille = (x, y, txt, couleur) => {
+    g.save();
+    g.beginPath(); g.arc(x, y, r, 0, 7);
+    g.fillStyle = couleur; g.fill();
+    g.lineWidth = Math.max(2, r * 0.2); g.strokeStyle = "#fff"; g.stroke();
+    g.fillStyle = "#fff"; g.font = `bold ${Math.round(r * 1.15)}px system-ui, sans-serif`;
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText(txt, x, y + r * 0.05);
+    g.restore();
+  };
+  marks.forEach((m, i) => pastille(m.x * cv.width, m.y * cv.height, markLetter(i), "#2F86C5"));
+  for (const p of photos){
+    const pin = planPhotoPin(p);
+    pastille(pin.x * cv.width, pin.y * cv.height, String(p.num), STATUT_CSS[p.statut] || "#8A8A8A");
+  }
+  const blob = await new Promise(res => cv.toBlob(res, "image/jpeg", 0.88));
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return {bytes, w: cv.width, h: cv.height, auto: false, marks: marks.map((m, i) => ({l: markLetter(i), lab: m.lab}))};
+}
+
 async function getPlanForReport(clusters, settings){
   const up = getLogo("planImg");
   const tryAuto = async () => { try{ return await buildAutoPlan(clusters, settings.planZoom); }catch{ return null; } };
@@ -4044,12 +4603,18 @@ async function getPlanForReport(clusters, settings){
     const lon = geo.reduce((s, c) => s + c.lon, 0) / geo.length;
     place = await reverseCommune(lat, lon);
   }
+  // plan chargé : on y incruste les repères posés à la main avant de l'intégrer
+  const planCharge = async () => {
+    if (!up) return null;
+    const marque = await planAvecReperes(up, clusters);
+    return marque || {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
+  };
   let plan = null;
   if (settings.planMode === "image"){
-    plan = up ? {bytes: logoBytes(up), w: up.w, h: up.h, auto: false} : await tryAuto();
+    plan = (await planCharge()) || await tryAuto();
   } else {
     plan = await tryAuto();
-    if (!plan && up) plan = {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
+    if (!plan) plan = await planCharge();
   }
   if (!plan){ toast("Plan non intégré : aucun cliché géolocalisé, ou réseau indisponible.", true); return null; }
   plan.place = place;
@@ -4588,7 +5153,12 @@ async function pdfForVisit(visit, photos, settings){
   toast("Plan de situation…");
   const plan = await getPlanForReport(clusters, settings);
   if (plan){
-    const sc = Math.min(515 / plan.w, 620 / plan.h);
+    // un plan projet est souvent dense : s'il est peu allongé, on lui donne une pleine page
+    const ratio = plan.w / plan.h;
+    const pleinePage = !plan.auto && ratio < 2.2;
+    if (pleinePage && y < 700) newPage();
+    const hMax = pleinePage ? 690 : 620;
+    const sc = Math.min(515 / plan.w, hMax / plan.h);
     const dw = plan.w * sc, dh = plan.h * sc;
     const bx = 40 + (515 - dw) / 2;
     ensure(dh + 34);
@@ -4597,7 +5167,22 @@ async function pdfForVisit(visit, photos, settings){
     cur.texts.push({x:bx + 8, y:y-14.5, size:FS.bandSm, font:"F2", color:PDF_NAVY, text:`PLAN DE SITUATION${plan.place ? " — " + plan.place.toUpperCase() : ""}`});
     y -= 20;
     cur.images.push({bytes:plan.bytes, w:plan.w, h:plan.h, x:bx, y:y-dh, dw, dh});
-    y -= dh + 16;
+    y -= dh + 10;
+    // légende des repères libres
+    if (plan.marks && plan.marks.length){
+      ensure(16 + plan.marks.length * 11);
+      cur.texts.push({x:40, y:y-8, size:FS.mini, font:"F2", color:PDF_NAVY, text:"REPÈRES DU PLAN"});
+      y -= 14;
+      for (const m of plan.marks){
+        ensure(12);
+        cur.rects.push({x:40, y:y-9, w:15, h:11, grad:PDF_G_STATUT.AC});
+        cur.texts.push({x:44, y:y-6, size:FS.caption, font:"F2", color:"1 1 1", text:m.l});
+        cur.texts.push({x:60, y:y-6, size:FS.small, font:"F1", text:String(m.lab || "").slice(0, 95)});
+        y -= 12;
+      }
+      y -= 4;
+    }
+    y -= 6;
   }
 
   /* ---- sommaire des visites (page 2, sous le plan) : N° / Date / Rédacteur / Constats / Statut ---- */
@@ -4650,6 +5235,21 @@ async function pdfForVisit(visit, photos, settings){
     zn++;
     if (y < 300) newPage();
     band(zoneLabel(c, zn).slice(0, 78), 23, FS.band);
+    // extrait de plan recadré sur la section
+    if (settings.planSections){
+      toast(`Extrait de plan ${zn}/${clusters.length}…`);
+      const ex = await planExtraitSection(c, settings).catch(() => null);
+      if (ex){
+        const sc = Math.min(300 / ex.w, 150 / ex.h);
+        const dw = ex.w * sc, dh = ex.h * sc;
+        ensure(dh + 18);
+        cur.images.push({bytes:ex.bytes, w:ex.w, h:ex.h, x:40, y:y-dh, dw, dh});
+        cur.texts.push({x:40 + dw + 10, y:y-12, size:FS.mini, font:"F2", color:PDF_NAVY, text:"EXTRAIT DE PLAN"});
+        cur.texts.push({x:40 + dw + 10, y:y-24, size:FS.micro, font:"F1", color:PDF_GREY,
+          text:ex.auto ? `Vue aérienne — largeur ≈ ${ex.largeur} m` : "Plan projet — détail de la section"});
+        y -= dh + 12;
+      }
+    }
     // tableau « intervenants sur site » propre à la zone (effectif/engins saisis via « Moyens sur site »)
     const zEnts = visitEntreprises(c.items, visit);
     const zoneName = (c.items.find(p => p.zone) || {}).zone || `Zone ${zn}`;
@@ -4709,9 +5309,9 @@ async function pdfForVisit(visit, photos, settings){
         const pkv = photoAbsText(o.p, false);
         if (pkv){
           cur.texts.push({x:cxImg, y:y - dims[k].dh - 17, size:FS.micro, font:"F2", color:PDF_STATUT.AC, text:pkv});
-        } else if (o.p.lat != null){
+        } else if (photoLat(o.p) != null){
           cur.texts.push({x:cxImg, y:y - dims[k].dh - 17, size:FS.micro, font:"F1", color:PDF_GREY,
-            text:`${o.p.gpsApprox ? "~" : ""}${o.p.lat.toFixed(5)}, ${o.p.lon.toFixed(5)}`});
+            text:`${photoRectifie(o.p) ? "rect. " : (o.p.gpsApprox ? "~" : "")}${photoLat(o.p).toFixed(5)}, ${photoLon(o.p).toFixed(5)}`});
         }
       });
       y -= rowH + 14;
@@ -4729,6 +5329,7 @@ async function pdfForVisit(visit, photos, settings){
       if (p.description) for (const l of wrapText(p.description, 62)) constat.push({t:l});
       const pkp = photoAbsText(p, true);
       if (pkp) constat.push({t:"Repérage : " + pkp, g:true});
+      if (photoRectifie(p)) constat.push({t:"Position rectifiée sur vue aérienne (GPS d'origine conservé)", g:true});
       if (p.entreprise) constat.push({t:"Entreprise : " + p.entreprise, g:true});
       if (!constat.length) constat.push({t:"—", g:true});
       const suite = p.suite ? wrapText(p.suite, 41) : ["—"];
@@ -5132,6 +5733,16 @@ async function docxForVisit(visit, photos, settings){
     const planImg = `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${pcx}" cy="${pcy}"/><wp:docPr id="950" name="Plan"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="950" name="Plan"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdPlan"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${pcx}" cy="${pcy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
     body.push(`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/><w:jc w:val="center"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${tw}"/></w:tblGrid><w:tr>${wTc(tw, wP(wR(`PLAN DE SITUATION${plan.place ? " — " + plan.place : ""}`, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="20"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_BAND})}</w:tr><w:tr>${wTc(tw, `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${planImg}</w:p>`)}</w:tr></w:tbl>`);
     body.push(wP("", `<w:spacing w:before="120" w:after="0"/>`));
+    // légende des repères libres du plan
+    if (plan.marks && plan.marks.length){
+      body.push(wP(wR("Repères du plan", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="40"/>`));
+      for (const m of plan.marks){
+        body.push(`<w:p><w:pPr><w:spacing w:after="20"/></w:pPr>` +
+          `<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:shd w:val="clear" w:fill="${DOCX_STATUT.AC}"/><w:sz w:val="15"/></w:rPr><w:t xml:space="preserve"> ${escXml(m.l)} </w:t></w:r>` +
+          `<w:r><w:rPr><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">  ${escXml(m.lab || "")}</w:t></w:r></w:p>`);
+      }
+      body.push(wP("", `<w:spacing w:after="80"/>`));
+    }
   }
 
   /* ---- sommaire des visites (page 2, sous le plan) : N° / Date / Rédacteur / Constats / Statut ---- */
@@ -5167,6 +5778,23 @@ async function docxForVisit(visit, photos, settings){
   for (const c of clusters){
     zn++;
     body.push(wP(wR(zoneLabel(c, zn), `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`), `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="180" w:after="80"/><w:ind w:left="113"/>`));
+    // extrait de plan recadré sur la section
+    if (settings.planSections){
+      toast(`Word : extrait de plan ${zn}/${clusters.length}…`);
+      const ex = await planExtraitSection(c, settings).catch(() => null);
+      if (ex){
+        imgId++;
+        const rid = `rIdEx${imgId}`;
+        media.push({name:`word/media/extrait${imgId}.jpg`, data:ex.bytes});
+        rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/extrait${imgId}.jpg"/>`);
+        let cx = ex.w * 9525, cy = ex.h * 9525;
+        const sc = Math.min(1, 3800000 / cx, 1900000 / cy);   // ≈ 10,5 x 5,3 cm
+        cx = Math.round(cx * sc); cy = Math.round(cy * sc);
+        body.push(`<w:p><w:pPr><w:spacing w:after="0"/></w:pPr>${wPhoto(rid, cx, cy, 5000 + imgId)}</w:p>`);
+        body.push(wP(wR(ex.auto ? `Extrait de plan — vue aérienne, largeur ≈ ${ex.largeur} m` : "Extrait de plan — détail de la section",
+          `<w:i/><w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:before="30" w:after="80"/>`));
+      }
+    }
     // tableau « intervenants sur site » propre à la zone (effectif/engins saisis via « Moyens sur site »)
     const zEnts = visitEntreprises(c.items, visit);
     const zoneName = (c.items.find(p => p.zone) || {}).zone || `Zone ${zn}`;
@@ -5184,7 +5812,8 @@ async function docxForVisit(visit, photos, settings){
       const im = await safeJpeg(p.blob, 800, 0.75);
       const cap = `n°${p.num}${p.statut ? ` [${p.statut}]` : ""}`;
       const pkv = photoAbsText(p, false);
-      const sous = pkv || (p.lat != null ? `${p.gpsApprox ? "~" : ""}${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : "");
+      const sous = pkv || (photoLat(p) != null
+        ? `${photoRectifie(p) ? "rect. " : (p.gpsApprox ? "~" : "")}${photoLat(p).toFixed(5)}, ${photoLon(p).toFixed(5)}` : "");
       const styleSous = pkv ? `<w:b/><w:color w:val="${DOCX_STATUT.AC}"/><w:sz w:val="12"/>`
                             : `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="11"/>`;
       const capP = wP(wR(cap, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
@@ -5221,6 +5850,7 @@ async function docxForVisit(visit, photos, settings){
       if (p.description) constat += wP(wR(p.description, `<w:sz w:val="17"/>`), `<w:spacing w:after="20"/>`);
       const pkp = photoAbsText(p, true);
       if (pkp) constat += wP(wR("Repérage : " + pkp, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
+      if (photoRectifie(p)) constat += wP(wR("Position rectifiée sur vue aérienne (GPS d'origine conservé)", `<w:i/><w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/>`);
       if (p.entreprise) constat += wP(wR("Entreprise : " + p.entreprise, `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`);
       if (!constat) constat = wP(wR("—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`);
       const numCell = wP(wR(String(p.num), `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`) +
@@ -5685,6 +6315,7 @@ function openSettings(){
   $("#sContacts").value = s.contacts.join("\n");
   $("#sPlanZoom").value = s.planZoom;
   $("#sPlanMode").value = s.planMode;
+  $("#sPlanSections").value = s.planSections ? "1" : "0";
   $("#sKey").value = localStorage.getItem("apiKey") || "";
   $("#sAutoLock").value = String(autoLockDelay());
   refreshLogoState();
@@ -5703,7 +6334,8 @@ async function saveSettingsUI(){
     cartouche: $("#sCartouche").value.split("\n").map(x => x.trim()).filter(Boolean),
     contacts: $("#sContacts").value.split("\n").map(x => x.trim()).filter(Boolean),
     planZoom: $("#sPlanZoom").value,
-    planMode: $("#sPlanMode").value
+    planMode: $("#sPlanMode").value,
+    planSections: $("#sPlanSections").value === "1"
   };
   if (CUR){ CUR.settings = s; CUR.name = s.proj; await saveCurrentProject(); }
   const key = $("#sKey").value.trim();
@@ -5918,6 +6550,31 @@ async function main(){
   $("#btnJournal").addEventListener("click", async () => {
     try{ await openJournal(); }catch(e){ toast("Journal indisponible : " + (e && e.message || e), true); }
   });
+  // pointage sur plan
+  $("#btnPlanScreen").addEventListener("click", async () => {
+    try{ await openPlanScreen(null); }catch(e){ toast("Plan indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnPlanClose").addEventListener("click", () => $("#planModal").classList.remove("on"));
+  $("#btnPlanFit").addEventListener("click", () => planFit());
+  $("#btnPlanPose").addEventListener("click", async () => {
+    try{ await planPoser(); }catch(e){ toast("Impossible de poser le repère : " + (e && e.message || e), true); }
+  });
+  $("#btnPlanSkip").addEventListener("click", () => {
+    PLAN.idx++;
+    if (PLAN.idx >= PLAN.file.length) PLAN.idx = -1;
+    planMajFile();
+  });
+  $("#btnMarkToggle").addEventListener("click", () => planToggleMarks());
+  $("#btnMarkPose").addEventListener("click", async () => {
+    try{ await planPoserMark(); }catch(e){ toast("Impossible de poser le repère : " + (e && e.message || e), true); }
+  });
+  $("#markLab").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("#btnMarkPose").click(); } });
+  $("#btnPlacePin").addEventListener("click", async () => {
+    if (!curEdit) return;
+    const id = curEdit.id;
+    stopMic(); $("#editModal").classList.remove("on");
+    try{ await openPlanScreen(id); }catch(e){ toast("Plan indisponible : " + (e && e.message || e), true); }
+  });
   $("#btnDashClose").addEventListener("click", () => $("#dashModal").classList.remove("on"));
   $("#btnDashPdf").addEventListener("click", exportDashboardPdf);
   $("#btnJrnClose").addEventListener("click", () => { $("#jrnModal").classList.remove("on"); openSettings(); });
@@ -5946,9 +6603,9 @@ async function main(){
     const f = e.target.files[0];
     e.target.value = "";
     if (!f) return;
-    if (!isImageFile(f)){ toast("Le plan de situation doit être une image (JPG, PNG…).", true); return; }
+    if (!isImageFile(f) && !estPdf(f)){ toast("Le plan doit être une image (JPG, PNG…) ou un PDF.", true); return; }
     try{ await storePlan(f); refreshLogoState(); toast("Plan de situation enregistré"); }
-    catch{ toast("Image illisible — essayez un autre fichier.", true); }
+    catch(err){ toast("Plan illisible : " + (err && err.message || err), true); }
   });
   $("#btnPlanClear").addEventListener("click", () => {
     localStorage.removeItem("planImg");
