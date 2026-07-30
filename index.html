@@ -19,7 +19,9 @@
     --shadow-lg:0 12px 34px rgba(34,29,23,.13);
     --danger:#C0392B;
     --r-xl:26px; --r-lg:20px; --r-md:15px; --r-sm:11px;
-    --plan-op:.62; --halo-b:rgba(47,134,197,.05); --halo-o:rgba(217,106,11,.03);
+    /* fond de plan : discret derrière les écrans de travail, plein écran au verrouillage */
+    --plan-op:.13; --plan-op-lock:.62;
+    --halo-b:rgba(47,134,197,.05); --halo-o:rgba(217,106,11,.03);
   }
   @media (prefers-color-scheme: dark){
     :root{
@@ -30,7 +32,8 @@
       --shadow:0 1px 3px rgba(0,0,0,.45);
       --shadow-lg:0 14px 36px rgba(0,0,0,.55);
       --danger:#E06052;
-      --plan-op:.66; --halo-b:rgba(111,182,232,.05); --halo-o:rgba(240,126,26,.03);
+      --plan-op:.16; --plan-op-lock:.66;
+      --halo-b:rgba(111,182,232,.05); --halo-o:rgba(240,126,26,.03);
     }
   }
   :root{
@@ -57,6 +60,9 @@
     filter:blur(0.6px) saturate(112%);
     transform:scale(1.03); /* absorbe le halo de flou sur les bords */
   }
+  /* Verrouillé, il n'y a rien à lire par-dessus : l'illustration reprend toute sa force.
+     Derrière une liste de dix-neuf lignes, elle la reperdrait. */
+  body.locked::before{opacity:var(--plan-op-lock)}
   /* halos doux bleu / orange par-dessus l'image, pour fondre avec la palette */
   body::after{
     content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
@@ -76,7 +82,13 @@
   }
   @supports not (backdrop-filter:blur(2px)){ header.top{background:var(--bg)} }
   .top-inner{max-width:640px; margin:0 auto; padding:12px 14px 10px; display:flex; align-items:center; gap:10px}
-  .top-id{flex:1; min-width:0}
+  /* le chantier courant est un bouton : toujours visible, changeable en un geste */
+  .top-id{
+    flex:1; min-width:0; display:block; text-align:left;
+    border:none; background:none; padding:0; cursor:pointer; color:var(--ink); font:inherit;
+  }
+  .top-id .top-title{display:block}
+  .top-id:hover .eyebrow{color:var(--blue-deep)}
   .eyebrow{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--blue); }
   .top-title{font-size:18.5px; font-weight:850; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .hazard{
@@ -104,7 +116,7 @@
   .btn.primary{background:var(--grad); color:#fff; box-shadow:0 8px 22px -6px rgba(217,106,11,.55)}
   .btn.primary:hover{box-shadow:0 10px 26px -6px rgba(217,106,11,.62)}
   .btn.blue{background:var(--grad-blue); color:#fff; box-shadow:0 8px 22px -6px rgba(47,134,197,.5)}
-  .btn.ghost{background:color-mix(in srgb, var(--card) 70%, transparent); border:1.5px solid var(--line)}
+  .btn.ghost{background:var(--card); border:1.5px solid var(--line)}
   .btn.ghost:hover{border-color:var(--blue-line); color:var(--blue-deep)}
   .btn.danger{background:transparent; border:1.5px solid var(--danger); color:var(--danger)}
   .btn.block{width:100%}
@@ -113,6 +125,191 @@
 
   section.screen{display:none}
   section.screen.on{display:block}
+  /* les écrans doivent dégager la barre d'onglets ; les fenêtres modales gardent leur propre marge */
+  section.screen > .wrap{padding-bottom:calc(112px + env(safe-area-inset-bottom))}
+
+  /* ===== barre d'onglets : les quatre zones du quotidien, atteignables au pouce ===== */
+  .tabbar{
+    position:fixed; inset:auto 0 0 0; z-index:26; display:flex;
+    background:color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter:blur(16px) saturate(140%); -webkit-backdrop-filter:blur(16px) saturate(140%);
+    border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom);
+    box-shadow:0 -10px 30px -20px rgba(34,29,23,.55);
+  }
+  @supports not (backdrop-filter:blur(2px)){ .tabbar{background:var(--card)} }
+  .tabbar button{
+    flex:1; position:relative; border:none; background:none; cursor:pointer; color:var(--ink2);
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:9px 2px 9px; font:inherit; font-size:10.5px; font-weight:800; letter-spacing:.02em;
+    transition:color .15s ease;
+  }
+  .tabbar .tb-ico{font-size:20px; line-height:1}
+  /* l'onglet actif est bleu : l'orange reste réservé à l'action (décision 5) */
+  .tabbar button.on{color:var(--blue)}
+  .tabbar button.on::before{
+    content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:36px; height:3px; border-radius:0 0 99px 99px; background:var(--blue);
+  }
+  .tabbar .tb-badge{
+    position:absolute; top:4px; left:calc(50% + 9px);
+    min-width:17px; height:17px; padding:0 4px; border-radius:99px;
+    background:var(--nc); color:#fff; font-size:10px; font-weight:800; line-height:17px;
+  }
+  .tabbar .tb-badge[hidden]{display:none !important}
+
+  /* ===== tiroir : ce qu'on ouvre une fois par semaine ne doit pas encombrer le quotidien ===== */
+  .drawer-scrim{position:fixed; inset:0; z-index:34; background:rgba(0,0,0,.45); display:none}
+  .drawer-scrim.on{display:block}
+  .drawer{
+    position:fixed; inset:0 auto 0 0; z-index:35; width:min(84vw, 330px);
+    background:var(--card); border-right:1px solid var(--line);
+    display:flex; flex-direction:column; overflow-y:auto;
+    transform:translateX(-102%); transition:transform .22s ease;
+    box-shadow:16px 0 44px -20px rgba(34,29,23,.5);
+  }
+  .drawer.on{transform:none}
+  @media (prefers-reduced-motion:reduce){ .drawer{transition:none} }
+  .dr-head{
+    background:var(--grad-blue); color:#fff;
+    padding:calc(20px + env(safe-area-inset-top)) 18px 16px;
+  }
+  .dr-head b{display:block; font-size:16px; font-weight:850}
+  .dr-head small{display:block; font-size:12px; opacity:.9; margin-top:2px}
+  .dr-chantier{
+    margin:14px 14px 6px; padding:11px 13px; border-radius:var(--r-md);
+    background:var(--blue-soft); border:1px solid var(--blue-line);
+  }
+  .dr-chantier span{display:block; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--blue-deep)}
+  .dr-chantier b{display:block; font-size:14px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .drawer nav{padding:6px 8px 18px}
+  .dr-item{
+    width:100%; display:flex; align-items:center; gap:12px;
+    border:none; background:none; cursor:pointer; color:var(--ink);
+    font:inherit; font-size:14.5px; font-weight:600; text-align:left;
+    padding:12px 12px; border-radius:var(--r-md);
+  }
+  .dr-item:hover{background:var(--chip)}
+  .dr-item .dr-ico{flex:none; width:24px; font-size:18px; text-align:center}
+  .dr-sep{height:1px; background:var(--line); margin:8px 12px}
+
+  /* verrouillé : ni onglets ni tiroir, la page de marque reste seule */
+  body.locked .tabbar, body.locked .drawer, body.locked .drawer-scrim{display:none}
+
+  /* ===== compteurs d'accueil : ce qui est en retard ou attend une action =====
+     Quatre au maximum : au-delà, on ne lit plus rien. Chacun est un bouton qui mène
+     là où l'on peut agir. */
+  /* nom distinct de .kpi / .kpis, déjà pris par le tableau de bord */
+  .hkpis{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0 4px}
+  .hkpi{
+    display:block; text-align:left; cursor:pointer; font:inherit;
+    border:1px solid var(--line); border-radius:var(--r-md);
+    background:var(--card); color:var(--ink); padding:12px 14px;
+    box-shadow:var(--shadow); transition:transform .1s ease, border-color .15s ease;
+  }
+  .hkpi:active{transform:scale(.98)}
+  .hkpi .hk-n{display:block; font-size:26px; font-weight:850; line-height:1.05; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .hkpi .hk-l{display:block; font-size:11.5px; font-weight:700; color:var(--ink2); margin-top:3px; line-height:1.25}
+  /* la couleur ne porte que l'urgence ; l'orange reste l'action, jamais un statut */
+  .hkpi.late{background:color-mix(in srgb, var(--nc) 12%, var(--card)); border-color:color-mix(in srgb, var(--nc) 38%, var(--line))}
+  .hkpi.late .hk-n, .hkpi.late .hk-l{color:var(--nc)}
+  .hkpi.soon{background:color-mix(in srgb, var(--pa) 13%, var(--card)); border-color:color-mix(in srgb, var(--pa) 40%, var(--line))}
+  .hkpi.soon .hk-n, .hkpi.soon .hk-l{color:var(--pa)}
+  .hkpi.info{background:var(--blue-soft); border-color:var(--blue-line)}
+  .hkpi.info .hk-n, .hkpi.info .hk-l{color:var(--blue-deep)}
+  /* à zéro, un compteur ne doit pas crier : il redevient neutre */
+  .hkpi.zero{background:var(--card); border-color:var(--line)}
+  .hkpi.zero .hk-n, .hkpi.zero .hk-l{color:var(--ink2)}
+  /* ===== registre : une ligne = un repère, un libellé, une vignette =====
+     Le numéro est un identifiant permanent, pas un rang : il relie la liste au plan et
+     figurera au PV. Le tri lui est indépendant. */
+  .rr{
+    width:100%; display:flex; align-items:center; gap:11px;
+    background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:var(--r-md);
+    padding:9px 11px; margin-bottom:8px; box-shadow:var(--shadow);
+  }
+  /* le repère est un bouton à part : un appui solde ou rouvre, sans ouvrir la fiche */
+  .rr-n{
+    flex:none; width:36px; height:36px; border-radius:9px; border:2px solid var(--ink2);
+    display:flex; align-items:center; justify-content:center; padding:0;
+    background:transparent; font:inherit;
+    font-size:14px; font-weight:850; color:var(--ink2); font-variant-numeric:tabular-nums;
+  }
+  button.rr-n{cursor:pointer}
+  button.rr-n:active{transform:scale(.92)}
+  .rr-open{
+    flex:1; min-width:0; display:flex; align-items:center; gap:11px;
+    border:none; background:none; padding:0; font:inherit; color:inherit;
+    text-align:left; cursor:pointer;
+  }
+  .rr-open:active{opacity:.75}
+  .rr-txt{flex:1; min-width:0}
+  .rr-txt b{display:block; font-size:13.5px; font-weight:700; line-height:1.3}
+  .rr-txt small{display:block; font-size:11.5px; color:var(--ink2); margin-top:2px}
+  .rr-th{flex:none; width:50px; height:40px; border-radius:8px; object-fit:cover; background:var(--chip)}
+  .rr-th-none{
+    flex:none; width:50px; height:40px; border-radius:8px; background:var(--chip);
+    display:flex; align-items:center; justify-content:center; font-size:16px; opacity:.5;
+  }
+  /* en retard : toute la ligne est teintée. Un liseré de 2 px ne se voit pas en plein
+     soleil, et reste invisible pour un daltonien. */
+  .rr.late{background:color-mix(in srgb, var(--nc) 11%, var(--card)); border-color:color-mix(in srgb, var(--nc) 40%, var(--line))}
+  .rr.late .rr-n{border-color:var(--nc); background:var(--nc); color:#fff}
+  .rr.late .rr-txt small{color:var(--nc); font-weight:700}
+  .rr.soon .rr-n{border-color:var(--pa); color:var(--pa)}
+  .rr.soon .rr-txt small{color:var(--pa)}
+  /* une ligne soldée s'efface, mais reste lisible : le barré et le repère vert suffisent */
+  .rr.done{opacity:.82}
+  .rr.done .rr-n{border-color:var(--c); background:var(--c); color:#fff}
+  .rr.done .rr-txt b{text-decoration:line-through}
+  .rr.done .rr-txt small{color:var(--c)}
+  /* constat pas encore porté au registre : pas de numéro, mais son code de statut */
+  .rr.draft .rr-n{border-style:dashed; font-size:11.5px}
+  .rr-tag{
+    display:inline-block; margin-left:6px; padding:1px 6px; border-radius:99px;
+    font-size:10px; font-weight:800; letter-spacing:.04em;
+    background:var(--chip); color:var(--ink2); vertical-align:1px;
+  }
+
+  /* point d'arrêt non levé : l'exécution est suspendue, ça doit se voir */
+  .ctl-alerte{
+    margin:10px 0 12px; padding:11px 13px; border-radius:var(--r-md);
+    background:color-mix(in srgb, var(--nc) 12%, var(--card));
+    border:1px solid color-mix(in srgb, var(--nc) 40%, var(--line));
+    color:var(--nc); font-size:13px; font-weight:700; line-height:1.35;
+  }
+  .ctrl-card.bloq{
+    background:color-mix(in srgb, var(--nc) 8%, var(--card));
+    border-color:color-mix(in srgb, var(--nc) 34%, var(--line));
+  }
+  .rr-tag.pa{background:color-mix(in srgb, var(--nc) 18%, var(--card)); color:var(--nc)}
+
+  .reg-bar{display:flex; align-items:center; gap:8px; margin:6px 2px 12px; flex-wrap:wrap}
+  .reg-bar .reg-count{margin-left:auto; font-size:12.5px; font-weight:800; color:var(--ink2)}
+  .sortchip{
+    border:1px solid var(--line); background:var(--card); color:var(--ink2);
+    border-radius:99px; padding:6px 12px; font:inherit; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  .sortchip.on{background:var(--blue-soft); border-color:var(--blue-line); color:var(--blue-deep)}
+  .sortchip:disabled{opacity:.45; cursor:default}
+
+  /* bascule Plan | Liste, en pied d'écran mais au-dessus de la barre d'onglets */
+  .seg{
+    display:flex; gap:0; border:1px solid var(--line); border-radius:99px;
+    overflow:hidden; background:var(--card); box-shadow:var(--shadow); margin:4px 0 2px;
+  }
+  .seg button{
+    flex:1; border:none; background:none; font:inherit; font-size:13px; font-weight:800;
+    color:var(--ink2); cursor:pointer; padding:11px 0; display:flex; align-items:center;
+    justify-content:center; gap:7px;
+  }
+  .seg button.on{background:var(--blue-soft); color:var(--blue-deep)}
+
+  .kpi-calm{
+    display:flex; align-items:center; gap:9px; margin:14px 2px 2px;
+    font-size:13px; color:var(--c); font-weight:700;
+  }
 
   .lockbox{min-height:92dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:24px 10px}
   .lockbox .glyph{
@@ -182,17 +379,15 @@
   .sect-label{
     font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink);
     margin:20px 2px 8px; display:inline-flex; align-items:center; gap:8px;
-    background:color-mix(in srgb, var(--card) 86%, transparent);
+    background:var(--card);
     border:1px solid var(--line); border-radius:99px; padding:7px 14px 7px 11px;
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:var(--shadow);
+    box-shadow:var(--shadow);
   }
   .sect-label::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--grad-blue); flex:none}
-  .home-project{display:flex; gap:8px; align-items:center; margin:14px 0 2px}
-  .proj-chip{flex:1; display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:99px; padding:12px 18px; font:inherit; cursor:pointer; color:var(--ink); box-shadow:var(--shadow); min-width:0}
-  .proj-name{font-weight:800; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1; text-align:left}
-  .proj-caret{color:var(--blue); font-size:12px; flex:none}
-  .reg-chip{flex:none; background:var(--blue-soft); border:1px solid var(--blue-line); border-radius:99px; padding:12px 15px; font:inherit; font-size:13px; font-weight:700; cursor:pointer; color:var(--blue-deep)}
-  .reg-chip b{color:var(--nc)}
+  /* accueille désormais la grille des compteurs, plus le rang de pastilles : bloc, pas flex */
+  .home-project{display:block; margin:14px 0 2px}
+  /* .proj-chip / .reg-chip retirées : la rangée de pastilles de l'accueil a été remplacée
+     par l'en-tête, les onglets et les compteurs (lots 1 et 2). */
   .proj-row{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:13px 16px; margin-bottom:8px; font:inherit; color:var(--ink); cursor:pointer; box-shadow:var(--shadow)}
   .proj-row.active{border-color:var(--blue); border-width:2px; background:var(--blue-soft)}
   .proj-row b{flex:1}
@@ -454,7 +649,8 @@
   }
 
   .fab{
-    position:fixed; right:16px; bottom:18px; z-index:25;
+    /* dégage la barre d'onglets */
+    position:fixed; right:16px; bottom:calc(80px + env(safe-area-inset-bottom)); z-index:25;
     width:64px; height:64px; border-radius:50%; border:none; cursor:pointer;
     background:var(--grad); color:#fff; font-size:29px; font-weight:700;
     box-shadow:0 12px 30px -8px rgba(217,106,11,.7);
@@ -539,9 +735,9 @@
   .moyen-row .mr-field .microw input, .moyen-row .mr-field > input{width:100%; font:inherit; color:var(--ink); background:var(--bg); border:1.5px solid var(--line); border-radius:var(--r-sm); padding:10px 12px}
   .moyen-row .mr-field input:focus{border-color:var(--blue); outline:none}
 
+  /* opaque : un bloc qui porte du texte ne doit pas laisser passer le fond */
   .empty{text-align:center; color:var(--ink2); padding:34px 20px; line-height:1.6;
-    background:color-mix(in srgb, var(--card) 84%, transparent); border:1px solid var(--line);
-    border-radius:var(--r-xl); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px)}
+    background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl)}
   .empty .glyph{font-size:30px; display:block; margin-bottom:8px}
   .toast{
     position:fixed; left:50%; bottom:88px; transform:translateX(-50%);
@@ -566,15 +762,44 @@
 
 <header class="top">
   <div class="top-inner">
-    <div class="top-id">
-      <div class="eyebrow" id="projSub">Suivi de chantier</div>
-      <div class="top-title" id="projTitle">Mon chantier</div>
-    </div>
-    <button class="iconbtn" id="btnSettings" title="Réglages" aria-label="Réglages">⚙</button>
+    <button class="iconbtn" id="btnDrawer" title="Menu" aria-label="Ouvrir le menu" aria-expanded="false">☰</button>
+    <button class="top-id" id="btnProjSwitch" aria-label="Changer de chantier">
+      <span class="top-title" id="projTitle">Mon chantier</span>
+      <span class="eyebrow" id="projSub">Changer de chantier ▾</span>
+    </button>
     <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller">🔒</button>
   </div>
   <div class="hazard"></div>
 </header>
+
+<!-- ================= TIROIR ================= -->
+<div class="drawer-scrim" id="drawerScrim"></div>
+<aside class="drawer" id="drawer" aria-label="Menu">
+  <div class="dr-head">
+    <b id="drName">—</b>
+    <small id="drOrg"></small>
+  </div>
+  <button class="dr-chantier" id="drChantier">
+    <span>Chantier courant</span>
+    <b id="drChantierName">—</b>
+  </button>
+  <nav>
+    <button class="dr-item" id="btnDrPlan"><span class="dr-ico">🗺</span>Plans et repérage</button>
+    <button class="dr-item" id="btnDrDash"><span class="dr-ico">📊</span>Tableau de bord</button>
+    <button class="dr-item" id="btnDrJournal"><span class="dr-ico">🕘</span>Journal des modifications</button>
+    <div class="dr-sep"></div>
+    <button class="dr-item" id="btnSettings"><span class="dr-ico">⚙</span>Réglages du chantier</button>
+    <button class="dr-item" id="btnDrLock"><span class="dr-ico">🔒</span>Verrouiller</button>
+  </nav>
+</aside>
+
+<!-- ================= BARRE D'ONGLETS ================= -->
+<nav class="tabbar" id="tabbar" role="tablist" aria-label="Navigation principale">
+  <button role="tab" data-tab="home"><span class="tb-ico" aria-hidden="true">🏠</span>Accueil</button>
+  <button role="tab" data-tab="reserves"><span class="tb-ico" aria-hidden="true">⚠</span>Réserves<span class="tb-badge" id="tbResBadge" hidden></span></button>
+  <button role="tab" data-tab="controls"><span class="tb-ico" aria-hidden="true">📋</span>Contrôles</button>
+  <button role="tab" data-tab="reports"><span class="tb-ico" aria-hidden="true">📄</span>Rapports</button>
+</nav>
 
 <!-- ================= VERROUILLAGE ================= -->
 <section class="screen" id="scrLock">
@@ -611,13 +836,54 @@
 <!-- ================= REGISTRE DES RÉSERVES ================= -->
 <section class="screen" id="scrRegister">
   <div class="wrap">
-    <button class="backlink" id="btnRegBack">← Visites</button>
-    <div class="sect-label">Registre des réserves — <span id="regProjName"></span></div>
+    <div class="sect-label"><span id="regTitre">Réserves</span><span id="regProjName"></span></div>
+    <div class="seg" id="regSeg">
+      <button data-vue="liste" class="on"><span aria-hidden="true">☰</span>Liste</button>
+      <button data-vue="plan"><span aria-hidden="true">🗺</span>Plan</button>
+    </div>
+    <div class="reg-bar" id="regSorts">
+      <button class="sortchip on" data-sort="urgence">Urgence</button>
+      <button class="sortchip" data-sort="abscisse">PR / PK</button>
+      <button class="sortchip" data-sort="entreprise">Entreprise</button>
+      <button class="sortchip" data-sort="numero">N°</button>
+      <span class="reg-count" id="regCount"></span>
+    </div>
     <div id="regList"></div>
     <div class="btnrow">
       <button class="btn block" id="btnRegAdd">+ Réserve manuelle</button>
       <button class="btn blue block" id="btnExtract">📤 Extraire par entreprise</button>
     </div>
+  </div>
+</section>
+
+<!-- ================= FICHES DE CONTRÔLE : vue chantier ================= -->
+<section class="screen" id="scrControls">
+  <div class="wrap">
+    <div class="sect-label">Fiches de contrôle<span id="ctlProjName"></span></div>
+    <div class="ctl-alerte" id="ctlAlerte" hidden></div>
+    <div id="ctlList"></div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnCtlNew">+ Nouvelle fiche</button>
+      <div class="hint" style="margin:-2px 4px 0">
+        Une fiche se rattache à une visite : ouvrez ou créez la visite du jour depuis l'accueil,
+        puis revenez ici.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RAPPORTS ================= -->
+<section class="screen" id="scrReports">
+  <div class="wrap">
+    <div class="sect-label">Rapports<span id="rapProjName"></span></div>
+    <div class="hint" style="margin:0 4px 12px">Produire à l'échelle du chantier</div>
+    <div class="btnrow" style="margin-top:0">
+      <button class="btn primary block" id="btnRapPilotage">📊 Rapport de pilotage (PDF)</button>
+      <button class="btn blue block" id="btnRapExtract">📤 Extraire les réserves par entreprise</button>
+      <div class="hint" id="rapAvenir" style="margin:-2px 4px 0"></div>
+    </div>
+    <div class="sect-label">Par visite</div>
+    <div id="rapVisitList"></div>
   </div>
 </section>
 
@@ -929,6 +1195,14 @@
       <input type="text" id="tFam" list="famList" placeholder="Ex. : Chaussée">
       <datalist id="famList"></datalist>
     </div>
+    <div class="field">
+      <label for="tPointArret">Nature du contrôle</label>
+      <select id="tPointArret">
+        <option value="0">Contrôle courant</option>
+        <option value="1">Point d'arrêt — les travaux ne reprennent qu'après votre levée</option>
+      </select>
+      <div class="hint">Un point d'arrêt suspend l'exécution jusqu'à votre visa. Les fiches ainsi marquées remontent en tête de l'onglet Contrôles et alimentent le compteur de l'accueil.</div>
+    </div>
     <div class="sect-label" style="margin-top:16px">Points de contrôle</div>
     <div id="tplItems"></div>
     <button class="btn ghost block" id="btnTplAddItem" style="margin-top:8px">➕ Ajouter un point</button>
@@ -1069,6 +1343,23 @@
       <div class="field">
         <label for="sSub">Sous-titre (société / mission)</label>
         <input type="text" id="sSub" placeholder="Ex. : PCM Ingénierie — AMOE">
+      </div>
+      <div class="field">
+        <label for="sPhase">Phase de la mission</label>
+        <select id="sPhase">
+          <option value="DET">DET — direction de l'exécution des travaux</option>
+          <option value="AOR">AOR — opérations de réception</option>
+        </select>
+        <div class="hint">En DET vous relevez des <b>constats</b> à corriger au fil de l'eau. En AOR vous portez des <b>réserves</b> au procès-verbal, avec délai contractuel de levée puis garantie de parfait achèvement. Basculez le jour de l'OPR : les réserves déjà ouvertes gardent leur phase d'origine.</div>
+      </div>
+      <div class="field" id="fldReception" hidden>
+        <label for="sReception">Date de réception (procès-verbal)</label>
+        <input type="date" id="sReception">
+      </div>
+      <div class="field" id="fldDelai" hidden>
+        <label for="sDelai">Délai contractuel de levée des réserves (jours)</label>
+        <input type="text" id="sDelai" inputmode="numeric" placeholder="Ex. : 60">
+        <div class="hint">Sert à décompter le délai de levée et la fin de garantie de parfait achèvement (un an après la réception).</div>
       </div>
       <div class="field">
         <label for="sRedac">Rédacteur (apparaît sur les rapports)</label>
@@ -1299,7 +1590,7 @@ const CTRL_LIB = [
       {l:"Sol conforme à la classification GTR annoncée", t:"v"},
       {l:"Observations", t:"t"}
     ]},
-  { id:"tranchee", fam:"Terrassement", name:"Tranchée avant remblaiement (point d'arrêt)", ref:"Fasc. 70/71 · NF P 98-331",
+  { id:"tranchee", fam:"Terrassement", name:"Tranchée avant remblaiement (point d'arrêt)", ref:"Fasc. 70/71 · NF P 98-331", pointArret:true,
     items:[
       {l:"Profondeur de fouille conforme au profil", t:"v"},
       {l:"Lit de pose : matériau et épaisseur", t:"m", u:"cm", op:">=", seuil:10},
@@ -1353,7 +1644,7 @@ const CTRL_LIB = [
       {l:"Observations", t:"t"}
     ]},
 
-  { id:"assain-epreuve", fam:"Assainissement", name:"Épreuves d'assainissement (point d'arrêt)", ref:"Fasc. 70 · NF EN 1610",
+  { id:"assain-epreuve", fam:"Assainissement", name:"Épreuves d'assainissement (point d'arrêt)", ref:"Fasc. 70 · NF EN 1610", pointArret:true,
     items:[
       {l:"Essai d'étanchéité réalisé (air ou eau) — PV fourni", t:"v"},
       {l:"Résultat de l'essai d'étanchéité conforme", t:"v"},
@@ -1485,8 +1776,29 @@ function normSettings(s){
     contacts: Array.isArray(s.contacts) ? s.contacts : [],
     planZoom: s.planZoom || "300",
     planMode: s.planMode || "auto",
-    planSections: s.planSections === undefined ? true : !!s.planSections
+    planSections: s.planSections === undefined ? true : !!s.planSections,
+    /* phase de la mission : pilote le vocabulaire, les compteurs et les livrables */
+    phase: s.phase === "AOR" ? "AOR" : "DET",
+    dateReception: s.dateReception || "",
+    delaiLevee: s.delaiLevee || ""
   };
+}
+
+/* DET et AOR ne sont pas la même mission : en DET on relève des constats à corriger au
+   fil de l'eau, en AOR on porte des réserves au PV, avec délai contractuel puis GPA.
+   Le mot compte : c'est lui qui figurera au procès-verbal. */
+const VOCAB = {
+  DET: { phase:"DET", long:"DET — direction de l'exécution",
+         un:"constat", des:"constats", ecran:"Constats et réserves" },
+  AOR: { phase:"AOR", long:"AOR — opérations de réception",
+         un:"réserve", des:"réserves", ecran:"Réserves" }
+};
+function vocab(){ return VOCAB[(getSettings() || {}).phase] || VOCAB.DET; }
+function isoPlus(iso, jours){
+  if (!iso) return "";
+  const t = new Date(iso + "T12:00:00");
+  t.setDate(t.getDate() + jours);
+  return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
 }
 
 /* ===== chantier courant : chaque chantier porte ses réglages, logos, plan ===== */
@@ -1495,6 +1807,10 @@ function getSettings(){ return CUR ? CUR.settings : blankSettings(); }
 async function saveCurrentProject(){ if (CUR) await tx("projects","readwrite", s => s.put(CUR)); }
 function setCurrentProject(p){
   CUR = p;
+  /* Les chantiers créés avant une évolution des réglages n'ont pas les nouveaux champs :
+     saveSettingsUI écrit un objet reconstruit, sans passer par normSettings. On normalise
+     à l'ouverture pour que le reste du code n'ait jamais à composer avec un champ absent. */
+  if (p) p.settings = normSettings(p.settings);
   if (p) localStorage.setItem("currentProjectId", String(p.id));
   applyHeader(getSettings());
 }
@@ -1860,6 +2176,7 @@ function showLock(){
   $("#jrnModal").classList.remove("on");
   $("#dashModal").classList.remove("on");
   closeAddSheet();
+  closeDrawer();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
   const has = !!localStorage.getItem("pinHash");
   pinMode = has ? "enter" : "create";
@@ -2012,27 +2329,221 @@ const objectURLs = [];
 function freeURLs(){ while(objectURLs.length) URL.revokeObjectURL(objectURLs.pop()); }
 function mkURL(blob){ const u = URL.createObjectURL(blob); objectURLs.push(u); return u; }
 
+/* Nom du chantier : les réglages sont la source, CUR.name ne s'y aligne qu'à
+   l'enregistrement. Un seul point d'accès évite d'afficher deux noms différents. */
+function chantierName(){
+  const s = getSettings();
+  return (s && s.proj) || (CUR && CUR.name) || "—";
+}
+
+/* =============== ossature : barre d'onglets et tiroir ===============
+   Les quatre onglets sont les quatre zones du quotidien. Tout le reste passe par le
+   tiroir. Chaque écran marque lui-même son onglet, pour que les appels directs
+   (showHome après une suppression, par exemple) gardent l'indicateur juste. */
+function setActiveTab(name){
+  document.querySelectorAll("#tabbar button").forEach(b => {
+    const on = b.dataset.tab === name;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+}
+const TABS = {
+  home:     () => showHome(),
+  reserves: () => showRegister(),
+  controls: () => showControls(),
+  reports:  () => showReports()
+};
+async function showTab(name){
+  closeDrawer();
+  const fn = TABS[name];
+  if (!fn) return;
+  try{ await fn(); }
+  catch(e){ toast("Écran indisponible : " + (e && e.message || e), true); return; }
+  window.scrollTo(0,0);
+}
+function refreshResBadge(n){
+  const b = $("#tbResBadge");
+  if (!b) return;
+  b.textContent = n > 99 ? "99+" : String(n);
+  b.hidden = !n;
+}
+function openDrawer(){
+  const s = getSettings();
+  $("#drName").textContent = s.redac || "Rédacteur non renseigné";
+  $("#drOrg").textContent = vocab().long;
+  $("#drChantierName").textContent = chantierName();
+  $("#drawer").classList.add("on");
+  $("#drawerScrim").classList.add("on");
+  $("#btnDrawer").setAttribute("aria-expanded", "true");
+}
+function closeDrawer(){
+  $("#drawer").classList.remove("on");
+  $("#drawerScrim").classList.remove("on");
+  $("#btnDrawer").setAttribute("aria-expanded", "false");
+}
+
+/* =============== compteurs d'accueil ===============
+   Source unique : actionTracking(), qui fusionne déjà les réserves du registre et les
+   constats NC/PA/AC non encore portés au registre, sans doublon. La pastille de l'onglet
+   Réserves lit le même chiffre — deux comptes différents pour la même chose seraient
+   pires que pas de compte du tout. */
+function isoPlusDays(n){
+  const t = new Date();
+  t.setDate(t.getDate() + n);
+  return `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+}
+async function homeCounters(){
+  const rows = await actionTracking();
+  const ouvert = rows.filter(r => r.statut !== "Soldé");
+  const auj = todayIso(), sept = isoPlusDays(7);
+  /* « En retard » vaut déjà dateLimite < aujourd'hui : les deux ensembles sont disjoints. */
+  const retard  = ouvert.filter(r => r.statut === "En retard").length;
+  const bientot = ouvert.filter(r => r.dateLimite && r.dateLimite >= auj && r.dateLimite <= sept).length;
+  /* Faute d'indicateur « point d'arrêt » dans les données, on compte ce qui est vrai :
+     les fiches où il reste des points à renseigner, donc celles qui attendent le passage
+     du maître d'œuvre. Un vrai marqueur sur les modèles est prévu au lot 4. */
+  const fiches = CUR ? ((await idbAll("controls", "projectId", CUR.id)) || []) : [];
+  /* un point d'arrêt non conclu suspend l'exécution : c'est le seul contrôle qui bloque
+     réellement le chantier, et le seul qui mérite une tuile */
+  const aConclure = fiches.filter(f => f.pointArret && ctrlConclusion(f) === "En cours").length;
+  const s = getSettings() || {};
+  if (s.phase === "AOR"){
+    /* En réception, les bons chiffres ne sont plus les mêmes : ce qui compte est le délai
+       contractuel de levée, puis la garantie de parfait achèvement. */
+    const finLevee = (s.dateReception && s.delaiLevee) ? isoPlus(s.dateReception, Number(s.delaiLevee)) : "";
+    const finGpa   = s.dateReception ? isoPlus(s.dateReception, 365) : "";
+    return { phase:"AOR", retard, ouvert: ouvert.length,
+      jLevee: finLevee ? joursEntre(todayIso(), finLevee) : null,
+      jGpa:   finGpa   ? joursEntre(todayIso(), finGpa)   : null };
+  }
+  return { phase:"DET", retard, ouvert: ouvert.length, bientot, aConclure };
+}
+function renderHomeCounters(k){
+  const box = $("#homeProject");
+  const jour = j => j == null ? "—" : (j < 0 ? "0" : String(j));
+  const tuiles = k.phase === "AOR"
+    ? [
+        { n:k.retard, z:!k.retard, l:"Hors délai<br>de levée", cls:"late", tab:"reserves" },
+        { n:k.ouvert, z:!k.ouvert, l:"Réserves<br>non levées", cls:"info", tab:"reserves" },
+        { n:jour(k.jLevee), z:k.jLevee == null,
+          l:k.jLevee == null ? "Délai de levée<br>non renseigné"
+            : (k.jLevee < 0 ? "Délai de levée<br>expiré" : "Jours avant fin<br>du délai de levée"),
+          cls:(k.jLevee != null && k.jLevee <= 15) ? "soon" : "info", tab:"reserves" },
+        { n:jour(k.jGpa), z:k.jGpa == null,
+          l:k.jGpa == null ? "Réception<br>non renseignée"
+            : (k.jGpa < 0 ? "Garantie<br>échue" : "Jours avant<br>fin de GPA"),
+          cls:(k.jGpa != null && k.jGpa <= 30) ? "soon" : "info", tab:"reserves" }
+      ]
+    : [
+        { n:k.retard,    z:!k.retard,    l:"Échéances<br>dépassées", cls:"late", tab:"reserves" },
+        { n:k.ouvert,    z:!k.ouvert,    l:"Réserves<br>ouvertes",   cls:"info", tab:"reserves" },
+        { n:k.bientot,   z:!k.bientot,   l:"Échéances<br>sous 7 jours", cls:"soon", tab:"reserves" },
+        { n:k.aConclure, z:!k.aConclure, l:"Points d'arrêt<br>en attente", cls:"late", tab:"controls" }
+      ];
+  box.innerHTML =
+    `<div class="hkpis">` +
+    tuiles.map((t, i) =>
+      `<button class="hkpi ${t.z ? "zero" : t.cls}" data-go="${t.tab}" data-i="${i}">
+         <span class="hk-n">${t.n}</span><span class="hk-l">${t.l}</span>
+       </button>`).join("") +
+    `</div>` +
+    (k.retard || (k.phase === "AOR" ? false : k.bientot) ? "" :
+      `<div class="kpi-calm"><span aria-hidden="true">✓</span>${
+        k.phase === "AOR" ? "Aucune réserve hors délai de levée." : "Aucune échéance à surveiller cette semaine."
+      }</div>`);
+  box.querySelectorAll("[data-go]").forEach(b =>
+    b.addEventListener("click", () => showTab(b.dataset.go)));
+}
+
+/* =============== onglet Contrôles : toutes les fiches du chantier ===============
+   La vue par visite (openCtrl) reste accessible depuis la visite. Ici on embrasse le
+   chantier entier : c'est ce qu'on veut voir quand on se demande où en sont les
+   points d'arrêt. */
+async function showControls(){
+  document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
+  $("#scrControls").classList.add("on");
+  setActiveTab("controls");
+  $("#ctlProjName").textContent = "";
+  const list = $("#ctlList");
+  const fiches = CUR ? ((await idbAll("controls", "projectId", CUR.id)) || []) : [];
+  if (!fiches.length){
+    list.innerHTML = `<div class="empty"><span class="glyph">📋</span>Aucune fiche de contrôle sur ce chantier.<br>Ouvrez la visite du jour, puis créez votre première fiche.</div>`;
+    return;
+  }
+  /* un point d'arrêt non levé bloque l'exécution : il passe devant tout le reste */
+  const bloquant = f => (f.pointArret && ctrlConclusion(f) === "En cours") ? 0 : 1;
+  fiches.sort((a, b) => bloquant(a) - bloquant(b)
+    || (b.date || "").localeCompare(a.date || "") || (b.num || 0) - (a.num || 0));
+  const cls = {"Conforme":"ok", "Non conforme":"ko", "En cours":"wip"};
+  const nBloq = fiches.filter(f => !bloquant(f)).length;
+  $("#ctlAlerte").hidden = !nBloq;
+  if (nBloq) $("#ctlAlerte").textContent =
+    `${nBloq} point${nBloq > 1 ? "s" : ""} d'arrêt en attente de votre levée — l'exécution reste suspendue.`;
+  list.innerHTML = fiches.map(f => {
+    const v = ctrlConclusion(f), st = ctrlStats(f);
+    const pa = f.pointArret
+      ? `<span class="rr-tag${bloquant(f) ? "" : " pa"}">point d'arrêt</span>` : "";
+    return `<button class="ctrl-card${bloquant(f) ? "" : " bloq"}" data-id="${f.id}">
+      <span class="cc-txt"><b>n°${f.num} — ${esc(f.name)}${pa}</b>
+        <small>${esc(frDate(f.date))} · ${esc(f.zone || "zone non précisée")}${f.entreprise ? " · " + esc(f.entreprise) : ""} · ${st.c} C / ${st.nc} NC${st.reste ? " · " + st.reste + " à saisir" : ""}</small></span>
+      <span class="cc-verdict ${cls[v] || "wip"}">${esc(v)}</span></button>`;
+  }).join("");
+  list.querySelectorAll("[data-id]").forEach(b =>
+    b.addEventListener("click", () => {
+      const f = fiches.find(x => x.id === Number(b.dataset.id));
+      if (f) openCtrlForm(f);
+    }));
+}
+
+/* =============== onglet Rapports ===============
+   Deux niveaux : ce qui s'édite à l'échelle du chantier, et l'accès aux visites où se
+   trouvent les rapports de visite. Les modèles par phase viendront au lot 4. */
+async function showReports(){
+  document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
+  $("#scrReports").classList.add("on");
+  setActiveTab("reports");
+  const v = vocab();
+  $("#rapProjName").textContent = " · " + v.phase;
+  $("#btnRapExtract").textContent = "📤 Extraire les " + v.des + " par entreprise";
+  $("#rapAvenir").textContent = v.phase === "AOR"
+    ? "Les procès-verbaux d'OPR, de réception et de levée de réserves ne sont pas encore générés par l'application. Le registre exporté par entreprise en tient lieu pour l'instant."
+    : "Les ordres de service ne sont pas encore générés par l'application.";
+  const pid = CUR ? CUR.id : null;
+  const visits = (await idbAll("visits")).filter(v => v.projectId === pid)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const list = $("#rapVisitList");
+  if (!visits.length){
+    list.innerHTML = `<div class="empty"><span class="glyph">📄</span>Aucune visite sur ce chantier : rien à éditer pour l'instant.</div>`;
+    return;
+  }
+  const photos = await idbAll("photos");
+  const byVisit = {};
+  photos.forEach(p => { (byVisit[p.visitId] = byVisit[p.visitId] || []).push(p); });
+  list.innerHTML = visits.map(v => {
+    const n = (byVisit[v.id] || []).length;
+    const titre = v.label ? esc(v.label) : `Visite du ${esc(frDate(v.date))}`;
+    return `<button class="ctrl-card" data-id="${v.id}">
+      <span class="cc-txt"><b>${titre}</b><small>${esc(frDate(v.date))} · ${n} cliché${n > 1 ? "s" : ""}</small></span>
+      <span class="cc-verdict wip">Éditer</span></button>`;
+  }).join("");
+  list.querySelectorAll("[data-id]").forEach(b =>
+    b.addEventListener("click", () => showVisit(Number(b.dataset.id))));
+}
+
 async function showHome(){
   document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
   $("#scrHome").classList.add("on");
+  setActiveTab("home");
   freeURLs();
   const pid = CUR ? CUR.id : null;
   const visits = (await idbAll("visits")).filter(v => v.projectId === pid).sort((a,b) => b.date.localeCompare(a.date));
   const photos = await idbAll("photos");
   const byVisit = {};
   photos.forEach(p => { (byVisit[p.visitId] = byVisit[p.visitId] || []).push(p); });
-  // bandeau du chantier courant + bilan du registre
-  const reserves = (await idbAll("reserves","projectId",pid)) || [];
-  const ouvertes = reserves.filter(r => r.statut !== "Soldé").length;
-  $("#homeProject").innerHTML =
-    `<button class="proj-chip" id="btnSwitchProject"><span class="proj-name">${esc(CUR ? CUR.name : "—")}</span><span class="proj-caret">▾</span></button>` +
-    `<button class="reg-chip" id="btnRegister">Registre · ${reserves.length}${ouvertes ? ` <b>(${ouvertes} en cours)</b>` : ""}</button>` +
-    `<button class="reg-chip" id="btnDash" title="Tableau de bord" aria-label="Tableau de bord" style="padding:12px 14px">📊</button>`;
-  $("#btnSwitchProject").addEventListener("click", openProjectSheet);
-  $("#btnRegister").addEventListener("click", showRegister);
-  $("#btnDash").addEventListener("click", async () => {
-    try{ await openDashboard(); }catch(e){ toast("Tableau de bord indisponible : " + (e && e.message || e), true); }
-  });
+  // ce qui est en retard ou attend une action : le seul contenu qui mérite le haut de l'écran
+  const k = await homeCounters();
+  refreshResBadge(k.ouvert);
+  renderHomeCounters(k);
   const list = $("#visitList");
   if (!visits.length){
     list.innerHTML = `<div class="empty"><span class="glyph">🚧</span>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
@@ -2617,7 +3128,11 @@ async function createReserve({objet, zone, statut, entreprise, action, dateLimit
   const rec = { projectId: CUR.id, num: await nextReserveNum(),
     date: date || (curVisit && curVisit.date) || todayIso(),
     zone: zone || "", objet: objet || "", entreprise: entreprise || "", action: action || "",
-    dateLimite: dateLimite || "", statut: statut || "En cours", dateSolde: "", createdAt: Date.now() };
+    dateLimite: dateLimite || "", statut: statut || "En cours", dateSolde: "",
+    /* la phase d'origine reste attachée à la réserve : basculer le chantier en AOR ne
+       requalifie pas rétroactivement ce qui a été relevé en cours d'exécution */
+    phase: (getSettings() || {}).phase || "DET",
+    createdAt: Date.now() };
   rec.id = await idbAdd("reserves", rec);
   await logAction("Réserve", `n°${rec.num}`, "Ouverte",
     [rec.objet, rec.entreprise, rec.dateLimite ? "échéance " + frDate(rec.dateLimite) : ""].filter(Boolean));
@@ -2632,46 +3147,163 @@ function reserveStatut(r){
 async function showRegister(){
   document.querySelectorAll("section.screen").forEach(s => s.classList.remove("on"));
   $("#scrRegister").classList.add("on");
-  $("#regProjName").textContent = CUR ? CUR.name : "";
+  setActiveTab("reserves");
+  const v = vocab();
+  /* le nom du chantier est déjà dans l'en-tête : le répéter ici casse le titre en deux
+     lignes sur un téléphone. Seule la phase mérite d'être rappelée. */
+  $("#regTitre").textContent = v.ecran;
+  $("#regProjName").textContent = " · " + v.phase;
   await renderRegister();
   window.scrollTo(0,0);
 }
+/* =============== registre unifié ===============
+   L'écran montre exactement ce que compte l'accueil : les réserves du registre ET les
+   constats NC/PA/AC pas encore portés au registre. Deux comptes différents pour la même
+   chose seraient pires que pas de compte du tout. */
+let regSort = "urgence";
+
+function joursEntre(isoA, isoB){
+  const a = new Date(isoA + "T12:00:00"), b = new Date(isoB + "T12:00:00");
+  return Math.round((b - a) / 86400000);
+}
+async function registreRows(){
+  if (!CUR) return [];
+  const auj = todayIso();
+  const visits = await projectVisits();
+  const vmap = {}; visits.forEach(v => vmap[v.id] = v);
+  const photos = (await idbAll("photos")).filter(p => vmap[p.visitId]);
+  const parRes = {};
+  photos.forEach(p => { if (p.reserveId) (parRes[p.reserveId] = parRes[p.reserveId] || []).push(p); });
+
+  const rows = [];
+  for (const r of await idbAll("reserves", "projectId", CUR.id)){
+    const liees = (parRes[r.id] || []).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    const p0 = liees[0] || null;
+    const a = p0 ? photoAbs(p0) : null;
+    rows.push({ kind:"reserve", id:r.id, rec:r, num:r.num,
+      titre: r.objet || "(sans objet)", entreprise: r.entreprise || "", zone: r.zone || "",
+      dateLimite: r.dateLimite || "", statut: reserveStatut(r), dateSolde: r.dateSolde || "",
+      date: r.date, photo: p0, abs: a ? a.abs : null, mode: a ? a.mode : null });
+  }
+  for (const p of photos){
+    if (!["NC","PA","AC"].includes(p.statut)) continue;
+    if (p.reserveId) continue;                       // déjà porté au registre : pas de doublon
+    const a = photoAbs(p);
+    rows.push({ kind:"constat", id:p.id, rec:p, num:null, code:p.statut,
+      titre: p.suite || p.titre || p.description || "(sans intitulé)",
+      entreprise: p.entreprise || "", zone: p.zone || "",
+      dateLimite: p.dateLimite || "",
+      statut: (p.dateLimite && p.dateLimite < auj) ? "En retard" : "En cours",
+      date: vmap[p.visitId].date, photo: p, visitId: p.visitId,
+      abs: a ? a.abs : null, mode: a ? a.mode : null });
+  }
+  return rows;
+}
+/* rang d'urgence : en retard, puis échéance connue, puis sans échéance, soldé en dernier */
+function regRang(r){
+  if (r.statut === "Soldé") return 3;
+  if (r.statut === "En retard") return 0;
+  return r.dateLimite ? 1 : 2;
+}
+function trierRegistre(rows, mode){
+  const parEch = (a, b) => (a.dateLimite || "9999-99-99").localeCompare(b.dateLimite || "9999-99-99");
+  const parDate = (a, b) => (a.date || "").localeCompare(b.date || "");
+  const out = rows.slice();
+  if (mode === "abscisse")
+    /* sans axe renseigné ou sans cliché géolocalisé, la position est inconnue :
+       ces lignes vont en fin de liste plutôt que d'être inventées à zéro */
+    return out.sort((a, b) =>
+      (a.abs == null ? 1 : 0) - (b.abs == null ? 1 : 0) ||
+      (a.abs != null && b.abs != null ? a.abs - b.abs : 0) ||
+      regRang(a) - regRang(b) || parEch(a, b));
+  if (mode === "entreprise")
+    return out.sort((a, b) =>
+      (a.entreprise || "￿").localeCompare(b.entreprise || "￿", "fr") ||
+      regRang(a) - regRang(b) || parEch(a, b));
+  if (mode === "numero")
+    return out.sort((a, b) =>
+      (a.kind === b.kind ? 0 : a.kind === "reserve" ? -1 : 1) ||
+      ((a.num || 0) - (b.num || 0)) || parDate(a, b));
+  return out.sort((a, b) => regRang(a) - regRang(b) || parEch(a, b) || parDate(a, b));
+}
+/* échéance en clair : ce qui compte c'est le retard, pas la date */
+function regEcheanceTexte(r){
+  const auj = todayIso();
+  if (r.statut === "Soldé") return r.dateSolde ? "levée le " + frDate(r.dateSolde) : "levée";
+  if (!r.dateLimite) return "sans échéance";
+  const j = joursEntre(auj, r.dateLimite);
+  if (j < 0)  return `en retard de ${-j} j`;
+  if (j === 0) return "échéance aujourd'hui";
+  if (j <= 7) return `échéance dans ${j} j`;
+  return "échéance " + frDate(r.dateLimite);
+}
 async function renderRegister(){
-  const res = (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num);
   const list = $("#regList");
-  if (!res.length){
-    list.innerHTML = `<div class="empty"><span class="glyph">📋</span>Aucune réserve.<br>Les constats NC / PA peuvent créer une réserve depuis l'éditeur de cliché,<br>ou ajoutez-en une manuellement.</div>`;
+  const brutes = await registreRows();
+  if (!brutes.length){
+    $("#regCount").textContent = "";
+    list.innerHTML = `<div class="empty"><span class="glyph">📋</span>Aucune réserve ni constat à suivre.<br>Les constats NC / PA apparaissent ici dès qu'ils sont saisis,<br>ou ajoutez une réserve manuellement.</div>`;
     return;
   }
-  const cls = {"Soldé":"solde-b","En retard":"retard-b","En cours":"encours"};
+  freeURLs();
+  const res = trierRegistre(brutes, regSort);
+  const ouvertes = res.filter(r => r.statut !== "Soldé").length;
+  $("#regCount").textContent = `${ouvertes} ouverte${ouvertes > 1 ? "s" : ""} · ${res.length} au total`;
+  /* le tri par abscisse n'a de sens qu'avec un axe renseigné */
+  const axe = !!axisOf();
+  $("#regSorts").querySelector('[data-sort="abscisse"]').disabled = !axe;
+
+  const auj = todayIso();
   list.innerHTML = res.map(r => {
-    const st = reserveStatut(r);
-    return `<div class="reg-card${st === "Soldé" ? " solde" : ""}" data-id="${r.id}">
-      <div class="reg-head">
-        <span class="reg-num">${r.num}</span>
-        <span class="reg-obj">${esc(r.objet || "(sans objet)")}</span>
-        <span class="reg-state ${cls[st]}" data-act="toggle">${st}</span>
-      </div>
-      <div class="reg-meta">Ouverte le ${esc(frDate(r.date))}${r.zone ? " · " + esc(r.zone) : ""}${r.entreprise ? " · " + esc(r.entreprise) : ""}${r.dateLimite ? " · échéance " + esc(frDate(r.dateLimite)) : ""}${st === "Soldé" && r.dateSolde ? " · soldée le " + esc(frDate(r.dateSolde)) : ""}</div>
-      ${r.action ? `<div class="reg-meta" style="margin-top:3px"><b>Action :</b> ${esc(r.action)}</div>` : ""}
-      <div style="margin-top:8px; display:flex; gap:8px">
-        <button class="btn ghost" data-act="edit" style="padding:7px 12px; font-size:13px">✎ Modifier</button>
-      </div>
+    const j = r.dateLimite ? joursEntre(auj, r.dateLimite) : null;
+    const cls = r.statut === "Soldé" ? "done"
+      : r.statut === "En retard" ? "late"
+      : (j != null && j <= 7) ? "soon" : "";
+    const repere = r.kind === "reserve" ? r.num : esc(r.code || "?");
+    const pos = r.abs != null ? " · " + fmtAbs(r.abs, r.mode) : "";
+    const th = r.photo && r.photo.blob
+      ? `<img class="rr-th" src="${mkURL(r.photo.blob)}" alt="">`
+      : `<span class="rr-th-none" aria-hidden="true">🚧</span>`;
+    const badge = r.kind === "reserve"
+      ? `<button class="rr-n" data-toggle="${r.id}" title="${r.statut === "Soldé" ? "Rouvrir" : "Solder"} la réserve n°${r.num}" aria-label="${r.statut === "Soldé" ? "Rouvrir" : "Solder"} la réserve n°${r.num}">${repere}</button>`
+      : `<span class="rr-n">${repere}</span>`;
+    return `<div class="rr ${cls}${r.kind === "constat" ? " draft" : ""}">
+      ${badge}
+      <button class="rr-open" data-kind="${r.kind}" data-id="${r.id}"${r.visitId ? ` data-visit="${r.visitId}"` : ""}>
+        <span class="rr-txt">
+          <b>${esc(r.titre)}${r.kind === "constat" ? `<span class="rr-tag">à formaliser</span>` : ""}</b>
+          <small>${esc(regEcheanceTexte(r))}${r.entreprise ? " · " + esc(r.entreprise) : ""}${pos}</small>
+        </span>
+        ${th}
+      </button>
     </div>`;
   }).join("");
-  list.querySelectorAll(".reg-card").forEach(card => {
-    const id = Number(card.dataset.id);
-    card.querySelector('[data-act=toggle]').addEventListener("click", async () => {
-      const r = res.find(x => x.id === id);
-      r.statut = r.statut === "Soldé" ? "En cours" : "Soldé";
-      r.dateSolde = r.statut === "Soldé" ? todayIso() : "";
-      if (r.statut !== "Soldé") r.soldePhotoId = null;
-      await tx("reserves","readwrite", s => s.put(r));
-      await logAction("Réserve", `n°${r.num}`, r.statut === "Soldé" ? "Soldée" : "Réouverte", "depuis le registre");
-      await renderRegister();
-    });
-    card.querySelector('[data-act=edit]').addEventListener("click", () => openReserveForm(res.find(x => x.id === id)));
-  });
+  list.querySelectorAll("[data-toggle]").forEach(b =>
+    b.addEventListener("click", () => basculerReserve(Number(b.dataset.toggle))));
+  list.querySelectorAll(".rr-open").forEach(b => b.addEventListener("click", async () => {
+    const id = Number(b.dataset.id);
+    if (b.dataset.kind === "reserve"){
+      const r = res.find(x => x.kind === "reserve" && x.id === id);
+      if (r) openReserveForm(r.rec);
+    }else{
+      /* un constat vit dans sa visite : on y va, puis on ouvre son cliché */
+      await showVisit(Number(b.dataset.visit));
+      await openEditor(id);
+    }
+  }));
+}
+/* solder ou rouvrir sans passer par le formulaire : l'appui long sur le repère.
+   Reprend l'action qu'offrait la pastille de statut de l'ancien rendu par cartes. */
+async function basculerReserve(id){
+  const r = (await idbAll("reserves", "projectId", CUR.id)).find(x => x.id === id);
+  if (!r) return;
+  r.statut = r.statut === "Soldé" ? "En cours" : "Soldé";
+  r.dateSolde = r.statut === "Soldé" ? todayIso() : "";
+  if (r.statut !== "Soldé") r.soldePhotoId = null;
+  await tx("reserves", "readwrite", s => s.put(r));
+  await logAction("Réserve", `n°${r.num}`, r.statut === "Soldé" ? "Soldée" : "Réouverte", "depuis le registre");
+  toast(r.statut === "Soldé" ? `Réserve n°${r.num} soldée` : `Réserve n°${r.num} rouverte`);
+  await renderRegister();
 }
 function parseFrDate(s){
   const m = String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
@@ -2733,6 +3365,16 @@ async function ensureTemplates(){
     CUR.templates = JSON.parse(JSON.stringify(CTRL_LIB));
     await saveCurrentProject();
   }
+  /* Le marqueur de point d'arrêt n'existait pas : jusqu'ici la mention ne vivait que dans
+     l'intitulé du modèle. On la promeut une fois en donnée, sans toucher aux intitulés. */
+  let migre = false;
+  for (const t of CUR.templates){
+    if (t.pointArret === undefined){
+      t.pointArret = /point\s*d['’]arr[êe]t/i.test(t.name || "");
+      migre = true;
+    }
+  }
+  if (migre) await saveCurrentProject();
   return CUR.templates;
 }
 function templateFams(tpls){
@@ -2788,7 +3430,9 @@ async function newCtrl(tplId){
   if (!t) return;
   const f = {
     projectId: CUR.id, visitId: curVisit.id, templateId: t.id, num: await nextCtrlNum(),
-    name: t.name, ref: t.ref, fam: t.fam, date: curVisit.date,
+    /* le marqueur est recopié sur la fiche : modifier le modèle plus tard ne doit pas
+       requalifier une fiche déjà établie, comme pour l'intitulé et la référence */
+    name: t.name, ref: t.ref, fam: t.fam, pointArret: !!t.pointArret, date: curVisit.date,
     zone: "", entreprise: "",
     items: t.items.map(i => ({...i, statut:"", val:"", obs:""})),
     createdAt: Date.now()
@@ -3628,6 +4272,7 @@ async function openTplForm(id){
   $("#tName").value = curTpl.name || "";
   $("#tRef").value = curTpl.ref || "";
   $("#tFam").value = curTpl.fam || "";
+  $("#tPointArret").value = curTpl.pointArret ? "1" : "0";
   $("#famList").innerHTML = templateFams(tpls).map(f => `<option value="${esc(f)}">`).join("");
   $("#tDelRow").hidden = !t;
   renderTplItems();
@@ -3692,6 +4337,7 @@ async function saveTplForm(){
   curTpl.name = $("#tName").value.trim();
   curTpl.ref  = $("#tRef").value.trim();
   curTpl.fam  = $("#tFam").value.trim() || "Autres";
+  curTpl.pointArret = $("#tPointArret").value === "1";
   if (!curTpl.name){ toast("Donnez un intitulé au modèle", true); $("#tName").focus(); return; }
   curTpl.items = curTpl.items.filter(it => (it.l || "").trim());
   if (!curTpl.items.length){ toast("Ajoutez au moins un point de contrôle", true); return; }
@@ -6302,12 +6948,23 @@ async function describeAI(){
 /* =============== réglages =============== */
 function applyHeader(s){
   $("#projTitle").textContent = s.proj;
-  $("#projSub").textContent = s.sub || DEFAULTS.sub;
+  /* la seconde ligne de l'en-tête est désormais l'invitation à changer de chantier ;
+     le sous-titre du chantier (s.sub) continue d'alimenter les rapports. */
+}
+/* les deux champs de réception n'ont de sens qu'en AOR */
+function refreshPhaseUI(){
+  const aor = $("#sPhase").value === "AOR";
+  $("#fldReception").hidden = !aor;
+  $("#fldDelai").hidden = !aor;
 }
 function openSettings(){
   const s = getSettings();
   $("#sProj").value = s.proj;
   $("#sSub").value = s.sub;
+  $("#sPhase").value = s.phase;
+  $("#sReception").value = s.dateReception;
+  $("#sDelai").value = s.delaiLevee;
+  refreshPhaseUI();
   $("#sRedac").value = s.redac;
   $("#sZones").value = s.zones.join("\n");
   $("#sEnts").value = s.ents.join("\n");
@@ -6335,9 +6992,15 @@ async function saveSettingsUI(){
     contacts: $("#sContacts").value.split("\n").map(x => x.trim()).filter(Boolean),
     planZoom: $("#sPlanZoom").value,
     planMode: $("#sPlanMode").value,
-    planSections: $("#sPlanSections").value === "1"
+    planSections: $("#sPlanSections").value === "1",
+    phase: $("#sPhase").value === "AOR" ? "AOR" : "DET",
+    dateReception: $("#sReception").value || "",
+    delaiLevee: $("#sDelai").value.replace(/\D/g, "")
   };
+  const phaseAvant = (getSettings() || {}).phase || "DET";
   if (CUR){ CUR.settings = s; CUR.name = s.proj; await saveCurrentProject(); }
+  if (phaseAvant !== s.phase)
+    await logAction("Chantier", s.proj, "Changement de phase", `${phaseAvant} → ${s.phase}`);
   const key = $("#sKey").value.trim();
   if (key) localStorage.setItem("apiKey", key);
   else localStorage.removeItem("apiKey");
@@ -6436,8 +7099,30 @@ async function main(){
   document.querySelectorAll("[data-clear]").forEach(b => b.addEventListener("click", () => {
     sigClear($("#" + b.dataset.clear)); refreshSigState();
   }));
-  $("#btnRegBack").addEventListener("click", showHome);
+  /* plus de lien « ← Visites » : la barre d'onglets rend le retour inutile */
   $("#btnRegAdd").addEventListener("click", () => openReserveForm(null));
+  /* tris du registre */
+  $("#regSorts").querySelectorAll(".sortchip").forEach(c =>
+    c.addEventListener("click", async () => {
+      regSort = c.dataset.sort;
+      $("#regSorts").querySelectorAll(".sortchip").forEach(x => x.classList.toggle("on", x === c));
+      await renderRegister();
+    }));
+  /* bascule Plan | Liste. Le plan travaille sur une visite : sans visite ouverte, on
+     prend la plus récente et on le dit, plutôt que de refuser. */
+  $("#regSeg").querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", async () => {
+      if (b.dataset.vue !== "plan") return;
+      try{
+        if (!curVisit){
+          const vs = await projectVisits();
+          if (!vs.length){ toast("Aucune visite : le plan n'a rien à afficher.", true); return; }
+          curVisit = vs[vs.length - 1];
+          toast("Plan de la visite du " + frDate(curVisit.date));
+        }
+        await openPlanScreen(null);
+      }catch(e){ toast("Plan indisponible : " + (e && e.message || e), true); }
+    }));
   $("#btnExtract").addEventListener("click", async () => {
     try{ await openExtract(); }catch(e){ toast("Extraction indisponible : " + (e && e.message || e), true); }
   });
@@ -6511,16 +7196,58 @@ async function main(){
     showHome();
   });
 
-  $("#btnSettings").addEventListener("click", openSettings);
+  /* ---- ossature : onglets, tiroir, chantier courant ---- */
+  document.querySelectorAll("#tabbar button").forEach(b =>
+    b.addEventListener("click", () => showTab(b.dataset.tab)));
+  $("#btnDrawer").addEventListener("click", () =>
+    $("#drawer").classList.contains("on") ? closeDrawer() : openDrawer());
+  $("#drawerScrim").addEventListener("click", closeDrawer);
+  $("#btnProjSwitch").addEventListener("click", openProjectSheet);
+  $("#drChantier").addEventListener("click", () => { closeDrawer(); openProjectSheet(); });
+  $("#btnDrDash").addEventListener("click", async () => {
+    closeDrawer();
+    try{ await openDashboard(); }catch(e){ toast("Tableau de bord indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnDrJournal").addEventListener("click", async () => {
+    closeDrawer();
+    try{ await openJournal(); }catch(e){ toast("Journal indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnDrPlan").addEventListener("click", async () => {
+    closeDrawer();
+    try{ await openPlanScreen(null); }catch(e){ toast("Plan indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnDrLock").addEventListener("click", () => { closeDrawer(); showLock(); });
+  /* échappement : referme le tiroir avant tout le reste */
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && $("#drawer").classList.contains("on")) closeDrawer();
+  });
+
+  /* ---- onglet Contrôles ---- */
+  $("#btnCtlNew").addEventListener("click", async () => {
+    if (!curVisit){
+      toast("Ouvrez d'abord la visite à laquelle rattacher la fiche.", true);
+      return showTab("home");
+    }
+    try{ await openCtrl(); }catch(e){ toast("Fiches indisponibles : " + (e && e.message || e), true); }
+  });
+
+  /* ---- onglet Rapports ---- */
+  $("#btnRapPilotage").addEventListener("click", exportDashboardPdf);
+  $("#btnRapExtract").addEventListener("click", async () => {
+    try{ await openExtract(); }catch(e){ toast("Extraction indisponible : " + (e && e.message || e), true); }
+  });
+
+  $("#btnSettings").addEventListener("click", () => { closeDrawer(); openSettings(); });
   $("#btnSetClose").addEventListener("click", () => $("#setModal").classList.remove("on"));
   $("#btnSetSave").addEventListener("click", saveSettingsUI);
+  $("#sPhase").addEventListener("change", refreshPhaseUI);
   $("#btnManageSwitch").addEventListener("click", () => { $("#setModal").classList.remove("on"); openProjectSheet(); });
   $("#btnDeleteProject").addEventListener("click", deleteCurrentProject);
   $("#btnChangePin").addEventListener("click", () => {
     $("#setModal").classList.remove("on");
     showLock();
     pinMode = "current";
-    $("#lockTitle").textContent = "Changer le code";
+    /* pas de #lockTitle sur la page de connexion : le titre est le logotype. */
     $("#lockText").textContent = "Saisissez d'abord le code actuel.";
     $("#btnUnlock").textContent = "Continuer";
   });
