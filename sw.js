@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
 /* abraCADabra — application version 3.0 */
-const CACHE = "chantier-v47";
+const CACHE = "chantier-v48";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable.png",
   "./fond-plan.jpg", "./pdf.min.js", "./pdf.worker.min.js"];
 
@@ -15,45 +15,29 @@ self.addEventListener("activate", e => {
   );
 });
 
-/* même base locale que l'application — garder la MÊME version que index.html (4) pour éviter un VersionError */
+/* Même base locale que l'application, mais SANS numéro de version : le service worker n'a
+   besoin que du magasin « inbox » pour déposer les photos partagées. Fixer une version ici
+   obligeait à la synchroniser avec index.html à chaque évolution du schéma, et levait une
+   VersionError dès que l'application prenait de l'avance. C'est elle qui crée les magasins. */
 function openDb(){
   return new Promise((res, rej) => {
-    const rq = indexedDB.open("chantier-notes", 6);
+    const rq = indexedDB.open("chantier-notes");
     rq.onupgradeneeded = e => {
+      // première ouverture sur cet appareil : au minimum de quoi recevoir un partage
       const d = e.target.result;
-      if (!d.objectStoreNames.contains("visits")){
-        const v = d.createObjectStore("visits", {keyPath:"id", autoIncrement:true});
-        v.createIndex("date","date");
-      }
-      if (!d.objectStoreNames.contains("photos")){
-        const p = d.createObjectStore("photos", {keyPath:"id", autoIncrement:true});
-        p.createIndex("visitId","visitId");
-      }
       if (!d.objectStoreNames.contains("inbox")){
         d.createObjectStore("inbox", {keyPath:"id", autoIncrement:true});
       }
-      if (!d.objectStoreNames.contains("projects")){
-        d.createObjectStore("projects", {keyPath:"id", autoIncrement:true});
-      }
-      if (!d.objectStoreNames.contains("reserves")){
-        const r = d.createObjectStore("reserves", {keyPath:"id", autoIncrement:true});
-        r.createIndex("projectId","projectId");
-      }
-      if (!d.objectStoreNames.contains("annexes")){
-        const a = d.createObjectStore("annexes", {keyPath:"id", autoIncrement:true});
-        a.createIndex("projectId","projectId");
-      }
-      if (!d.objectStoreNames.contains("controls")){
-        const c = d.createObjectStore("controls", {keyPath:"id", autoIncrement:true});
-        c.createIndex("projectId","projectId");
-        c.createIndex("visitId","visitId");
-      }
-      if (!d.objectStoreNames.contains("journal")){
-        const j = d.createObjectStore("journal", {keyPath:"id", autoIncrement:true});
-        j.createIndex("projectId","projectId");
-      }
     };
-    rq.onsuccess = () => res(rq.result);
+    rq.onsuccess = () => {
+      const d = rq.result;
+      if (!d.objectStoreNames.contains("inbox")){
+        d.close();
+        rej(new Error("magasin inbox absent — ouvrez l'application une fois"));
+        return;
+      }
+      res(d);
+    };
     rq.onerror = () => rej(rq.error);
   });
 }

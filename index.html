@@ -882,6 +882,30 @@
       <button class="btn blue block" id="btnRapExtract">📤 Extraire les réserves par entreprise</button>
       <div class="hint" id="rapAvenir" style="margin:-2px 4px 0"></div>
     </div>
+    <div id="rapOS" hidden>
+      <div class="sect-label">Ordres de service</div>
+      <div id="osList"></div>
+      <div class="btnrow" style="margin-top:6px">
+        <button class="btn ghost block" id="btnOsNew">📋 Nouvel ordre de service</button>
+        <div class="hint" style="margin:-2px 4px 0">
+          Numérotés et conservés par chantier. <b>Un ordre de service engage</b> : vérifiez la
+          prescription et les incidences au regard du CCAP avant notification.
+        </div>
+      </div>
+    </div>
+    <div id="rapPV" hidden>
+      <div class="sect-label">Procès-verbaux</div>
+      <div class="btnrow" style="margin-top:0">
+        <button class="btn ghost block" data-pv="opr">⚖ PV des opérations préalables (OPR)</button>
+        <button class="btn ghost block" data-pv="reception">🏁 PV de réception des travaux</button>
+        <button class="btn ghost block" data-pv="levee">✅ PV de levée des réserves</button>
+        <div class="hint" style="margin:-2px 4px 0">
+          Établis à partir du registre, avec pavés de signature à remplir contradictoirement.
+          <b>Vérifiez les mentions et les délais au regard du CCAP avant signature</b> — l'application
+          ne connaît pas votre marché.
+        </div>
+      </div>
+    </div>
     <div class="sect-label">Par visite</div>
     <div id="rapVisitList"></div>
   </div>
@@ -1312,6 +1336,52 @@
 
     <div class="btnrow" id="rDelRow">
       <button class="btn danger block" id="btnResDelete">Supprimer cette réserve</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ORDRE DE SERVICE ================= -->
+<div class="modal" id="osModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnOsClose" aria-label="Fermer">←</button>
+      <b id="osTitle">Ordre de service</b>
+    </div>
+    <div class="field">
+      <label for="oType">Nature de l'ordre de service</label>
+      <select id="oType"></select>
+    </div>
+    <div class="field">
+      <label for="oObjet">Objet</label>
+      <input type="text" id="oObjet" placeholder="Ex. : reprise des travaux après intempéries">
+    </div>
+    <div class="field">
+      <label for="oDest">Destinataire (entreprise)</label>
+      <input type="text" id="oDest" list="entsList3" placeholder="Ex. : COLAS">
+      <datalist id="entsList3"></datalist>
+    </div>
+    <div class="field">
+      <label for="oPrescription">Prescription</label>
+      <textarea id="oPrescription" style="min-height:120px" placeholder="Ce qui est ordonné à l'entreprise, en termes exécutoires."></textarea>
+      <div class="hint">Rédigez à l'impératif et sans ambiguïté : ce texte engage. Il sera reproduit tel quel sur le document.</div>
+    </div>
+    <div class="field">
+      <label for="oDateEffet">Date de prise d'effet</label>
+      <input type="date" id="oDateEffet">
+    </div>
+    <div class="field">
+      <label for="oDelai">Incidence sur le délai d'exécution</label>
+      <input type="text" id="oDelai" placeholder="Ex. : prolongation de 12 jours — nouvelle date d'achèvement le 12/03/2027">
+    </div>
+    <div class="field">
+      <label for="oPrix">Incidence financière</label>
+      <input type="text" id="oPrix" placeholder="Ex. : sans incidence financière">
+      <div class="hint">Sous le CCAG-Travaux, un ordre de service à incidence financière ouvre au titulaire un délai pour formuler ses réserves. Mentionnez-la, même pour dire qu'il n'y en a pas.</div>
+    </div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnOsSave">Enregistrer</button>
+      <button class="btn blue block" id="btnOsPdf">📄 Éditer l'ordre de service (PDF)</button>
+      <button class="btn danger block" id="btnOsDelete" hidden>Supprimer cet ordre de service</button>
     </div>
   </div>
 </div>
@@ -1948,9 +2018,10 @@ const DB_SCHEMA = {
   reserves: ["projectId"],
   annexes:  ["projectId"],
   controls: ["projectId","visitId"],
-  journal:  ["projectId"]
+  journal:  ["projectId"],
+  os:       ["projectId"]
 };
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 /* Ouvre la base puis vérifie magasins ET index. Une montée de version interrompue laissait
    l'application inutilisable ; on rouvre alors en version+1 pour compléter ce qui manque. */
 async function openDB(){
@@ -2175,6 +2246,7 @@ function showLock(){
   $("#extModal").classList.remove("on");
   $("#jrnModal").classList.remove("on");
   $("#dashModal").classList.remove("on");
+  $("#osModal").classList.remove("on");
   closeAddSheet();
   closeDrawer();
   document.body.classList.add("locked"); // masque le nom du chantier tant que le code n'est pas saisi
@@ -2505,9 +2577,11 @@ async function showReports(){
   const v = vocab();
   $("#rapProjName").textContent = " · " + v.phase;
   $("#btnRapExtract").textContent = "📤 Extraire les " + v.des + " par entreprise";
-  $("#rapAvenir").textContent = v.phase === "AOR"
-    ? "Les procès-verbaux d'OPR, de réception et de levée de réserves ne sont pas encore générés par l'application. Le registre exporté par entreprise en tient lieu pour l'instant."
-    : "Les ordres de service ne sont pas encore générés par l'application.";
+  /* à chaque phase ses livrables : ordres de service en exécution, procès-verbaux en réception */
+  $("#rapPV").hidden = v.phase !== "AOR";
+  $("#rapOS").hidden = v.phase !== "DET";
+  $("#rapAvenir").textContent = "";
+  if (v.phase === "DET") await renderOsList();
   const pid = CUR ? CUR.id : null;
   const visits = (await idbAll("visits")).filter(v => v.projectId === pid)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -5688,6 +5762,425 @@ async function pdfForEntreprise(data, scope, settings){
   return buildPdf(pages);
 }
 
+/* =============== procès-verbaux (phase AOR) ===============
+   Les trois documents partagent leur ossature — en-tête, parties, corps tabulaire,
+   conclusion, signatures — et ne diffèrent que par le jeu de réserves retenu et les
+   mentions. Un seul générateur, paramétré. */
+const PV_TYPES = {
+  opr: {
+    titre:"PROCÈS-VERBAL DES OPÉRATIONS PRÉALABLES À LA RÉCEPTION",
+    court:"PV d'OPR", fichier:"PV OPR",
+    objet:"Constatations effectuées contradictoirement lors des opérations préalables à la réception des travaux.",
+    band:"RÉSERVES RELEVÉES LORS DES OPÉRATIONS",
+    colEch:"ÉCHÉANCE",
+    filtre: r => reserveStatut(r) !== "Soldé",
+    vide:"Aucune réserve n'a été relevée lors des opérations préalables à la réception.",
+    parties:["Maîtrise d'œuvre","Entreprise"]
+  },
+  reception: {
+    titre:"PROCÈS-VERBAL DE RÉCEPTION DES TRAVAUX",
+    court:"PV de réception", fichier:"PV de reception",
+    objet:"Réception des travaux prononcée au vu des opérations préalables.",
+    band:"RÉSERVES ASSORTISSANT LA RÉCEPTION",
+    colEch:"LEVÉE ATTENDUE",
+    filtre: r => reserveStatut(r) !== "Soldé",
+    vide:"La réception est prononcée sans réserve.",
+    parties:["Maîtrise d'ouvrage","Maîtrise d'œuvre","Entreprise"]
+  },
+  levee: {
+    titre:"PROCÈS-VERBAL DE LEVÉE DES RÉSERVES",
+    court:"PV de levée de réserves", fichier:"PV de levee de reserves",
+    objet:"Constat de levée des réserves formulées au procès-verbal de réception.",
+    band:"RÉSERVES LEVÉES",
+    colEch:"LEVÉE LE",
+    filtre: r => reserveStatut(r) === "Soldé",
+    vide:"Aucune réserve levée à ce jour.",
+    parties:["Maîtrise d'œuvre","Entreprise"]
+  }
+};
+
+async function pdfForPV(kind, settings){
+  const T = PV_TYPES[kind];
+  if (!T) throw new Error("type de procès-verbal inconnu");
+  const toutes = (await idbAll("reserves", "projectId", CUR.id)).sort((a, b) => a.num - b.num);
+  const liste = toutes.filter(T.filtre);
+  const restantes = toutes.filter(r => reserveStatut(r) !== "Soldé").length;
+  const dateRec = settings.dateReception || "";
+  const delai = Number(settings.delaiLevee) || 0;
+  const finLevee = (dateRec && delai) ? isoPlus(dateRec, delai) : "";
+
+  const pages = [];
+  let cur = null, y = 0;
+  const newPage = () => { cur = {images:[], rects:[], texts:[]}; pages.push(cur); y = 795; };
+  const ensure = h => { if (y - h < 50) newPage(); };
+  const band = (label, h, size) => {
+    ensure(h + 8);
+    cur.rects.push({x:40, y:y-h, w:515.28, h, grad:PDF_G_BAND});
+    cur.rects.push({x:40, y:y-h, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:48, y:y - h + (h - size) / 2 + 2.2, size, font:"F2", color:PDF_NAVY, text:label});
+    y -= h + 8;
+  };
+  newPage();
+
+  /* ---- en-tête ---- */
+  cur.rects.push({x:40, y:y-64, w:515.28, h:64, grad:PDF_G_TITLE});
+  cur.rects.push({x:40, y:y-64, w:515.28, h:2.4, grad:PDF_G_RULE, horiz:true});
+  for (const [k, l] of wrapText(T.titre, 46).slice(0, 2).entries())
+    cur.texts.push({x:52, y:y-24-k*17, size:FS.subtitle, font:"F2", color:PDF_PEACH, text:l});
+  cur.texts.push({x:52, y:y-56, size:FS.body, font:"F1", color:"0.85 0.92 0.98", text:settings.proj.slice(0, 62)});
+  y -= 80;
+
+  cur.texts.push({x:40, y, size:FS.lead, font:"F2", color:PDF_NAVY, text:"Objet"}); y -= 15;
+  for (const l of wrapText(T.objet, 96)){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:l}); y -= 12; }
+  y -= 6;
+  const etabli = `Établi le ${frDate(todayIso())}${settings.redac ? " par " + settings.redac : ""}`;
+  cur.texts.push({x:40, y, size:9.5, font:"F1", color:PDF_GREY, text:etabli}); y -= 13;
+  /* les opérations préalables précèdent la réception : y annoncer une réception déjà
+     prononcée serait un contresens. La mention n'apparaît que sur les deux autres. */
+  if (dateRec && kind !== "opr"){
+    cur.texts.push({x:40, y, size:9.5, font:"F1", color:PDF_GREY,
+      text:`Réception prononcée le ${frDate(dateRec)}${finLevee ? ` — levée des réserves attendue au plus tard le ${frDate(finLevee)} (délai contractuel de ${delai} jours)` : ""}`});
+    y -= 13;
+  }
+  y -= 8;
+
+  /* ---- parties ---- */
+  if ((settings.cartouche || []).length){
+    band("PARTIES ET INTERVENANTS", 19, FS.bandSm);
+    for (const ligne of settings.cartouche){
+      for (const l of wrapText(ligne, 100)){
+        ensure(12);
+        cur.texts.push({x:40, y:y-8, size:FS.small, font:"F1", text:l});
+        y -= 11;
+      }
+    }
+    y -= 10;
+  }
+
+  /* ---- corps : les réserves retenues ---- */
+  band(T.band, 21, FS.band);
+  if (!liste.length){
+    ensure(20);
+    cur.texts.push({x:40, y:y-8, size:FS.body, font:"F1", color:PDF_GREY, text:T.vide});
+    y -= 24;
+  }else{
+    const RX = [40, 66, 300, 392, 458];
+    ensure(16);
+    cur.rects.push({x:40, y:y-13, w:515.28, h:14, grad:PDF_G_LABEL});
+    ["N°","OBJET","ENTREPRISE",T.colEch,"STATUT"].forEach((h, k) =>
+      cur.texts.push({x:RX[k]+2, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 17;
+    for (const r of liste){
+      const ol = wrapText(r.objet || "—", 50);
+      const el = wrapText(r.entreprise || "—", 20);
+      const rowH = Math.max(ol.length, el.length, 1) * 9.8 + 7;
+      ensure(rowH);
+      cur.texts.push({x:RX[0]+2, y:y-8, size:FS.body, font:"F2", text:String(r.num)});
+      let oy = y-8; for (const l of ol){ cur.texts.push({x:RX[1]+2, y:oy, size:FS.small, font:"F1", text:l}); oy -= 9.8; }
+      let ey = y-8; for (const l of el){ cur.texts.push({x:RX[2]+2, y:ey, size:FS.small, font:"F1", color:PDF_GREY, text:l}); ey -= 9.8; }
+      const dref = kind === "levee" ? r.dateSolde : r.dateLimite;
+      cur.texts.push({x:RX[3]+2, y:y-8, size:FS.mini, font:"F1", color:PDF_GREY, text:dref ? frDate(dref) : "—"});
+      pdfPill(cur, RX[4]+1, y-11.5, 70, 13, reserveStatut(r), FS.caption);
+      cur.rects.push({x:40, y:y-rowH+4, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= rowH;
+    }
+    y -= 10;
+    ensure(16);
+    cur.texts.push({x:40, y:y-8, size:FS.small, font:"F2", color:PDF_NAVY,
+      text:`${liste.length} réserve${liste.length > 1 ? "s" : ""} portée${liste.length > 1 ? "s" : ""} au présent procès-verbal.`});
+    y -= 20;
+  }
+
+  /* ---- conclusion propre au type ---- */
+  band("CONCLUSION", 19, FS.bandSm);
+  const concl = kind === "reception"
+    ? (liste.length
+        ? [`La réception des travaux est prononcée avec les ${liste.length} réserve(s) énumérées ci-dessus.`,
+           finLevee ? `L'entreprise dispose jusqu'au ${frDate(finLevee)} pour y remédier.` : "Le délai de levée sera fixé par ordre de service."]
+        : ["La réception des travaux est prononcée sans réserve."])
+    : kind === "opr"
+      ? [liste.length
+          ? `Les opérations préalables font apparaître ${liste.length} réserve(s), énumérées ci-dessus.`
+          : "Les opérations préalables n'appellent aucune réserve.",
+         "Le présent procès-verbal est transmis à la maîtrise d'ouvrage pour décision sur la réception."]
+      : [liste.length
+          ? `Les ${liste.length} réserve(s) énumérées ci-dessus sont constatées levées.`
+          : "Aucune réserve n'est constatée levée à ce jour.",
+         restantes
+           ? `${restantes} réserve(s) demeurent ouvertes à la date du présent procès-verbal.`
+           : "L'ensemble des réserves formulées est levé."];
+  for (const p of concl){
+    for (const l of wrapText(p, 96)){ ensure(13); cur.texts.push({x:40, y:y-8, size:FS.body, font:"F1", text:l}); y -= 12; }
+    y -= 4;
+  }
+  y -= 8;
+
+  /* ---- signatures : un pavé par partie, à signer contradictoirement ---- */
+  const nb = T.parties.length;
+  const larg = (515.28 - (nb - 1) * 10) / nb;
+  ensure(96);
+  T.parties.forEach((nom, k) => {
+    const x = 40 + k * (larg + 10);
+    cur.rects.push({x, y:y-88, w:larg, h:88, grad:PDF_G_LABEL});
+    cur.rects.push({x, y:y-88, w:larg, h:1.4, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:x+7, y:y-14, size:FS.small, font:"F2", color:PDF_NAVY, text:nom});
+    if (nom === "Maîtrise d'œuvre" && settings.redac)
+      cur.texts.push({x:x+7, y:y-28, size:FS.caption, font:"F1", color:PDF_GREY, text:settings.redac.slice(0, 30)});
+    cur.texts.push({x:x+7, y:y-44, size:FS.micro, font:"F1", color:PDF_GREY, text:"Nom et qualité :"});
+    cur.rects.push({x:x+7, y:y-58, w:larg-14, h:0.5, color:"0.7 0.74 0.79"});
+    cur.texts.push({x:x+7, y:y-70, size:FS.micro, font:"F1", color:PDF_GREY, text:"Date et signature :"});
+    cur.rects.push({x:x+7, y:y-84, w:larg-14, h:0.5, color:"0.7 0.74 0.79"});
+  });
+  y -= 96;
+
+  /* ---- avertissement : l'application ne connaît pas le marché ---- */
+  ensure(30);
+  for (const l of wrapText("Document établi depuis abraCADabra à partir du registre de suivi du chantier. Les mentions et délais portés ci-dessus doivent être vérifiés au regard du CCAP de l'opération avant signature. L'application ne produit pas d'horodatage qualifié opposable.", 108)){
+    cur.texts.push({x:40, y:y-8, size:FS.caption, font:"F1", color:PDF_GREY, text:l});
+    y -= 10;
+  }
+
+  /* ---- en-tête et pied de page ---- */
+  const HDR = "0.34 0.55 0.72", MARGE_D = 555.28;
+  pages.forEach((pg, i) => {
+    pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR, text:settings.proj.toUpperCase().slice(0,60)});
+    const th = T.court.toUpperCase();
+    pg.texts.push({x:pdfRightX(th, FS.caption, false, MARGE_D), y:816, size:FS.caption, font:"F1", color:HDR, text:th});
+    pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR, text:`${settings.sub} — ${settings.proj}`.slice(0,88)});
+    const tp = `Page ${i+1} / ${pages.length}`;
+    pg.texts.push({x:pdfRightX(tp, FS.caption, false, MARGE_D), y:26, size:FS.caption, font:"F1", color:HDR, text:tp});
+  });
+  return buildPdf(pages);
+}
+
+async function exportPV(kind){
+  if (!CUR) return;
+  const T = PV_TYPES[kind];
+  try{
+    toast(`Génération du ${T.court}…`);
+    const settings = getSettings();
+    const blob = await pdfForPV(kind, settings);
+    const nom = `${T.fichier} — ${sanitizeFilename(settings.proj)} — ${shortDate(todayIso())}.pdf`;
+    const r = await shareOrDownload([new File([blob], nom, {type:"application/pdf"})], nom);
+    await logAction("Procès-verbal", T.court, "Édité", settings.proj);
+    toast(r === "shared" ? `${T.court} partagé ✔`
+        : r === "downloaded" ? `${T.court} enregistré dans Téléchargements ✔` : "Partage annulé");
+  }catch(err){ toast(`Erreur ${T.court} : ` + (err && err.message || err), true); }
+}
+
+/* =============== ordres de service (phase DET) ===============
+   Contrairement aux procès-verbaux, un ordre de service ne se déduit d'aucune donnée :
+   il se rédige, il se numérote et il se conserve. D'où un magasin dédié. */
+const OS_TYPES = [
+  "Démarrage des travaux",
+  "Prolongation du délai d'exécution",
+  "Suspension — ajournement des travaux",
+  "Reprise des travaux",
+  "Travaux modificatifs ou supplémentaires",
+  "Mise en demeure",
+  "Autre"
+];
+let curOs = null;
+
+async function nextOsNum(){
+  const all = await idbAll("os", "projectId", CUR.id);
+  return all.reduce((m, x) => Math.max(m, x.num || 0), 0) + 1;
+}
+async function renderOsList(){
+  const box = $("#osList");
+  const liste = CUR ? ((await idbAll("os", "projectId", CUR.id)) || []) : [];
+  if (!liste.length){
+    box.innerHTML = `<div class="hint" style="margin:0 4px 6px">Aucun ordre de service émis sur ce chantier.</div>`;
+    return;
+  }
+  liste.sort((a, b) => (b.num || 0) - (a.num || 0));
+  box.innerHTML = liste.map(o => `<button class="ctrl-card" data-os="${o.id}">
+      <span class="cc-txt"><b>OS n°${o.num} — ${esc(o.objet || o.type || "(sans objet)")}</b>
+        <small>${esc(frDate(o.date))}${o.destinataire ? " · " + esc(o.destinataire) : ""} · ${esc(o.type || "")}</small></span>
+      <span class="cc-verdict wip">Ouvrir</span></button>`).join("");
+  box.querySelectorAll("[data-os]").forEach(b =>
+    b.addEventListener("click", () => {
+      const o = liste.find(x => x.id === Number(b.dataset.os));
+      if (o) openOsForm(o);
+    }));
+}
+async function openOsForm(o){
+  const s = getSettings();
+  curOs = o ? {...o} : { projectId: CUR.id, num: await nextOsNum(), date: todayIso(),
+    type: OS_TYPES[0], objet: "", destinataire: "", prescription: "",
+    dateEffet: todayIso(), delai: "", prix: "Sans incidence financière", createdAt: Date.now() };
+  $("#osTitle").textContent = `Ordre de service n°${curOs.num}`;
+  $("#oType").innerHTML = OS_TYPES.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+  $("#oType").value = curOs.type || OS_TYPES[0];
+  $("#entsList3").innerHTML = (s.ents || []).map(e => `<option value="${esc(e)}">`).join("");
+  $("#oObjet").value = curOs.objet || "";
+  $("#oDest").value = curOs.destinataire || "";
+  $("#oPrescription").value = curOs.prescription || "";
+  $("#oDateEffet").value = curOs.dateEffet || "";
+  $("#oDelai").value = curOs.delai || "";
+  $("#oPrix").value = curOs.prix || "";
+  $("#btnOsDelete").hidden = !o;
+  $("#osModal").classList.add("on");
+  window.scrollTo(0, 0);
+}
+function lireOsForm(){
+  curOs.type = $("#oType").value;
+  curOs.objet = $("#oObjet").value.trim();
+  curOs.destinataire = $("#oDest").value.trim();
+  curOs.prescription = $("#oPrescription").value.trim();
+  curOs.dateEffet = $("#oDateEffet").value || "";
+  curOs.delai = $("#oDelai").value.trim();
+  curOs.prix = $("#oPrix").value.trim();
+}
+async function saveOsForm(){
+  if (!curOs) return false;
+  lireOsForm();
+  if (!curOs.prescription){ toast("La prescription est le cœur de l'ordre de service : elle ne peut rester vide.", true); $("#oPrescription").focus(); return false; }
+  const neuf = curOs.id === undefined;
+  const id = await tx("os", "readwrite", s => s.put(curOs));
+  if (neuf) curOs.id = id;
+  await logAction("Ordre de service", `n°${curOs.num}`, neuf ? "Émis" : "Modifié",
+    [curOs.type, curOs.destinataire].filter(Boolean).join(" · "));
+  await renderOsList();
+  return true;
+}
+async function deleteOsForm(){
+  if (!curOs || curOs.id === undefined) return;
+  if (!confirm(`Supprimer l'ordre de service n°${curOs.num} ?\n\nIl restera au journal des modifications.`)) return;
+  await tx("os", "readwrite", s => s.delete(curOs.id));
+  await logAction("Ordre de service", `n°${curOs.num}`, "Supprimé", curOs.objet || "");
+  $("#osModal").classList.remove("on");
+  curOs = null;
+  await renderOsList();
+  toast("Ordre de service supprimé");
+}
+
+async function pdfForOS(o, settings){
+  const pages = [];
+  let cur = null, y = 0;
+  const newPage = () => { cur = {images:[], rects:[], texts:[]}; pages.push(cur); y = 795; };
+  const ensure = h => { if (y - h < 50) newPage(); };
+  const band = (label, h, size) => {
+    ensure(h + 8);
+    cur.rects.push({x:40, y:y-h, w:515.28, h, grad:PDF_G_BAND});
+    cur.rects.push({x:40, y:y-h, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:48, y:y - h + (h - size) / 2 + 2.2, size, font:"F2", color:PDF_NAVY, text:label});
+    y -= h + 8;
+  };
+  const para = (txt, size, color) => {
+    for (const l of wrapText(txt, size <= 9 ? 108 : 96)){
+      ensure(13);
+      cur.texts.push({x:40, y:y-8, size, font:"F1", color, text:l});
+      y -= size <= 9 ? 10.5 : 12;
+    }
+  };
+  newPage();
+
+  /* ---- en-tête ---- */
+  cur.rects.push({x:40, y:y-64, w:515.28, h:64, grad:PDF_G_TITLE});
+  cur.rects.push({x:40, y:y-64, w:515.28, h:2.4, grad:PDF_G_RULE, horiz:true});
+  cur.texts.push({x:52, y:y-26, size:FS.title, font:"F2", color:PDF_PEACH, text:`ORDRE DE SERVICE N° ${o.num}`});
+  cur.texts.push({x:52, y:y-48, size:FS.subtitle, font:"F1", color:"0.85 0.92 0.98", text:(o.type || "").slice(0, 58)});
+  y -= 80;
+
+  cur.texts.push({x:40, y, size:FS.lead, font:"F2", color:PDF_NAVY, text:"Objet"}); y -= 15;
+  para(o.objet || o.type || "—", FS.body);
+  /* para() descend déjà d'une ligne ; sans ce retrait supplémentaire l'intitulé et la
+     ligne d'émission se touchent. */
+  y -= 12;
+  cur.texts.push({x:40, y:y-8, size:9.5, font:"F1", color:PDF_GREY,
+    text:`Émis le ${frDate(o.date)}${settings.redac ? " par " + settings.redac : ""}`}); y -= 14;
+  if (o.destinataire){
+    cur.texts.push({x:40, y:y-8, size:10, font:"F2", text:`Destinataire : ${o.destinataire}`}); y -= 15;
+  }
+  if (o.dateEffet){
+    cur.texts.push({x:40, y:y-8, size:9.5, font:"F1", color:PDF_GREY, text:`Prise d'effet : ${frDate(o.dateEffet)}`}); y -= 14;
+  }
+  y -= 10;
+
+  /* ---- marché et intervenants ---- */
+  if ((settings.cartouche || []).length){
+    band("MARCHÉ ET INTERVENANTS", 19, FS.bandSm);
+    for (const ligne of settings.cartouche){
+      for (const l of wrapText(ligne, 100)){
+        ensure(12);
+        cur.texts.push({x:40, y:y-8, size:FS.small, font:"F1", text:l});
+        y -= 11;
+      }
+    }
+    y -= 10;
+  }
+
+  /* ---- la prescription : le cœur du document ---- */
+  band("PRESCRIPTION", 21, FS.band);
+  para(o.prescription || "—", FS.body);
+  y -= 12;
+
+  /* ---- incidences ---- */
+  band("INCIDENCES", 19, FS.bandSm);
+  ensure(30);
+  cur.texts.push({x:40, y:y-8, size:FS.small, font:"F2", color:PDF_NAVY, text:"Délai d'exécution :"});
+  y -= 12; para(o.delai || "Sans incidence sur le délai d'exécution.", FS.small, PDF_GREY);
+  y -= 6;
+  ensure(24);
+  cur.texts.push({x:40, y:y-8, size:FS.small, font:"F2", color:PDF_NAVY, text:"Incidence financière :"});
+  y -= 12; para(o.prix || "Sans incidence financière.", FS.small, PDF_GREY);
+  y -= 16;
+
+  /* ---- signature du maître d'œuvre et accusé de réception du titulaire ---- */
+  ensure(100);
+  const larg = (515.28 - 10) / 2;
+  [["Le maître d'œuvre", settings.redac || ""],
+   ["Accusé de réception du titulaire", ""]].forEach(([nom, sous], k) => {
+    const x = 40 + k * (larg + 10);
+    cur.rects.push({x, y:y-92, w:larg, h:92, grad:PDF_G_LABEL});
+    cur.rects.push({x, y:y-92, w:larg, h:1.4, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:x+7, y:y-14, size:FS.small, font:"F2", color:PDF_NAVY, text:nom});
+    if (sous) cur.texts.push({x:x+7, y:y-27, size:FS.caption, font:"F1", color:PDF_GREY, text:sous.slice(0, 34)});
+    if (k === 1) cur.texts.push({x:x+7, y:y-27, size:FS.micro, font:"F1", color:PDF_GREY, text:"Reçu le :"});
+    cur.texts.push({x:x+7, y:y-46, size:FS.micro, font:"F1", color:PDF_GREY, text:"Nom et qualité :"});
+    cur.rects.push({x:x+7, y:y-60, w:larg-14, h:0.5, color:"0.7 0.74 0.79"});
+    cur.texts.push({x:x+7, y:y-72, size:FS.micro, font:"F1", color:PDF_GREY, text:"Date et signature :"});
+    cur.rects.push({x:x+7, y:y-88, w:larg-14, h:0.5, color:"0.7 0.74 0.79"});
+  });
+  y -= 100;
+
+  /* ---- avertissement ---- */
+  ensure(34);
+  para("Document établi depuis abraCADabra. Les prescriptions, délais et incidences portés ci-dessus doivent être vérifiés au regard du CCAP et du CCAG applicables au marché avant notification. Le titulaire dispose du délai prévu au CCAG pour formuler ses réserves. L'application ne produit pas d'horodatage qualifié opposable.", FS.caption, PDF_GREY);
+
+  /* ---- en-tête et pied de page ---- */
+  const HDR = "0.34 0.55 0.72", MARGE_D = 555.28;
+  pages.forEach((pg, i) => {
+    pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR, text:settings.proj.toUpperCase().slice(0,60)});
+    const th = `ORDRE DE SERVICE N° ${o.num}`;
+    pg.texts.push({x:pdfRightX(th, FS.caption, false, MARGE_D), y:816, size:FS.caption, font:"F1", color:HDR, text:th});
+    pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR, text:`${settings.sub} — ${settings.proj}`.slice(0,88)});
+    const tp = `Page ${i+1} / ${pages.length}`;
+    pg.texts.push({x:pdfRightX(tp, FS.caption, false, MARGE_D), y:26, size:FS.caption, font:"F1", color:HDR, text:tp});
+  });
+  return buildPdf(pages);
+}
+
+async function exportOS(){
+  if (!curOs) return;
+  /* on enregistre avant d'éditer : un OS édité mais non conservé serait ingérable */
+  if (!(await saveOsForm())) return;
+  try{
+    toast("Génération de l'ordre de service…");
+    const settings = getSettings();
+    const blob = await pdfForOS(curOs, settings);
+    const nom = `OS n°${curOs.num} — ${sanitizeFilename(curOs.objet || curOs.type)} — ${shortDate(curOs.date)}.pdf`;
+    const r = await shareOrDownload([new File([blob], nom, {type:"application/pdf"})], nom);
+    toast(r === "shared" ? "Ordre de service partagé ✔"
+        : r === "downloaded" ? "Ordre de service dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur ordre de service : " + (err && err.message || err), true); }
+}
+
 /* Réserves d'une entreprise en tableur (séparateur « ; » et BOM : ouverture directe dans Excel FR) */
 function csvForEntreprise(data){
   const esc2 = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -6811,8 +7304,9 @@ async function fullBackup(){
     }
     const annexes = [];
     for (const a of annexesRaw){ const {blob, ...rest} = a; rest.b64 = blob ? await blobToBase64(blob) : null; annexes.push(rest); }
-    const data = { app:"notes-chantier", schema:6, exportedAt:new Date().toISOString(),
-      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, journal, annexes, photos: photoData };
+    const os = await idbAll("os");
+    const data = { app:"notes-chantier", schema:7, exportedAt:new Date().toISOString(),
+      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, journal, os, annexes, photos: photoData };
     const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
     const d = todayIso();
     const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde abraCADabra");
@@ -6831,7 +7325,7 @@ async function restoreBackup(file){
     if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\n⚠️ Cela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
     // vider les stores
-    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal"]){
+    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal","os"]){
       await new Promise((res, rej) => { const t = db.transaction(st,"readwrite"); t.objectStore(st).clear(); t.oncomplete = res; t.onerror = () => rej(t.error); });
     }
     // réinsérer avec les identifiants d'origine
@@ -6840,6 +7334,8 @@ async function restoreBackup(file){
     for (const r of (data.reserves||[])) await tx("reserves","readwrite", s => s.put(r));
     for (const c of (data.controls||[])) await tx("controls","readwrite", s => s.put(c));
     for (const j of (data.journal||[])) await tx("journal","readwrite", s => s.put(j));
+    /* sauvegardes antérieures au schéma 7 : aucun ordre de service à restaurer */
+    for (const o of (data.os||[])) await tx("os","readwrite", s => s.put(o));
     for (const a of (data.annexes||[])){
       const {b64, ...rest} = a;
       if (b64){ const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
@@ -7233,6 +7729,18 @@ async function main(){
 
   /* ---- onglet Rapports ---- */
   $("#btnRapPilotage").addEventListener("click", exportDashboardPdf);
+  document.querySelectorAll("[data-pv]").forEach(b =>
+    b.addEventListener("click", () => exportPV(b.dataset.pv)));
+  /* ordres de service */
+  $("#btnOsNew").addEventListener("click", async () => {
+    try{ await openOsForm(null); }catch(e){ toast("Ouverture impossible : " + (e && e.message || e), true); }
+  });
+  $("#btnOsClose").addEventListener("click", () => { $("#osModal").classList.remove("on"); curOs = null; });
+  $("#btnOsSave").addEventListener("click", async () => {
+    if (await saveOsForm()){ $("#osModal").classList.remove("on"); curOs = null; toast("Ordre de service enregistré ✔"); }
+  });
+  $("#btnOsPdf").addEventListener("click", exportOS);
+  $("#btnOsDelete").addEventListener("click", deleteOsForm);
   $("#btnRapExtract").addEventListener("click", async () => {
     try{ await openExtract(); }catch(e){ toast("Extraction indisponible : " + (e && e.message || e), true); }
   });
