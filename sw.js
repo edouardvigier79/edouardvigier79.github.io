@@ -1,8 +1,8 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
 /* abraCADabra — application version 3.0 */
-const CACHE = "chantier-v49";
+const CACHE = "chantier-v50";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable.png",
-  "./fond-plan.jpg", "./pdf.min.js", "./pdf.worker.min.js"];
+  "./fond-plan.jpg", "./logo.png", "./logo-dark.png", "./pdf.min.js", "./pdf.worker.min.js"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

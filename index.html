@@ -18,7 +18,8 @@
     --shadow:0 1px 2px rgba(34,29,23,.05), 0 6px 20px rgba(34,29,23,.07);
     --shadow-lg:0 12px 34px rgba(34,29,23,.13);
     --danger:#C0392B;
-    --r-xl:26px; --r-lg:20px; --r-md:15px; --r-sm:11px;
+    /* registre « produit moderne » : rayons courts et cohérents (26 px lisait « loisir ») */
+    --r-xl:14px; --r-lg:12px; --r-md:9px; --r-sm:6px;
     /* fond de plan : discret derrière les écrans de travail, plein écran au verrouillage */
     --plan-op:.13; --plan-op-lock:.62;
     --halo-b:rgba(47,134,197,.05); --halo-o:rgba(217,106,11,.03);
@@ -70,6 +71,16 @@
       radial-gradient(58vw 42vh at 88% -6%, var(--halo-b), transparent 70%),
       radial-gradient(52vw 38vh at -8% 102%, var(--halo-o), transparent 72%);
   }
+  /* icônes : filaires, couleur héritée du texte, donc justes en mode sombre et sur
+     tous les états sans une seule règle de plus */
+  .ico{
+    width:1.35em; height:1.35em; flex:none; display:inline-block; vertical-align:-.28em;
+    fill:none; stroke:currentColor; stroke-width:1.75;
+    stroke-linecap:round; stroke-linejoin:round;
+  }
+  .ico.sm{width:1.15em; height:1.15em; vertical-align:-.2em}
+  .ico.lg{width:1.6em; height:1.6em; vertical-align:-.35em}
+
   .wrap{max-width:640px; margin:0 auto; padding:0 14px 96px}
   .mono{font-family:ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-variant-numeric:tabular-nums}
 
@@ -90,12 +101,9 @@
   .top-id .top-title{display:block}
   .top-id:hover .eyebrow{color:var(--blue-deep)}
   .eyebrow{font-size:10.5px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--blue); }
-  .top-title{font-size:18.5px; font-weight:850; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  .hazard{
-    height:4px; margin:0 14px; border-radius:99px;
-    background:linear-gradient(90deg, var(--accent) 0%, #E8940F 32%, var(--blue) 100%);
-    opacity:.9;
-  }
+  .top-title{font-size:18.5px; font-weight:700; letter-spacing:-.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  /* un simple filet d'accent : le dégradé tricolore « rubalise » relevait de la décoration */
+  .hazard{height:2px; background:var(--accent); opacity:.85}
   .iconbtn{
     flex:none; width:42px; height:42px; border-radius:var(--r-md); border:1px solid var(--line);
     background:var(--card); color:var(--ink); font-size:17px; cursor:pointer;
@@ -105,17 +113,19 @@
   .iconbtn:hover{border-color:var(--blue-line); color:var(--blue)}
   .iconbtn:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
+  /* boutons : rectangle arrondi plutôt que gélule, aplat plutôt que dégradé,
+     ombre d'un pixel plutôt qu'une auréole colorée */
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
-    border:none; border-radius:99px; padding:14px 18px;
-    font:inherit; font-weight:700; cursor:pointer;
+    border:none; border-radius:var(--r-md); padding:13px 18px;
+    font:inherit; font-weight:600; cursor:pointer;
     background:var(--chip); color:var(--ink);
-    transition:transform .1s ease, filter .15s ease, box-shadow .18s ease;
+    transition:transform .1s ease, filter .15s ease, background .15s ease;
   }
   .btn:active, .chip:active, .iconbtn:active, .fab:active{transform:scale(.97)}
-  .btn.primary{background:var(--grad); color:#fff; box-shadow:0 8px 22px -6px rgba(217,106,11,.55)}
-  .btn.primary:hover{box-shadow:0 10px 26px -6px rgba(217,106,11,.62)}
-  .btn.blue{background:var(--grad-blue); color:#fff; box-shadow:0 8px 22px -6px rgba(47,134,197,.5)}
+  .btn.primary{background:var(--accent); color:var(--accent-ink); box-shadow:0 1px 2px rgba(34,29,23,.14)}
+  .btn.primary:hover{filter:brightness(1.06)}
+  .btn.blue{background:var(--blue); color:#fff; box-shadow:0 1px 2px rgba(34,29,23,.14)}
   .btn.ghost{background:var(--card); border:1.5px solid var(--line)}
   .btn.ghost:hover{border-color:var(--blue-line); color:var(--blue-deep)}
   .btn.danger{background:transparent; border:1.5px solid var(--danger); color:var(--danger)}
@@ -141,10 +151,10 @@
   .tabbar button{
     flex:1; position:relative; border:none; background:none; cursor:pointer; color:var(--ink2);
     display:flex; flex-direction:column; align-items:center; gap:3px;
-    padding:9px 2px 9px; font:inherit; font-size:10.5px; font-weight:800; letter-spacing:.02em;
+    padding:9px 2px 9px; font:inherit; font-size:10.5px; font-weight:600; letter-spacing:.02em;
     transition:color .15s ease;
   }
-  .tabbar .tb-ico{font-size:20px; line-height:1}
+  .tabbar .tb-ico{width:22px; height:22px; vertical-align:0}
   /* l'onglet actif est bleu : l'orange reste réservé à l'action (décision 5) */
   .tabbar button.on{color:var(--blue)}
   .tabbar button.on::before{
@@ -154,7 +164,7 @@
   .tabbar .tb-badge{
     position:absolute; top:4px; left:calc(50% + 9px);
     min-width:17px; height:17px; padding:0 4px; border-radius:99px;
-    background:var(--nc); color:#fff; font-size:10px; font-weight:800; line-height:17px;
+    background:var(--nc); color:#fff; font-size:10px; font-weight:600; line-height:17px;
   }
   .tabbar .tb-badge[hidden]{display:none !important}
 
@@ -171,16 +181,17 @@
   .drawer.on{transform:none}
   @media (prefers-reduced-motion:reduce){ .drawer{transition:none} }
   .dr-head{
-    background:var(--grad-blue); color:#fff;
+    /* bleu plein, assez sombre pour porter du blanc dans les deux modes */
+    background:#1C5F92; color:#fff;
     padding:calc(20px + env(safe-area-inset-top)) 18px 16px;
   }
-  .dr-head b{display:block; font-size:16px; font-weight:850}
+  .dr-head b{display:block; font-size:16px; font-weight:700}
   .dr-head small{display:block; font-size:12px; opacity:.9; margin-top:2px}
   .dr-chantier{
     margin:14px 14px 6px; padding:11px 13px; border-radius:var(--r-md);
     background:var(--blue-soft); border:1px solid var(--blue-line);
   }
-  .dr-chantier span{display:block; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--blue-deep)}
+  .dr-chantier span{display:block; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--blue-deep)}
   .dr-chantier b{display:block; font-size:14px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .drawer nav{padding:6px 8px 18px}
   .dr-item{
@@ -190,7 +201,7 @@
     padding:12px 12px; border-radius:var(--r-md);
   }
   .dr-item:hover{background:var(--chip)}
-  .dr-item .dr-ico{flex:none; width:24px; font-size:18px; text-align:center}
+  .dr-item .dr-ico{flex:none; width:21px; height:21px; vertical-align:0; color:var(--ink2)}
   .dr-sep{height:1px; background:var(--line); margin:8px 12px}
 
   /* verrouillé : ni onglets ni tiroir, la page de marque reste seule */
@@ -208,7 +219,7 @@
     box-shadow:var(--shadow); transition:transform .1s ease, border-color .15s ease;
   }
   .hkpi:active{transform:scale(.98)}
-  .hkpi .hk-n{display:block; font-size:26px; font-weight:850; line-height:1.05; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .hkpi .hk-n{display:block; font-size:26px; font-weight:700; line-height:1.05; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
   .hkpi .hk-l{display:block; font-size:11.5px; font-weight:700; color:var(--ink2); margin-top:3px; line-height:1.25}
   /* la couleur ne porte que l'urgence ; l'orange reste l'action, jamais un statut */
   .hkpi.late{background:color-mix(in srgb, var(--nc) 12%, var(--card)); border-color:color-mix(in srgb, var(--nc) 38%, var(--line))}
@@ -234,7 +245,7 @@
     flex:none; width:36px; height:36px; border-radius:9px; border:2px solid var(--ink2);
     display:flex; align-items:center; justify-content:center; padding:0;
     background:transparent; font:inherit;
-    font-size:14px; font-weight:850; color:var(--ink2); font-variant-numeric:tabular-nums;
+    font-size:14px; font-weight:700; color:var(--ink2); font-variant-numeric:tabular-nums;
   }
   button.rr-n{cursor:pointer}
   button.rr-n:active{transform:scale(.92)}
@@ -268,7 +279,7 @@
   .rr.draft .rr-n{border-style:dashed; font-size:11.5px}
   .rr-tag{
     display:inline-block; margin-left:6px; padding:1px 6px; border-radius:99px;
-    font-size:10px; font-weight:800; letter-spacing:.04em;
+    font-size:10px; font-weight:600; letter-spacing:.04em;
     background:var(--chip); color:var(--ink2); vertical-align:1px;
   }
 
@@ -286,7 +297,7 @@
   .rr-tag.pa{background:color-mix(in srgb, var(--nc) 18%, var(--card)); color:var(--nc)}
 
   .reg-bar{display:flex; align-items:center; gap:8px; margin:6px 2px 12px; flex-wrap:wrap}
-  .reg-bar .reg-count{margin-left:auto; font-size:12.5px; font-weight:800; color:var(--ink2)}
+  .reg-bar .reg-count{margin-left:auto; font-size:12.5px; font-weight:600; color:var(--ink2)}
   .sortchip{
     border:1px solid var(--line); background:var(--card); color:var(--ink2);
     border-radius:99px; padding:6px 12px; font:inherit; font-size:12px; font-weight:700; cursor:pointer;
@@ -300,7 +311,7 @@
     overflow:hidden; background:var(--card); box-shadow:var(--shadow); margin:4px 0 2px;
   }
   .seg button{
-    flex:1; border:none; background:none; font:inherit; font-size:13px; font-weight:800;
+    flex:1; border:none; background:none; font:inherit; font-size:13px; font-weight:600;
     color:var(--ink2); cursor:pointer; padding:11px 0; display:flex; align-items:center;
     justify-content:center; gap:7px;
   }
@@ -311,79 +322,55 @@
     font-size:13px; color:var(--c); font-weight:700;
   }
 
-  .lockbox{min-height:92dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:6px; padding:24px 10px}
-  .lockbox .glyph{
-    width:96px; height:96px; border-radius:38% 62% 58% 42% / 46% 40% 60% 54%;
-    background:var(--grad);
-    display:flex; align-items:center; justify-content:center; font-size:40px;
-    box-shadow:0 16px 40px -8px rgba(217,106,11,.5); margin-bottom:10px;
-    animation:blob 12s ease-in-out infinite;
-  }
-  @keyframes blob{
-    0%,100%{border-radius:38% 62% 58% 42% / 46% 40% 60% 54%}
-    50%{border-radius:58% 42% 40% 60% / 56% 58% 42% 44%}
-  }
-  @media (prefers-reduced-motion: reduce){ .lockbox .glyph{animation:none} }
-  /* bloc de marque de la page de connexion */
   /* verrouillé : page de marque plein écran, aucun nom de chantier visible */
   body.locked header.top{display:none}
-  .brand{display:flex; flex-direction:column; align-items:center; gap:2px; margin-bottom:22px}
-  /* logotype : « abra » en serif clair, « CAD » en capitales dégradées — le jeu de mots devient visuel */
-  .brand-app{
-    display:flex; align-items:baseline; justify-content:center;
-    line-height:1; white-space:nowrap;
+
+  /* Page de connexion : le formulaire est contenu dans un panneau net posé sur
+     l'illustration, plutôt que flottant dessus. C'est ce qui fait la différence entre
+     une page de marque et une page d'accès. */
+  .lockbox{
+    min-height:100dvh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; padding:24px 16px;
   }
-  .brand-app i{
-    font-family:Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
-    font-style:italic; font-weight:400; font-size:clamp(29px, 9.6vw, 38px); letter-spacing:-.01em;
-    color:var(--blue-deep);
+  .lockpanel{
+    width:100%; max-width:380px; text-align:center;
+    background:color-mix(in srgb, var(--card) 96%, transparent);
+    border:1px solid var(--line); border-radius:var(--r-xl);
+    padding:32px 26px 26px;
+    box-shadow:0 2px 4px rgba(34,29,23,.06), 0 18px 44px -18px rgba(34,29,23,.34);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
   }
-  .brand-app span{
-    font-family:system-ui, "Segoe UI", Roboto, sans-serif;
-    font-weight:900; font-size:clamp(35px, 11.6vw, 46px); letter-spacing:.02em; margin:0 .04em;
-    background:linear-gradient(160deg,#FFB454 0%,#F07E1A 45%,#D4560A 100%);
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 3px 10px rgba(217,106,11,.34));
-  }
-  @supports not ((-webkit-background-clip:text) or (background-clip:text)){
-    .brand-app span{color:var(--accent); filter:none}
-  }
-  .brand-rule{width:64px; height:3px; border-radius:99px; margin-top:12px;
-    background:linear-gradient(90deg, var(--accent), var(--blue))}
+  @supports not (backdrop-filter:blur(2px)){ .lockpanel{background:var(--card)} }
+  /* logotype : fichier fourni, détouré. Le filet sous le mot fait partie du dessin.
+     Deux variantes, la seconde éclaircie pour rester lisible sur fond sombre. */
+  .brand-logo img{display:block; width:min(72vw, 268px); height:auto; margin:0 auto}
+  /* signature : même famille et même bleu que le logotype, en demi-gras.
+     Elle lui répond au lieu de s'effacer sous lui. */
   .brand-tag{
-    font-family:Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
-    font-style:italic; font-size:14.5px; line-height:1.45; text-align:center;
-    color:var(--ink2); margin-top:11px; max-width:30ch;
+    font-size:15.5px; font-weight:600; line-height:1.4;
+    color:var(--blue-deep); letter-spacing:-.005em;
+    margin:15px auto 0; text-wrap:balance;
   }
-  .brand-seal{
-    margin-top:9px; font-size:10.5px; font-weight:800; letter-spacing:.13em; text-transform:uppercase;
-    color:var(--blue-deep); background:var(--blue-soft); border:1px solid var(--blue-line);
-    border-radius:99px; padding:5px 13px;
+  .lockpanel .sep{height:1px; background:var(--line); margin:22px 0 20px}
+  .lockbox p{color:var(--ink2); font-size:13.5px; line-height:1.55; margin:0 auto 16px; max-width:32ch}
+  .pinfield{
+    font-size:22px; letter-spacing:.4em; text-align:center; width:100%;
+    padding:13px 8px 13px 16px; border-radius:var(--r-md);
+    border:1.5px solid var(--line); background:var(--card); color:var(--ink);
   }
-  .lockbox h1{font-size:20px; margin:4px 0 0; letter-spacing:-.01em}
-  .lockbox p{color:var(--ink); font-weight:500; margin:2px 0 14px; max-width:34ch}
-  /* voile radial : garde le texte lisible tout en laissant l'illustration vivre sur les bords */
-  .lockbox::before{
-    content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
-    background:radial-gradient(ellipse 115% 46% at 50% 44%,
-      color-mix(in srgb, var(--bg) 92%, transparent) 0%,
-      color-mix(in srgb, var(--bg) 74%, transparent) 52%,
-      transparent 82%);
-  }
-  .lockbox{position:relative; isolation:isolate}
-  .pinfield{font-size:26px; letter-spacing:.45em; text-align:center; width:210px; padding:12px 6px 12px 16px; border-radius:99px; border:1.5px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow)}
-  .pinfield:focus{border-color:var(--blue); outline:none; box-shadow:0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent)}
-  .lockmsg{min-height:22px; font-size:13.5px; color:var(--danger); font-weight:600; margin-top:10px}
+  .pinfield:focus{border-color:var(--blue); outline:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent)}
+  .lockmsg{min-height:20px; font-size:13px; color:var(--danger); font-weight:600; margin-top:9px}
+  .lockfoot{margin-top:22px; font-size:11px; color:var(--ink2); opacity:.8}
 
   /* étiquette de section : pastille translucide pour rester lisible sur le fond de plan */
   .sect-label{
-    font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:var(--ink);
+    font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink);
     margin:20px 2px 8px; display:inline-flex; align-items:center; gap:8px;
     background:var(--card);
     border:1px solid var(--line); border-radius:99px; padding:7px 14px 7px 11px;
     box-shadow:var(--shadow);
   }
-  .sect-label::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--grad-blue); flex:none}
+  .sect-label::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--blue); flex:none}
   /* accueille désormais la grille des compteurs, plus le rang de pastilles : bloc, pas flex */
   .home-project{display:block; margin:14px 0 2px}
   /* .proj-chip / .reg-chip retirées : la rangée de pastilles de l'accueil a été remplacée
@@ -394,9 +381,9 @@
   .reg-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:13px 15px; margin-bottom:10px; box-shadow:var(--shadow)}
   .reg-card.solde{opacity:.62}
   .reg-head{display:flex; align-items:center; gap:9px; margin-bottom:5px}
-  .reg-num{width:32px; height:32px; border-radius:50% 50% 50% 12px; background:var(--grad); color:#fff; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 5px 14px -5px rgba(217,106,11,.6)}
+  .reg-num{width:32px; height:32px; border-radius:50% 50% 50% 12px; background:var(--grad); color:#fff; font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 5px 14px -5px rgba(217,106,11,.6)}
   .reg-obj{flex:1; font-weight:700; font-size:14.5px}
-  .reg-state{font-size:11px; font-weight:800; padding:3px 9px; border-radius:99px; cursor:pointer}
+  .reg-state{font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; cursor:pointer}
   .reg-state.encours{background:#FBE3C7; color:#9a5a12}
   .reg-state.solde-b{background:#D7EEDD; color:#256b39}
   .reg-state.retard-b{background:#F8D2CE; color:#a02617}
@@ -409,7 +396,7 @@
     box-shadow:var(--shadow); position:relative; overflow:hidden; flex-wrap:wrap;
     transition:transform .12s ease, box-shadow .18s ease, border-color .18s ease;
   }
-  .visit-card::before{content:""; position:absolute; left:0; top:14%; bottom:14%; width:4px; border-radius:0 99px 99px 0; background:var(--grad-blue); opacity:0; transition:opacity .18s ease}
+  .visit-card::before{content:""; position:absolute; left:0; top:14%; bottom:14%; width:4px; border-radius:0 99px 99px 0; background:var(--blue); opacity:0; transition:opacity .18s ease}
   .visit-card:hover{border-color:var(--blue-line); box-shadow:var(--shadow-lg)}
   .visit-card:hover::before{opacity:1}
   .visit-card:active{transform:scale(.985)}
@@ -421,7 +408,7 @@
   /* pastilles sur leur propre ligne, alignées sous le texte (vignette 56 + gap 12) */
   .visit-counts{display:flex; gap:5px; flex-wrap:wrap; flex:1 0 100%; padding-left:68px; margin-top:4px}
 
-  .pill{display:inline-flex; align-items:center; border-radius:99px; padding:2.5px 9px; font-size:11.5px; font-weight:800; letter-spacing:.03em; color:#fff}
+  .pill{display:inline-flex; align-items:center; border-radius:99px; padding:2.5px 9px; font-size:11.5px; font-weight:600; letter-spacing:.03em; color:#fff}
   .pill.C{background:var(--c)} .pill.NC{background:var(--nc)}
   .pill.PA{background:var(--pa)} .pill.AC{background:var(--ac)}
   .pill.none{background:var(--chip); color:var(--ink2)}
@@ -431,13 +418,13 @@
   .photo-card img.shot{width:100%; display:block; max-height:64dvh; object-fit:contain; background:#15120F}
   .shot-badge{
     position:absolute; top:10px; left:10px; z-index:2;
-    background:rgba(18,15,12,.66); color:#fff; font-weight:800; font-size:13px;
+    background:rgba(18,15,12,.66); color:#fff; font-weight:600; font-size:13px;
     padding:5px 13px; border-radius:99px; backdrop-filter:blur(6px);
   }
   .shot-statut{position:absolute; top:10px; right:10px; z-index:2}
   .caption{padding:12px 14px 13px}
   .cap-head{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
-  .cap-num{font-weight:800; font-size:15px}
+  .cap-num{font-weight:600; font-size:15px}
   .cap-meta{font-size:12.5px; color:var(--ink2); margin-top:3px}
   .cap-meta a{color:var(--blue); text-decoration:none; font-weight:700}
   .cap-title{font-weight:700; font-size:15.5px; margin-top:8px}
@@ -448,7 +435,7 @@
   /* bandeau réserve rattachée à un cliché (solde direct avec preuve photo) */
   .cap-res{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:12px; padding:10px 12px;
     border-radius:var(--r-md); background:var(--blue-soft); border:1px solid var(--blue-line)}
-  .cap-res .cr-lab{flex:1 1 auto; font-size:12.5px; font-weight:800; color:var(--blue-deep); min-width:0}
+  .cap-res .cr-lab{flex:1 1 auto; font-size:12.5px; font-weight:600; color:var(--blue-deep); min-width:0}
   .cap-res .cr-lab small{display:block; font-weight:600; font-size:11.5px; opacity:.8}
   .cap-res .btn{padding:8px 13px; font-size:12.5px}
   .cap-res.done{background:rgba(46,125,69,.12); border-color:rgba(46,125,69,.38)}
@@ -458,9 +445,9 @@
   /* réserves ouvertes à lever pendant la visite */
   .open-res{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
     padding:12px 14px; margin:0 0 12px; box-shadow:var(--shadow)}
-  .open-res > h4{margin:0 0 9px; font-size:11px; font-weight:800; letter-spacing:.09em;
+  .open-res > h4{margin:0 0 9px; font-size:11px; font-weight:600; letter-spacing:.09em;
     text-transform:uppercase; color:var(--ink2); display:flex; align-items:center; gap:8px}
-  .open-res > h4::before{content:""; width:14px; height:3px; border-radius:99px; background:var(--grad); flex:none}
+  .open-res > h4::before{content:""; width:14px; height:3px; border-radius:99px; background:var(--accent); flex:none}
   .or-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 0; border-top:1px solid var(--line)}
   .or-row:first-of-type{border-top:none}
   .or-txt{flex:1 1 auto; min-width:0}
@@ -475,11 +462,11 @@
   .ctrl-card .cc-txt{flex:1; min-width:0}
   .ctrl-card .cc-txt b{display:block; font-size:14.5px}
   .ctrl-card .cc-txt small{color:var(--ink2); font-size:12px}
-  .cc-verdict{flex:none; font-size:11px; font-weight:800; padding:5px 11px; border-radius:99px; color:#fff; text-align:center}
+  .cc-verdict{flex:none; font-size:11px; font-weight:600; padding:5px 11px; border-radius:99px; color:#fff; text-align:center}
   .cc-verdict.ok{background:var(--c)} .cc-verdict.ko{background:var(--nc)} .cc-verdict.res{background:var(--pa)}
   .cc-verdict.wip{background:var(--chip); color:var(--ink2)}
   .ctrl-fam{margin-bottom:12px}
-  .ctrl-fam > h5{margin:0 0 6px; font-size:10.5px; font-weight:800; letter-spacing:.08em;
+  .ctrl-fam > h5{margin:0 0 6px; font-size:10.5px; font-weight:600; letter-spacing:.08em;
     text-transform:uppercase; color:var(--blue)}
   .ctrl-head{background:var(--blue-soft); border:1px solid var(--blue-line); border-radius:var(--r-md);
     padding:10px 13px; margin-bottom:14px}
@@ -499,11 +486,11 @@
     border:1.5px solid var(--line); border-radius:var(--r-sm); padding:9px 11px}
   .ci-meas input:focus{border-color:var(--blue); outline:none}
   .ci-meas .ci-u{font-size:13px; color:var(--ink2); font-weight:600}
-  .ci-verdict{font-size:11.5px; font-weight:800; padding:4px 11px; border-radius:99px; color:#fff}
+  .ci-verdict{font-size:11.5px; font-weight:600; padding:4px 11px; border-radius:99px; color:#fff}
   .ci-verdict.ok{background:var(--c)} .ci-verdict.ko{background:var(--nc)}
   .ci textarea{width:100%; font:inherit; color:var(--ink); background:var(--bg);
     border:1.5px solid var(--line); border-radius:var(--r-sm); padding:9px 11px; min-height:56px; resize:vertical}
-  .ctrl-concl{border-radius:var(--r-lg); padding:14px 16px; margin:16px 0 4px; font-weight:800; text-align:center; font-size:15px}
+  .ctrl-concl{border-radius:var(--r-lg); padding:14px 16px; margin:16px 0 4px; font-weight:600; text-align:center; font-size:15px}
   .ctrl-concl.ok{background:rgba(46,125,69,.14); color:var(--c); border:1.5px solid rgba(46,125,69,.4)}
   .ctrl-concl.ko{background:rgba(192,57,43,.12); color:var(--nc); border:1.5px solid rgba(192,57,43,.4)}
   .ctrl-concl.res{background:rgba(168,116,7,.14); color:var(--pa); border:1.5px solid rgba(168,116,7,.42)}
@@ -525,7 +512,7 @@
   .planbar{flex:none; background:var(--bg); border-top:1px solid var(--line)}
   .plan-queue{display:flex; align-items:center; gap:10px; padding:10px 0 2px; font-size:13.5px}
   .plan-queue .pq-n{flex:none; width:32px; height:32px; border-radius:50%; background:var(--grad); color:#fff;
-    font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center}
+    font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center}
   .plan-queue .pq-t{flex:1; min-width:0}
   .plan-queue .pq-t b{display:block}
   .plan-queue .pq-t small{color:var(--ink2); font-size:12px}
@@ -538,29 +525,29 @@
   .mk-row span{flex:1; min-width:0; font-size:13.5px}
   /* après .mk-row span, sinon la pastille hérite du flex:1 et s'étire */
   .mk-row .mk-l{flex:0 0 26px; width:26px; height:26px; border-radius:50%; background:var(--blue); color:#fff;
-    font-size:12.5px; font-weight:800; display:flex; align-items:center; justify-content:center}
+    font-size:12.5px; font-weight:600; display:flex; align-items:center; justify-content:center}
   .mk-row button{flex:none; border:none; background:transparent; font-size:16px; cursor:pointer; padding:2px 5px}
   .mk-row .mk-go{color:var(--blue-deep)} .mk-row .mk-del{color:var(--nc)}
   /* ---- tableau de bord ---- */
   .kpis{display:grid; grid-template-columns:repeat(2,1fr); gap:9px; margin-bottom:16px}
   .kpi{border-radius:var(--r-lg); padding:13px 15px; color:#fff; box-shadow:var(--shadow)}
   .kpi b{display:block; font-size:27px; line-height:1.05; font-variant-numeric:tabular-nums}
-  .kpi span{display:block; font-size:10.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; margin-top:3px; opacity:.95}
+  .kpi span{display:block; font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; margin-top:3px; opacity:.95}
   .kpi small{display:block; font-size:11px; margin-top:4px; opacity:.9}
   .kpi.pa{background:linear-gradient(140deg,#E0A63A,#A87407)}
   .kpi.nc{background:linear-gradient(140deg,#E06052,#B4271B)}
   .kpi.c {background:linear-gradient(140deg,#5CB47C,#256B39)}
   .kpi.ac{background:linear-gradient(140deg,#5E9AD0,#25507F)}
-  .dash-sect{font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase;
+  .dash-sect{font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase;
     color:var(--ink2); margin:20px 2px 9px; display:flex; align-items:center; gap:8px}
-  .dash-sect::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--grad-blue); flex:none}
+  .dash-sect::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--blue); flex:none}
   .dash-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
     padding:13px 15px; margin-bottom:10px; box-shadow:var(--shadow)}
   .ent-row{padding:11px 0; border-top:1px solid var(--line)}
   .ent-row:first-child{border-top:none; padding-top:2px}
   .ent-head{display:flex; align-items:baseline; gap:8px}
   .ent-head b{flex:1; font-size:14.5px; min-width:0}
-  .ent-taux{font-size:16px; font-weight:800; font-variant-numeric:tabular-nums}
+  .ent-taux{font-size:16px; font-weight:600; font-variant-numeric:tabular-nums}
   .ent-taux.bon{color:var(--c)} .ent-taux.moyen{color:var(--pa)} .ent-taux.faible{color:var(--nc)}
   .ent-bar{height:8px; border-radius:99px; background:var(--chip); overflow:hidden; display:flex; margin:7px 0 5px}
   .ent-bar i{display:block; height:100%}
@@ -579,29 +566,29 @@
   .rec-row{display:flex; align-items:center; gap:10px; padding:7px 0; border-top:1px solid var(--line)}
   .rec-row:first-child{border-top:none}
   .rec-row .rn{flex:none; min-width:26px; height:26px; padding:0 7px; border-radius:99px; background:var(--nc); color:#fff;
-    font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center}
+    font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center}
   .rec-row span{flex:1; font-size:13.5px; min-width:0}
   /* ---- axe de repérage linéaire ---- */
   .ax-pt{display:flex; align-items:center; gap:9px; padding:8px 11px; border:1px solid var(--line);
     border-radius:var(--r-sm); margin-bottom:6px; background:var(--card)}
   .ax-pt .ax-n{flex:none; width:26px; height:26px; border-radius:50%; background:var(--grad-blue); color:#fff;
-    font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center}
+    font-size:11.5px; font-weight:600; display:flex; align-items:center; justify-content:center}
   .ax-pt .ax-c{flex:1; min-width:0; font-size:12.5px; font-family:ui-monospace,Menlo,Consolas,monospace}
   .ax-pt .ax-k{font-size:11.5px; color:var(--ink2); font-weight:700}
   .ax-pt .ax-del{flex:none; border:none; background:transparent; color:var(--nc); font-size:16px; cursor:pointer}
   /* repère PK affiché sur les clichés */
   .pk-chip{display:inline-flex; align-items:center; gap:5px; background:var(--blue-soft);
     border:1px solid var(--blue-line); color:var(--blue-deep); border-radius:99px;
-    padding:3px 10px; font-size:12px; font-weight:800; margin-top:6px}
+    padding:3px 10px; font-size:12px; font-weight:600; margin-top:6px}
   /* ---- journal des modifications ---- */
-  .jrn-jour{font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  .jrn-jour{font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase;
     color:var(--blue); margin:16px 2px 7px}
   .jrn-e{display:flex; gap:10px; padding:9px 12px; background:var(--card); border:1px solid var(--line);
     border-radius:var(--r-md); margin-bottom:7px}
   .jrn-h{flex:none; width:44px; font-size:12px; font-weight:700; color:var(--ink2); font-variant-numeric:tabular-nums}
   .jrn-c{flex:1; min-width:0}
   .jrn-t{font-size:13.5px; font-weight:700}
-  .jrn-t .jrn-act{font-weight:800}
+  .jrn-t .jrn-act{font-weight:600}
   .jrn-t .jrn-act.sup{color:var(--nc)}
   .jrn-t .jrn-act.new{color:var(--c)}
   .jrn-d{font-size:12px; color:var(--ink2); margin-top:2px; word-break:break-word}
@@ -628,7 +615,7 @@
   .ti-row span{font-size:12.5px; color:var(--ink2)}
   /* ---- signature ---- */
   .sigbox{border:1.5px solid var(--line); border-radius:var(--r-lg); padding:12px 13px; margin-bottom:12px; background:var(--card)}
-  .sig-lab{font-size:11px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--ink2); margin-bottom:7px}
+  .sig-lab{font-size:11px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--ink2); margin-bottom:7px}
   .sig-lab small{display:block; font-weight:600; font-size:12px; letter-spacing:0; text-transform:none; color:var(--ink)}
   .sigbox input{width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--bg);
     border:1.5px solid var(--line); border-radius:var(--r-sm); padding:9px 11px; margin-bottom:8px}
@@ -652,11 +639,11 @@
     /* dégage la barre d'onglets */
     position:fixed; right:16px; bottom:calc(80px + env(safe-area-inset-bottom)); z-index:25;
     width:64px; height:64px; border-radius:50%; border:none; cursor:pointer;
-    background:var(--grad); color:#fff; font-size:29px; font-weight:700;
-    box-shadow:0 12px 30px -8px rgba(217,106,11,.7);
-    transition:transform .12s ease, box-shadow .2s ease;
+    background:var(--accent); color:var(--accent-ink); font-size:29px; font-weight:600;
+    box-shadow:0 2px 6px rgba(34,29,23,.22);
+    transition:transform .12s ease, filter .2s ease;
   }
-  .fab:hover{box-shadow:0 16px 36px -8px rgba(217,106,11,.8)}
+  .fab:hover{filter:brightness(1.06)}
   .addsheet{
     position:fixed; inset:auto 0 0 0; z-index:30; display:none;
     background:var(--card); border-top:1px solid var(--line);
@@ -684,7 +671,7 @@
   }
   .modal-top b{flex:1; font-size:16px}
   .field{margin-bottom:13px}
-  .field label{display:block; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); margin-bottom:5px}
+  .field label{display:block; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); margin-bottom:5px}
   .field input[type=text], .field input[type=password], .field input[type=date], .field textarea, .field select{
     width:100%; font:inherit; color:var(--ink); background:var(--card);
     border:1.5px solid var(--line); border-radius:var(--r-md); padding:12px 14px;
@@ -750,7 +737,7 @@
   .backlink:hover{border-color:var(--blue-line); color:var(--blue-deep)}
   .settings-block{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px; margin-bottom:12px; box-shadow:var(--shadow)}
   .settings-block h3{margin:0 0 8px; font-size:14.5px; display:flex; align-items:center; gap:8px}
-  .settings-block h3::before{content:""; width:14px; height:3px; border-radius:99px; background:var(--grad-blue); flex:none}
+  .settings-block h3::before{content:""; width:14px; height:3px; border-radius:99px; background:var(--blue); flex:none}
   .settings-block p{margin:0 0 10px; color:var(--ink2); font-size:13.5px}
   @media (prefers-reduced-motion: no-preference){
     .photo-card{animation:pop .18s ease-out}
@@ -760,14 +747,55 @@
 </head>
 <body>
 
+<!-- ================= JEU D'ICÔNES =================
+     Sprite défini une fois, référencé par <use>. Aucune dépendance réseau : l'application
+     doit fonctionner sur un chantier sans couverture. Tracé à 24×24, filaire, couleur
+     héritée du texte (currentColor) pour suivre les états et le mode sombre. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <g id="i-home"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></g>
+  <g id="i-alert"><path d="M12 3.8 21 19.5H3L12 3.8Z"/><path d="M12 9.5v5"/><path d="M12 17.2h.01"/></g>
+  <g id="i-clipboard"><path d="M9 4h6v2.5H9z"/><path d="M15 5h2.5v15.5h-11V5H9"/><path d="m9 13 2 2 4-4"/></g>
+  <g id="i-file"><path d="M14 3H6.5v18h11V6.5L14 3Z"/><path d="M14 3v3.5h3.5"/><path d="M9 12h6M9 16h6"/></g>
+  <g id="i-menu"><path d="M4 7h16M4 12h16M4 17h16"/></g>
+  <g id="i-lock"><path d="M6.5 10.5h11V21h-11z"/><path d="M8.75 10.5V7a3.25 3.25 0 0 1 6.5 0v3.5"/></g>
+  <g id="i-map"><path d="m3 6.5 6-2.5v13.5l-6 2.5z"/><path d="m9 4 6 2.5v13.5L9 17.5z"/><path d="m15 6.5 6-2.5v13.5l-6 2.5z"/></g>
+  <g id="i-chart"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></g>
+  <g id="i-history"><path d="M12 7v5l3.5 2"/><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v4h4"/></g>
+  <g id="i-settings"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M19.4 14.2a1.6 1.6 0 0 0 .3 1.8l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a1.9 1.9 0 1 1-3.8 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.6 1.6 0 0 0-1.1-2.7h-.3a1.9 1.9 0 1 1 0-3.8h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.6 1.6 0 0 0 1.8.3h.1a1.6 1.6 0 0 0 1-1.5v-.3a1.9 1.9 0 1 1 3.8 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a1.9 1.9 0 1 1 0 3.8h-.2a1.6 1.6 0 0 0-1.5 1Z"/></g>
+  <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
+  <g id="i-camera"><path d="M4 7.5h3.5L9 5h6l1.5 2.5H20V20H4z"/><path d="M12 16.8a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z"/></g>
+  <g id="i-mic"><path d="M12 3.5a2.5 2.5 0 0 1 2.5 2.5v6a2.5 2.5 0 0 1-5 0V6A2.5 2.5 0 0 1 12 3.5Z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><path d="M12 17.5V21M9 21h6"/></g>
+  <g id="i-edit"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m15 6 3 3"/></g>
+  <g id="i-share"><path d="M12 15V3.5"/><path d="m8 7.5 4-4 4 4"/><path d="M4.5 14v6.5h15V14"/></g>
+  <g id="i-photo"><path d="M4 5h16v14H4z"/><path d="M4 16l4.5-4.5 4 4 3-3L20 16"/><path d="M9 9.5h.01"/></g>
+  <g id="i-pin"><path d="M12 21s6.5-6 6.5-11a6.5 6.5 0 1 0-13 0C5.5 15 12 21 12 21Z"/><path d="M12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></g>
+  <g id="i-cone"><path d="m12 3 6.5 18h-13L12 3Z"/><path d="M8.6 12h6.8M7.3 16.5h9.4"/></g>
+  <g id="i-database"><path d="M12 7.5c4.4 0 8-1 8-2.25S16.4 3 12 3 4 4 4 5.25 7.6 7.5 12 7.5Z"/><path d="M20 5.25v13.5C20 20 16.4 21 12 21s-8-1-8-2.25V5.25"/><path d="M20 12c0 1.25-3.6 2.25-8 2.25S4 13.25 4 12"/></g>
+  <g id="i-filter"><path d="M3.5 5h17l-6.5 8v6l-4 2v-8L3.5 5Z"/></g>
+  <g id="i-list"><path d="M8.5 6.5H21M8.5 12H21M8.5 17.5H21"/><path d="M3.5 6.5h.01M3.5 12h.01M3.5 17.5h.01"/></g>
+  <g id="i-check"><path d="m5 12.5 4.5 4.5L19 7"/></g>
+  <g id="i-search"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z"/><path d="m16.2 16.2 4.3 4.3"/></g>
+  <g id="i-trash"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7v13.5h11V7"/><path d="M10 11v6M14 11v6"/></g>
+  <g id="i-worker"><path d="M4 15.5a8 8 0 0 1 16 0"/><path d="M2.5 15.5h19"/><path d="M9.5 15.5 11 8h2l1.5 7.5"/><path d="M7 19.5h10"/></g>
+  <g id="i-scale"><path d="M12 3.5v17M7 20.5h10"/><path d="M4 8h16"/><path d="m4 8-2.5 5.5h5L4 8Z"/><path d="m20 8-2.5 5.5h5L20 8Z"/></g>
+  <g id="i-flag"><path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/></g>
+  <g id="i-expand"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></g>
+  <g id="i-sparkle"><path d="M12 3.5 13.9 9l5.6 2-5.6 2-1.9 5.5L10.1 13 4.5 11l5.6-2L12 3.5Z"/><path d="M19 4v3M17.5 5.5h3"/></g>
+  <g id="i-refresh"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20.5 4v4.5H16"/></g>
+  <g id="i-download"><path d="M12 3.5V15"/><path d="m8 11 4 4 4-4"/><path d="M4.5 15.5v5h15v-5"/></g>
+  <g id="i-swap"><path d="M4 8h13"/><path d="m14 5 3 3-3 3"/><path d="M20 16H7"/><path d="m10 13-3 3 3 3"/></g>
+  <g id="i-folder"><path d="M3.5 6.5h6l2 2.5H20.5v11h-17z"/></g>
+  <g id="i-ruler"><path d="M3.5 14.5 14.5 3.5l6 6-11 11z"/><path d="m7 11 2 2M10 8l2 2M13 5l2 2"/></g>
+</defs></svg>
+
 <header class="top">
   <div class="top-inner">
-    <button class="iconbtn" id="btnDrawer" title="Menu" aria-label="Ouvrir le menu" aria-expanded="false">☰</button>
+    <button class="iconbtn" id="btnDrawer" title="Menu" aria-label="Ouvrir le menu" aria-expanded="false"><svg class="ico"><use href="#i-menu"/></svg></button>
     <button class="top-id" id="btnProjSwitch" aria-label="Changer de chantier">
       <span class="top-title" id="projTitle">Mon chantier</span>
       <span class="eyebrow" id="projSub">Changer de chantier ▾</span>
     </button>
-    <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller">🔒</button>
+    <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller"><svg class="ico"><use href="#i-lock"/></svg></button>
   </div>
   <div class="hazard"></div>
 </header>
@@ -784,39 +812,40 @@
     <b id="drChantierName">—</b>
   </button>
   <nav>
-    <button class="dr-item" id="btnDrPlan"><span class="dr-ico">🗺</span>Plans et repérage</button>
-    <button class="dr-item" id="btnDrDash"><span class="dr-ico">📊</span>Tableau de bord</button>
-    <button class="dr-item" id="btnDrJournal"><span class="dr-ico">🕘</span>Journal des modifications</button>
+    <button class="dr-item" id="btnDrPlan"><svg class="ico dr-ico"><use href="#i-map"/></svg>Plans et repérage</button>
+    <button class="dr-item" id="btnDrDash"><svg class="ico dr-ico"><use href="#i-chart"/></svg>Tableau de bord</button>
+    <button class="dr-item" id="btnDrJournal"><svg class="ico dr-ico"><use href="#i-history"/></svg>Journal des modifications</button>
     <div class="dr-sep"></div>
-    <button class="dr-item" id="btnSettings"><span class="dr-ico">⚙</span>Réglages du chantier</button>
-    <button class="dr-item" id="btnDrLock"><span class="dr-ico">🔒</span>Verrouiller</button>
+    <button class="dr-item" id="btnSettings"><svg class="ico dr-ico"><use href="#i-settings"/></svg>Réglages du chantier</button>
+    <button class="dr-item" id="btnDrLock"><svg class="ico dr-ico"><use href="#i-lock"/></svg>Verrouiller</button>
   </nav>
 </aside>
 
 <!-- ================= BARRE D'ONGLETS ================= -->
 <nav class="tabbar" id="tabbar" role="tablist" aria-label="Navigation principale">
-  <button role="tab" data-tab="home"><span class="tb-ico" aria-hidden="true">🏠</span>Accueil</button>
-  <button role="tab" data-tab="reserves"><span class="tb-ico" aria-hidden="true">⚠</span>Réserves<span class="tb-badge" id="tbResBadge" hidden></span></button>
-  <button role="tab" data-tab="controls"><span class="tb-ico" aria-hidden="true">📋</span>Contrôles</button>
-  <button role="tab" data-tab="reports"><span class="tb-ico" aria-hidden="true">📄</span>Rapports</button>
+  <button role="tab" data-tab="home"><svg class="ico tb-ico"><use href="#i-home"/></svg>Accueil</button>
+  <button role="tab" data-tab="reserves"><svg class="ico tb-ico"><use href="#i-alert"/></svg>Réserves<span class="tb-badge" id="tbResBadge" hidden></span></button>
+  <button role="tab" data-tab="controls"><svg class="ico tb-ico"><use href="#i-clipboard"/></svg>Contrôles</button>
+  <button role="tab" data-tab="reports"><svg class="ico tb-ico"><use href="#i-file"/></svg>Rapports</button>
 </nav>
 
 <!-- ================= VERROUILLAGE ================= -->
 <section class="screen" id="scrLock">
   <div class="wrap">
     <div class="lockbox">
-      <div class="brand">
-        <div class="brand-app"><i>abra</i><span>CAD</span><i>abra</i></div>
-        <div class="brand-rule"></div>
-        <div class="brand-tag">Taillé pour satelliser le problème<br>et plier le jeu</div>
-        <div class="brand-seal">Garantie anti-boulette</div>
+      <div class="lockpanel">
+        <picture class="brand-logo">
+          <source srcset="logo-dark.png" media="(prefers-color-scheme: dark)">
+          <img src="logo.png" alt="abraCADabra" width="720" height="149">
+        </picture>
+        <div class="brand-tag">Taillé pour satelliser le problème</div>
+        <div class="sep"></div>
+        <p id="lockText">Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone.</p>
+        <input class="pinfield mono" id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Code PIN">
+        <div class="lockmsg" id="lockMsg"></div>
+        <button class="btn primary block" id="btnUnlock">Ouvrir</button>
+        <div class="lockfoot" id="verTag"></div>
       </div>
-      <div class="glyph">🔒</div>
-      <p id="lockText">Saisissez votre code pour ouvrir le carnet. Les données restent uniquement sur ce téléphone.</p>
-      <input class="pinfield mono" id="pinInput" type="password" inputmode="numeric" autocomplete="off" maxlength="8" aria-label="Code PIN">
-      <div class="lockmsg" id="lockMsg"></div>
-      <button class="btn primary" id="btnUnlock" style="min-width:200px">Ouvrir</button>
-      <div class="hint" id="verTag" style="margin-top:26px"></div>
     </div>
   </div>
 </section>
@@ -838,8 +867,8 @@
   <div class="wrap">
     <div class="sect-label"><span id="regTitre">Réserves</span><span id="regProjName"></span></div>
     <div class="seg" id="regSeg">
-      <button data-vue="liste" class="on"><span aria-hidden="true">☰</span>Liste</button>
-      <button data-vue="plan"><span aria-hidden="true">🗺</span>Plan</button>
+      <button data-vue="liste" class="on"><span aria-hidden="true"LISTE</button>
+      <button data-vue="plan"><svg class="ico sm"><use href="#i-map"/></svg>Plan</button>
     </div>
     <div class="reg-bar" id="regSorts">
       <button class="sortchip on" data-sort="urgence">Urgence</button>
@@ -851,7 +880,7 @@
     <div id="regList"></div>
     <div class="btnrow">
       <button class="btn block" id="btnRegAdd">+ Réserve manuelle</button>
-      <button class="btn blue block" id="btnExtract">📤 Extraire par entreprise</button>
+      <button class="btn blue block" id="btnExtract"><svg class="ico sm"><use href="#i-share"/></svg> Extraire par entreprise</button>
     </div>
   </div>
 </section>
@@ -878,15 +907,15 @@
     <div class="sect-label">Rapports<span id="rapProjName"></span></div>
     <div class="hint" style="margin:0 4px 12px">Produire à l'échelle du chantier</div>
     <div class="btnrow" style="margin-top:0">
-      <button class="btn primary block" id="btnRapPilotage">📊 Rapport de pilotage (PDF)</button>
-      <button class="btn blue block" id="btnRapExtract">📤 Extraire les réserves par entreprise</button>
+      <button class="btn primary block" id="btnRapPilotage"><svg class="ico sm"><use href="#i-chart"/></svg> Rapport de pilotage (PDF)</button>
+      <button class="btn blue block" id="btnRapExtract"><svg class="ico sm"><use href="#i-share"/></svg> Extraire les réserves par entreprise</button>
       <div class="hint" id="rapAvenir" style="margin:-2px 4px 0"></div>
     </div>
     <div id="rapOS" hidden>
       <div class="sect-label">Ordres de service</div>
       <div id="osList"></div>
       <div class="btnrow" style="margin-top:6px">
-        <button class="btn ghost block" id="btnOsNew">📋 Nouvel ordre de service</button>
+        <button class="btn ghost block" id="btnOsNew"><svg class="ico sm"><use href="#i-clipboard"/></svg> Nouvel ordre de service</button>
         <div class="hint" style="margin:-2px 4px 0">
           Numérotés et conservés par chantier. <b>Un ordre de service engage</b> : vérifiez la
           prescription et les incidences au regard du CCAP avant notification.
@@ -896,9 +925,9 @@
     <div id="rapPV" hidden>
       <div class="sect-label">Procès-verbaux</div>
       <div class="btnrow" style="margin-top:0">
-        <button class="btn ghost block" data-pv="opr">⚖ PV des opérations préalables (OPR)</button>
-        <button class="btn ghost block" data-pv="reception">🏁 PV de réception des travaux</button>
-        <button class="btn ghost block" data-pv="levee">✅ PV de levée des réserves</button>
+        <button class="btn ghost block" data-pv="opr"><svg class="ico sm"><use href="#i-scale"/></svg> PV des opérations préalables (OPR)</button>
+        <button class="btn ghost block" data-pv="reception"><svg class="ico sm"><use href="#i-flag"/></svg> PV de réception des travaux</button>
+        <button class="btn ghost block" data-pv="levee"><svg class="ico sm"><use href="#i-check"/></svg> PV de levée des réserves</button>
         <div class="hint" style="margin:-2px 4px 0">
           Établis à partir du registre, avec pavés de signature à remplir contradictoirement.
           <b>Vérifiez les mentions et les délais au regard du CCAP avant signature</b> — l'application
@@ -917,7 +946,7 @@
     <div class="modal-top">
       <button class="iconbtn" id="btnPlanClose" aria-label="Fermer">←</button>
       <b id="planTitle">Plan</b>
-      <button class="iconbtn" id="btnPlanFit" title="Vue d'ensemble" aria-label="Vue d'ensemble">⛶</button>
+      <button class="iconbtn" id="btnPlanFit" title="Vue d'ensemble" aria-label="Vue d'ensemble"><svg class="ico sm"><use href="#i-expand"/></svg></button>
     </div>
   </div>
   <div class="planwrap" id="planWrap">
@@ -930,7 +959,7 @@
     <div class="wrap" style="padding-bottom:0">
       <div id="planQueue" class="plan-queue"></div>
       <div class="btnrow" style="margin:8px 0 10px">
-        <button class="btn primary block" id="btnPlanPose" hidden>📍 Poser le repère ici</button>
+        <button class="btn primary block" id="btnPlanPose" hidden><svg class="ico sm"><use href="#i-pin"/></svg> Poser le repère ici</button>
         <button class="btn ghost block" id="btnPlanSkip" hidden>Passer ce constat</button>
       </div>
       <!-- repères libres : annotations du plan, indépendantes des clichés -->
@@ -939,11 +968,11 @@
           <input type="text" id="markLab" placeholder="Intitulé du repère (ex. : emprise de travaux)">
         </div>
         <div class="btnrow" style="margin:0 0 10px">
-          <button class="btn blue block" id="btnMarkPose">🔤 Poser ce repère libre ici</button>
+          <button class="btn blue block" id="btnMarkPose"><svg class="ico sm"><use href="#i-pin"/></svg> Poser ce repère libre ici</button>
         </div>
         <div id="markList"></div>
       </div>
-      <button class="btn ghost block" id="btnMarkToggle" style="margin:0 0 12px">➕ Repères libres</button>
+      <button class="btn ghost block" id="btnMarkToggle" style="margin:0 0 12px"><svg class="ico sm"><use href="#i-plus"/></svg> Repères libres</button>
     </div>
   </div>
 </div>
@@ -958,7 +987,7 @@
     <p class="hint" id="dashInfo" style="margin:2px 2px 14px"></p>
     <div id="dashBody"></div>
     <div class="btnrow">
-      <button class="btn primary block" id="btnDashPdf">📄 Rapport de pilotage (PDF)</button>
+      <button class="btn primary block" id="btnDashPdf"><svg class="ico sm"><use href="#i-file"/></svg> Rapport de pilotage (PDF)</button>
     </div>
   </div>
 </div>
@@ -980,7 +1009,7 @@
     </div>
     <div id="jrnList"></div>
     <div class="btnrow">
-      <button class="btn blue block" id="btnJrnCsv">📊 Exporter le journal (.csv)</button>
+      <button class="btn blue block" id="btnJrnCsv"><svg class="ico sm"><use href="#i-chart"/></svg> Exporter le journal (.csv)</button>
     </div>
   </div>
 </div>
@@ -1021,14 +1050,14 @@
       <div class="sect-label" id="visitLabel" style="margin:20px 2px 8px; flex:1">Visite</div>
       <button class="iconbtn" id="btnRenameVisit" title="Renommer la visite" aria-label="Renommer la visite" style="width:34px; height:34px; font-size:14px">✎</button>
     </div>
-    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 8px">👷 Moyens sur site (effectif, engins)</button>
-    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 8px">📋 Fiches de contrôle / points d'arrêt</button>
-    <button class="btn ghost block" id="btnPlanScreen" style="margin:0 0 12px">🗺 Pointer les constats sur le plan</button>
+    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 8px"><svg class="ico sm"><use href="#i-worker"/></svg> Moyens sur site (effectif, engins)</button>
+    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 8px"><svg class="ico sm"><use href="#i-clipboard"/></svg> Fiches de contrôle / points d'arrêt</button>
+    <button class="btn ghost block" id="btnPlanScreen" style="margin:0 0 12px"><svg class="ico sm"><use href="#i-map"/></svg> Pointer les constats sur le plan</button>
     <div id="photoList"></div>
     <div class="btnrow">
-      <button class="btn primary block" id="btnPdf">📄 Rapport PDF</button>
-      <button class="btn blue block" id="btnDocx">📝 Rapport Word (.docx)</button>
-      <button class="btn ghost block" id="btnSharePhotos">🖼 Partager les photos renommées</button>
+      <button class="btn primary block" id="btnPdf"><svg class="ico sm"><use href="#i-file"/></svg> Rapport PDF</button>
+      <button class="btn blue block" id="btnDocx"><svg class="ico sm"><use href="#i-file"/></svg> Rapport Word (.docx)</button>
+      <button class="btn ghost block" id="btnSharePhotos"><svg class="ico sm"><use href="#i-photo"/></svg> Partager les photos renommées</button>
       <div class="hint" style="margin:-2px 4px 0">
         Les rapports se génèrent sur le téléphone puis s'ouvrent dans la feuille de partage :
         Gmail, Outlook, WhatsApp… Sans réseau, ils sont enregistrés dans Téléchargements.
@@ -1044,10 +1073,10 @@
 <div class="addsheet" id="addSheet">
   <b>Ajouter des clichés</b>
   <div class="btnrow">
-    <button class="btn primary block" id="btnOpenTimestamp">📷 Ouvrir Timestamp Camera (prise de vue)</button>
+    <button class="btn primary block" id="btnOpenTimestamp"><svg class="ico sm"><use href="#i-camera"/></svg> Ouvrir Timestamp Camera (prise de vue)</button>
     <div class="hint" style="margin:-4px 4px 2px">Prenez vos clichés horodatés, revenez ici, puis importez-les.</div>
-    <button class="btn block" id="btnPickGallery">🖼 Importer depuis la galerie</button>
-    <button class="btn blue block" id="btnPickDrive">📁 Depuis Fichiers / Google Drive</button>
+    <button class="btn block" id="btnPickGallery"><svg class="ico sm"><use href="#i-photo"/></svg> Importer depuis la galerie</button>
+    <button class="btn blue block" id="btnPickDrive"><svg class="ico sm"><use href="#i-folder"/></svg> Depuis Fichiers / Google Drive</button>
     <button class="btn ghost block" id="btnPickCamera">Appareil photo simple (sans horodatage)</button>
     <button class="btn ghost block" id="btnAddCancel">Annuler</button>
   </div>
@@ -1070,8 +1099,8 @@
     <p class="cap-meta mono" id="editMeta" style="margin:8px 2px 10px"></p>
 
     <div class="chips" style="margin-bottom:12px">
-      <button class="chip" id="btnCopyComment">📋 Copier ce commentaire</button>
-      <button class="chip" id="btnPasteComment" hidden>📥 Coller le commentaire</button>
+      <button class="chip" id="btnCopyComment"><svg class="ico sm"><use href="#i-clipboard"/></svg> Copier ce commentaire</button>
+      <button class="chip" id="btnPasteComment" hidden><svg class="ico sm"><use href="#i-clipboard"/></svg> Coller le commentaire</button>
     </div>
 
     <button class="btn block aibtn" id="btnAI" hidden>✨ Décrire le cliché (IA — constat VRD)</button>
@@ -1130,7 +1159,7 @@
 
     <div class="field">
       <label>Position sur le plan</label>
-      <button class="btn ghost block" id="btnPlacePin" type="button">🗺 Placer ce constat sur le plan</button>
+      <button class="btn ghost block" id="btnPlacePin" type="button"><svg class="ico sm"><use href="#i-map"/></svg> Placer ce constat sur le plan</button>
       <div class="hint" id="pinState"></div>
     </div>
 
@@ -1161,7 +1190,7 @@
     </div>
     <p class="hint" style="margin:2px 2px 10px">Pour cette visite, indiquez l'effectif constaté et les engins / matériel observés, par entreprise. Les entreprises repérées sur vos constats sont pré-listées.</p>
     <div id="moyensList"></div>
-    <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px">➕ Ajouter une entreprise</button>
+    <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter une entreprise</button>
     <button class="btn primary block" id="btnMoyensSave" style="margin-top:12px">Enregistrer</button>
   </div>
 </div>
@@ -1177,7 +1206,7 @@
     <div id="ctrlList"></div>
     <div class="sect-label" style="margin-top:18px">Ouvrir une nouvelle fiche</div>
     <div id="ctrlPicker"></div>
-    <button class="btn ghost block" id="btnTplEdit" style="margin-top:14px">✎ Modifier les modèles de fiches</button>
+    <button class="btn ghost block" id="btnTplEdit" style="margin-top:14px"><svg class="ico sm"><use href="#i-edit"/></svg> Modifier les modèles de fiches</button>
     <div class="hint">Les seuils proposés sont des valeurs de référence courantes. Adaptez-les à votre CCTP : les modèles appartiennent à ce chantier.</div>
   </div>
 </div>
@@ -1192,7 +1221,7 @@
     <p class="hint" style="margin:2px 2px 12px">Propres à ce chantier. Les fiches déjà établies ne sont pas modifiées.</p>
     <div id="tplList"></div>
     <div class="btnrow">
-      <button class="btn primary block" id="btnTplNew">➕ Nouveau modèle</button>
+      <button class="btn primary block" id="btnTplNew"><svg class="ico sm"><use href="#i-plus"/></svg> Nouveau modèle</button>
       <button class="btn danger block" id="btnTplReset">↺ Restaurer la bibliothèque d'origine</button>
     </div>
   </div>
@@ -1229,7 +1258,7 @@
     </div>
     <div class="sect-label" style="margin-top:16px">Points de contrôle</div>
     <div id="tplItems"></div>
-    <button class="btn ghost block" id="btnTplAddItem" style="margin-top:8px">➕ Ajouter un point</button>
+    <button class="btn ghost block" id="btnTplAddItem" style="margin-top:8px"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter un point</button>
     <div class="btnrow" id="tDelRow">
       <button class="btn danger block" id="btnTplDelete">Supprimer ce modèle</button>
     </div>
@@ -1380,7 +1409,7 @@
     </div>
     <div class="btnrow">
       <button class="btn primary block" id="btnOsSave">Enregistrer</button>
-      <button class="btn blue block" id="btnOsPdf">📄 Éditer l'ordre de service (PDF)</button>
+      <button class="btn blue block" id="btnOsPdf"><svg class="ico sm"><use href="#i-file"/></svg> Éditer l'ordre de service (PDF)</button>
       <button class="btn danger block" id="btnOsDelete" hidden>Supprimer cet ordre de service</button>
     </div>
   </div>
@@ -1398,7 +1427,7 @@
       <h3>Chantiers</h3>
       <p>Chaque chantier a ses propres réglages, contacts, logos, plan et registre. Les visites sont classées par chantier.</p>
       <div class="btnrow" style="margin:0">
-        <button class="btn block" id="btnManageSwitch">🔀 Changer / créer un chantier</button>
+        <button class="btn block" id="btnManageSwitch"><svg class="ico sm"><use href="#i-swap"/></svg> Changer / créer un chantier</button>
         <button class="btn danger block" id="btnDeleteProject">Supprimer le chantier courant</button>
       </div>
     </div>
@@ -1508,7 +1537,7 @@
       <h3>Documents annexes</h3>
       <p>Pièces jointes du chantier (fiches techniques, plans, courriers…). Une page de garde et un sommaire des annexes sont ajoutés automatiquement au rapport dès qu'au moins un document est déposé. Les annexes <b>image</b> (photo, plan scanné, capture) sont intégrées en pleine page ; les PDF/Word sont listés et restent des fichiers joints séparés. Depuis le téléphone : Galerie, Fichiers ou Google Drive.</p>
       <div class="btnrow" style="margin:0">
-        <button class="btn block" id="btnAddAnnexe">➕ Ajouter un ou plusieurs documents</button>
+        <button class="btn block" id="btnAddAnnexe"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter un ou plusieurs documents</button>
       </div>
       <div id="annexeList" class="annexe-list"></div>
       <input type="file" id="fileAnnexe" multiple hidden>
@@ -1573,8 +1602,8 @@
         </div>
         <div class="hint" id="axState" style="margin-bottom:8px"></div>
         <div class="btnrow" style="margin:0">
-          <button class="btn primary block" id="axSetOrigin">📍 Définir l'origine ici</button>
-          <button class="btn blue block" id="axAddPoint">➕ Ajouter un point d'axe ici</button>
+          <button class="btn primary block" id="axSetOrigin"><svg class="ico sm"><use href="#i-pin"/></svg> Définir l'origine ici</button>
+          <button class="btn blue block" id="axAddPoint"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter un point d'axe ici</button>
           <button class="btn ghost block" id="axFromPhotos">Reconstituer l'axe depuis les clichés</button>
           <button class="btn danger block" id="axClear">Effacer l'axe</button>
         </div>
@@ -1585,17 +1614,17 @@
     <div class="settings-block">
       <h3>Journal des modifications</h3>
       <p>Trace horodatée de tout ce qui a été créé, modifié ou supprimé sur ce chantier. En cas de litige, elle établit qu'un constat n'a pas été retouché après coup.</p>
-      <button class="btn block" id="btnJournal">🕘 Consulter le journal</button>
+      <button class="btn block" id="btnJournal"><svg class="ico sm"><use href="#i-history"/></svg> Consulter le journal</button>
     </div>
 
     <div class="settings-block">
       <h3>Sauvegarde &amp; restauration</h3>
       <p>Tout est stocké uniquement dans ce téléphone. Faites une sauvegarde complète régulièrement — c'est votre filet de sécurité (téléphone perdu, changement d'appareil).</p>
-      <button class="btn primary block" id="btnBackupFull">💾 Sauvegarde complète (tous chantiers + photos)</button>
+      <button class="btn primary block" id="btnBackupFull"><svg class="ico sm"><use href="#i-database"/></svg> Sauvegarde complète (tous chantiers + photos)</button>
       <div class="hint">Vous choisirez la destination : Google Drive, appli Fichiers (dossier au choix), e-mail…</div>
-      <button class="btn block" id="btnRestore" style="margin-top:10px">♻ Restaurer depuis une sauvegarde</button>
+      <button class="btn block" id="btnRestore" style="margin-top:10px"><svg class="ico sm"><use href="#i-refresh"/></svg> Restaurer depuis une sauvegarde</button>
       <input type="file" id="fileRestore" accept="application/json,.json" hidden>
-      <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px">⬇ Export léger (notes seules, sans photos)</button>
+      <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px"><svg class="ico sm"><use href="#i-download"/></svg> Export léger (notes seules, sans photos)</button>
       <div class="hint" id="storageState" style="margin-top:12px">Espace utilisé : calcul…</div>
     </div>
   </div>
@@ -2738,7 +2767,7 @@ async function openProjectSheet(){
   const projects = await listProjects();
   $("#projList").innerHTML = projects.map(p =>
     `<button class="proj-row${CUR && p.id === CUR.id ? " active" : ""}" data-id="${p.id}">
-      <b>${esc(p.name)}</b>${CUR && p.id === CUR.id ? '<span style="color:var(--accent);font-weight:800">✓</span>' : ""}
+      <b>${esc(p.name)}</b>${CUR && p.id === CUR.id ? '<span style="color:var(--accent);font-weight:600">✓</span>' : ""}
     </button>`).join("");
   $("#projList").querySelectorAll(".proj-row").forEach(b =>
     b.addEventListener("click", async () => {
@@ -4904,7 +4933,7 @@ async function openEditor(id){
 }
 async function buildReserveSelect(){
   const res = (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num);
-  const opts = [`<option value="">— aucune —</option>`, `<option value="new">➕ Nouvelle réserve (depuis ce constat)</option>`]
+  const opts = [`<option value="">— aucune —</option>`, `<option value="new"><svg class="ico sm"><use href="#i-plus"/></svg> Nouvelle réserve (depuis ce constat)</option>`]
     .concat(res.map(r => `<option value="${r.id}">n°${r.num} — ${esc((r.objet||"").slice(0,48))}${r.statut === "Soldé" ? " (soldée)" : ""}</option>`));
   const sel = $("#fReserve");
   sel.innerHTML = opts.join("");
