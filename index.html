@@ -183,16 +183,36 @@
   }
   .drawer.on{transform:none}
   @media (prefers-reduced-motion:reduce){ .drawer{transition:none} }
+  /* En-tête du tiroir : l'illustration du chantier derrière un voile bleu foncé.
+     Le voile garantit le contraste du texte quelle que soit la zone de l'image. */
   .dr-head{
-    /* bleu plein, assez sombre pour porter du blanc dans les deux modes */
-    background:#1C5F92; color:#fff;
-    padding:calc(20px + env(safe-area-inset-top)) 18px 16px;
+    position:relative; isolation:isolate; color:#fff;
+    padding:calc(46px + env(safe-area-inset-top)) 18px 20px;
+    background:#123F63;
   }
-  .dr-head b{display:block; font-size:16px; font-weight:700}
-  .dr-head small{display:block; font-size:12px; opacity:.9; margin-top:2px}
+  .dr-head::before{
+    content:""; position:absolute; inset:0; z-index:-2;
+    background-image:url("fond-plan.jpg");
+    background-size:cover; background-position:center 38%;
+  }
+  .dr-head::after{
+    content:""; position:absolute; inset:0; z-index:-1;
+    background:linear-gradient(180deg, rgba(18,63,99,.42) 0%, rgba(18,63,99,.88) 72%, rgba(18,63,99,.95) 100%);
+  }
+  .dr-head b{
+    display:block; font-size:16.5px; font-weight:600; line-height:1.3;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .dr-head small{
+    display:block; font-size:12.5px; line-height:1.35; margin-top:3px;
+    color:rgba(255,255,255,.82);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  /* c'est un bouton : sans text-align, le libellé et le nom se centraient l'un sous l'autre */
   .dr-chantier{
+    display:block; width:calc(100% - 28px); text-align:left; font:inherit; cursor:pointer;
     margin:14px 14px 6px; padding:11px 13px; border-radius:var(--r-md);
-    background:var(--blue-soft); border:1px solid var(--blue-line);
+    background:var(--blue-soft); border:1px solid var(--blue-line); color:var(--ink);
   }
   .dr-chantier span{display:block; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--blue-deep)}
   .dr-chantier b{display:block; font-size:14px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -368,12 +388,12 @@
   /* étiquette de section : pastille translucide pour rester lisible sur le fond de plan */
   .sect-label{
     font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink);
-    margin:20px 2px 8px; display:inline-flex; align-items:center; gap:8px;
+    margin:20px 2px 8px; display:inline-flex; align-items:center;
     background:var(--card);
-    border:1px solid var(--line); border-radius:99px; padding:7px 14px 7px 11px;
+    border:1px solid var(--line); border-radius:99px; padding:7px 14px;
     box-shadow:var(--shadow);
   }
-  .sect-label::before{content:""; width:16px; height:3px; border-radius:99px; background:var(--blue); flex:none}
+  /* filet bleu supprimé : il n'apportait rien et serrait le texte contre le bord */
   /* accueille désormais la grille des compteurs, plus le rang de pastilles : bloc, pas flex */
   .home-project{display:block; margin:14px 0 2px}
   /* .proj-chip / .reg-chip retirées : la rangée de pastilles de l'accueil a été remplacée
@@ -755,8 +775,22 @@
   .backlink{display:inline-flex; align-items:center; gap:6px; margin:14px 0 2px; background:var(--card); border:1px solid var(--line); border-radius:99px; font:inherit; font-weight:700; color:var(--ink); cursor:pointer; padding:8px 16px 8px 13px; box-shadow:var(--shadow)}
   .backlink:hover{border-color:var(--blue-line); color:var(--blue-deep)}
   .settings-block{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px; margin-bottom:12px; box-shadow:var(--shadow)}
-  .settings-block h3{margin:0 0 8px; font-size:14.5px; display:flex; align-items:center; gap:8px}
-  .settings-block h3::before{content:""; width:14px; height:3px; border-radius:99px; background:var(--blue); flex:none}
+  /* plus de filet décoratif devant le titre : le pavé se suffit, et le trait rognait le texte */
+  .settings-block h3{margin:0 0 6px; font-size:16px; font-weight:600; letter-spacing:-.01em}
+  /* ---- sommaire des réglages : une entrée par domaine ---- */
+  .set-index{display:block; margin-top:4px}
+  .set-cat{
+    width:100%; display:flex; align-items:center; gap:13px; text-align:left; font:inherit;
+    background:var(--card); color:var(--ink); border:1px solid var(--line);
+    border-radius:var(--r-md); padding:13px 14px; margin-bottom:8px; cursor:pointer;
+    box-shadow:var(--shadow);
+  }
+  .set-cat:active{transform:scale(.995)}
+  .set-cat > .ico{flex:none; width:22px; height:22px; color:var(--blue)}
+  .set-cat span{flex:1; min-width:0}
+  .set-cat b{display:block; font-size:14.5px; font-weight:600; line-height:1.3}
+  .set-cat small{display:block; font-size:12px; color:var(--ink2); margin-top:1px; line-height:1.35}
+  .set-chev{flex:none; font-style:normal; font-size:20px; color:var(--ink2); opacity:.6}
   .settings-block p{margin:0 0 10px; color:var(--ink2); font-size:13.5px}
   @media (prefers-reduced-motion: no-preference){
     .photo-card{animation:pop .18s ease-out}
@@ -780,7 +814,7 @@
   <g id="i-map"><path d="m3 6.5 6-2.5v13.5l-6 2.5z"/><path d="m9 4 6 2.5v13.5L9 17.5z"/><path d="m15 6.5 6-2.5v13.5l-6 2.5z"/></g>
   <g id="i-chart"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></g>
   <g id="i-history"><path d="M12 7v5l3.5 2"/><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v4h4"/></g>
-  <g id="i-settings"><circle cx="12" cy="12" r="3.3"/><path d="M12 2.6v3.1M12 18.3v3.1M2.6 12h3.1M18.3 12h3.1M5.4 5.4l2.2 2.2M16.4 16.4l2.2 2.2M18.6 5.4l-2.2 2.2M7.6 16.4l-2.2 2.2"/></g>
+  <g id="i-settings"><circle cx="12" cy="12" r="4.4"/><path d="M12 3.2v2.6M12 18.2v2.6M3.2 12h2.6M18.2 12h2.6M5.8 5.8l1.9 1.9M16.3 16.3l1.9 1.9M18.2 5.8l-1.9 1.9M7.7 16.3l-1.9 1.9"/></g>
   <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
   <g id="i-camera"><path d="M4 7.5h3.5L9 5h6l1.5 2.5H20V20H4z"/><path d="M12 16.8a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z"/></g>
   <g id="i-mic"><path d="M12 3.5a2.5 2.5 0 0 1 2.5 2.5v6a2.5 2.5 0 0 1-5 0V6A2.5 2.5 0 0 1 12 3.5Z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><path d="M12 17.5V21M9 21h6"/></g>
@@ -814,7 +848,6 @@
       <span class="top-title" id="projTitle">Mon chantier</span>
       <span class="eyebrow" id="projSub">Changer de chantier ▾</span>
     </button>
-    <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller"><svg class="ico" viewBox="0 0 24 24"><use href="#i-lock"/></svg></button>
   </div>
   <div class="hazard"></div>
 </header>
@@ -1440,10 +1473,36 @@
   <div class="wrap">
     <div class="modal-top">
       <button class="iconbtn" id="btnSetClose" aria-label="Fermer">←</button>
-      <b>Réglages</b>
+      <b id="setTitre">Réglages</b>
     </div>
 
-    <div class="settings-block">
+    <!-- sommaire : une entrée par domaine, plutôt qu'une page unique interminable -->
+    <nav id="setIndex" class="set-index">
+      <button class="set-cat" data-go="identite"><svg class="ico" viewBox="0 0 24 24"><use href="#i-file"/></svg>
+        <span><b>Identité du chantier</b><small>Nom, phase, rédacteur</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="saisie"><svg class="ico" viewBox="0 0 24 24"><use href="#i-list"/></svg>
+        <span><b>Saisie rapide</b><small>Zones et entreprises proposées</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="entete"><svg class="ico" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg>
+        <span><b>En-tête des rapports</b><small>Cartouche, contacts, logos</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="plans"><svg class="ico" viewBox="0 0 24 24"><use href="#i-map"/></svg>
+        <span><b>Plans et vue aérienne</b><small>Application, page de garde, sections</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="reperage"><svg class="ico" viewBox="0 0 24 24"><use href="#i-ruler"/></svg>
+        <span><b>Repérage linéaire</b><small>Axe du chantier, PR et PK</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="annexes"><svg class="ico" viewBox="0 0 24 24"><use href="#i-folder"/></svg>
+        <span><b>Documents annexes</b><small>Pièces jointes au rapport</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="journal"><svg class="ico" viewBox="0 0 24 24"><use href="#i-history"/></svg>
+        <span><b>Journal des modifications</b><small>Historique du chantier</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="sauvegarde"><svg class="ico" viewBox="0 0 24 24"><use href="#i-database"/></svg>
+        <span><b>Sauvegarde et stockage</b><small>Filet de sécurité, espace occupé</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="securite"><svg class="ico" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
+        <span><b>Sécurité</b><small>Code et verrouillage automatique</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="ia"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg>
+        <span><b>Description par IA</b><small>Facultatif, avec une clé Anthropic</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="chantiers"><svg class="ico" viewBox="0 0 24 24"><use href="#i-swap"/></svg>
+        <span><b>Chantiers</b><small>Changer, créer, supprimer</small></span><i class="set-chev">›</i></button>
+    </nav>
+
+    <div class="settings-block" data-cat="chantiers">
       <h3>Chantiers</h3>
       <p>Chaque chantier a ses propres réglages, contacts, logos, plan et registre. Les visites sont classées par chantier.</p>
       <div class="btnrow" style="margin:0">
@@ -1452,8 +1511,8 @@
       </div>
     </div>
 
-    <div class="settings-block">
-      <h3>Réglages du chantier courant</h3>
+    <div class="settings-block" data-cat="identite">
+      <h3>Identité du chantier</h3>
       <p>Ces valeurs alimentent l'en-tête, les raccourcis de saisie et les rapports du chantier sélectionné.</p>
       <div class="field">
         <label for="sProj">Nom du chantier</label>
@@ -1484,6 +1543,11 @@
         <label for="sRedac">Rédacteur (apparaît sur les rapports)</label>
         <input type="text" id="sRedac" placeholder="Ex. : E. Vigier (PCM Ingénierie, AMOE)">
       </div>
+    </div>
+
+    <div class="settings-block" data-cat="saisie">
+      <h3>Saisie rapide</h3>
+      <p>Les valeurs proposées lors de la saisie d'un cliché ou d'une réserve.</p>
       <div class="field">
         <label for="sZones">Zones proposées (une par ligne)</label>
         <textarea id="sZones" style="min-height:110px"></textarea>
@@ -1492,6 +1556,11 @@
         <label for="sEnts">Entreprises proposées (une par ligne)</label>
         <textarea id="sEnts" style="min-height:90px"></textarea>
       </div>
+    </div>
+
+    <div class="settings-block" data-cat="entete">
+      <h3>En-tête des rapports</h3>
+      <p>Ce qui figure en page de garde : parties prenantes, contacts, logos.</p>
       <div class="field">
         <label for="sCartouche">Page de garde — cartouche (une ligne par entrée, format « Libellé : Valeur »)</label>
         <textarea id="sCartouche" style="min-height:120px" placeholder="Maîtrise d'Ouvrage : …&#10;Entreprise titulaire : …&#10;Marché notifié : …"></textarea>
@@ -1514,6 +1583,11 @@
         <input type="file" id="fileLogoL" hidden>
         <input type="file" id="fileLogoR" hidden>
       </div>
+    </div>
+
+    <div class="settings-block" data-cat="plans">
+      <h3>Plans et vue aérienne</h3>
+      <p>Quel fond de plan pour l'application, pour la page de garde et pour les sections du rapport.</p>
       <div class="field">
         <label for="sPlanMode">Plan affiché dans l'application</label>
         <select id="sPlanMode">
@@ -1573,11 +1647,9 @@
         <div class="hint">Sans plan chargé, le rapport génère automatiquement une vue aérienne IGN centrée
         sur les clichés GPS, au format bandeau, avec repères de zones et échelle graphique.</div>
       </div>
-      <button class="btn primary block" id="btnSetSave">Enregistrer les réglages</button>
-      <button class="btn ghost block" id="btnLoadExample" style="margin-top:8px">Pré-remplir avec l'exemple RD120 Vincennes</button>
     </div>
 
-    <div class="settings-block">
+    <div class="settings-block" data-cat="annexes">
       <h3>Documents annexes</h3>
       <p>Pièces jointes du chantier (fiches techniques, plans, courriers…). Une page de garde et un sommaire des annexes sont ajoutés automatiquement au rapport dès qu'au moins un document est déposé. Les annexes <b>image</b> (photo, plan scanné, capture) sont intégrées en pleine page ; les PDF/Word sont listés et restent des fichiers joints séparés. Depuis le téléphone : Galerie, Fichiers ou Google Drive.</p>
       <div class="btnrow" style="margin:0">
@@ -1587,7 +1659,7 @@
       <input type="file" id="fileAnnexe" multiple hidden>
     </div>
 
-    <div class="settings-block">
+    <div class="settings-block" data-cat="ia">
       <h3>Description par IA (optionnel)</h3>
       <p>Avec une clé API Anthropic, le bouton « Décrire le cliché » rédige automatiquement le constat VRD.
       La photo est alors envoyée au service Anthropic (coût ≈ 2 centimes par photo). Sans clé, tout le reste fonctionne normalement.</p>
@@ -1598,7 +1670,7 @@
       <div class="hint">La clé reste stockée uniquement sur ce téléphone. Créez-la sur console.anthropic.com.</div>
     </div>
 
-    <div class="settings-block">
+    <div class="settings-block" data-cat="securite">
       <h3>Code de verrouillage</h3>
       <p>Le code protège l'ouverture du carnet sur ce téléphone.</p>
       <button class="btn block" id="btnChangePin">Changer le code</button>
@@ -1615,7 +1687,7 @@
       </div>
     </div>
 
-    <div class="settings-block">
+    <div class="settings-block" data-cat="reperage">
       <h3>Repérage linéaire (PR / PK)</h3>
       <p>Repérez vos constats le long de l'axe du chantier plutôt que par une adresse. Définissez l'origine et suivez le tracé : chaque cliché reçoit son abscisse, du type « PK 2+340 ».</p>
       <div class="field">
@@ -1655,13 +1727,13 @@
       </div>
     </div>
 
-    <div class="settings-block">
+    <div class="settings-block" data-cat="journal">
       <h3>Journal des modifications</h3>
       <p>Trace horodatée de tout ce qui a été créé, modifié ou supprimé sur ce chantier. En cas de litige, elle établit qu'un constat n'a pas été retouché après coup.</p>
       <button class="btn block" id="btnJournal"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-history"/></svg> Consulter le journal</button>
     </div>
 
-    <div class="settings-block">
+    <div class="settings-block" data-cat="sauvegarde">
       <h3>Sauvegarde &amp; restauration</h3>
       <p>Tout est stocké uniquement dans ce téléphone. Faites une sauvegarde complète régulièrement — c'est votre filet de sécurité (téléphone perdu, changement d'appareil).</p>
       <button class="btn primary block" id="btnBackupFull"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-database"/></svg> Sauvegarde complète (tous chantiers + photos)</button>
@@ -1670,6 +1742,12 @@
       <input type="file" id="fileRestore" accept="application/json,.json" hidden>
       <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-download"/></svg> Export léger (notes seules, sans photos)</button>
       <div class="hint" id="storageState" style="margin-top:12px">Espace utilisé : calcul…</div>
+    </div>
+
+    <!-- pied commun : l'enregistrement vaut pour tous les domaines -->
+    <div id="setPied" hidden>
+      <button class="btn primary block" id="btnSetSave">Enregistrer les réglages</button>
+      <button class="btn ghost block" id="btnLoadExample" style="margin-top:8px">Pré-remplir avec l'exemple RD120 Vincennes</button>
     </div>
   </div>
 </div>
@@ -7845,6 +7923,28 @@ function refreshPhaseUI(){
   $("#fldReception").hidden = !aor;
   $("#fldDelai").hidden = !aor;
 }
+/* Navigation des réglages : le sommaire, puis un domaine à la fois. Aucun champ n'a
+   bougé — seule leur visibilité change, ce qui laisse tous les branchements intacts. */
+const SET_TITRES = {
+  identite:"Identité du chantier", saisie:"Saisie rapide", entete:"En-tête des rapports",
+  plans:"Plans et vue aérienne", reperage:"Repérage linéaire", annexes:"Documents annexes",
+  journal:"Journal des modifications", sauvegarde:"Sauvegarde et stockage",
+  securite:"Sécurité", ia:"Description par IA", chantiers:"Chantiers"
+};
+/* les domaines qui ne portent aucun champ enregistrable n'ont pas besoin du pied */
+const SET_SANS_PIED = ["journal","sauvegarde","securite","chantiers","annexes"];
+let setCat = null;
+function setAfficher(cat){
+  setCat = cat;
+  const index = !cat;
+  $("#setIndex").hidden = !index;
+  $("#setTitre").textContent = index ? "Réglages" : (SET_TITRES[cat] || "Réglages");
+  document.querySelectorAll("#setModal .settings-block").forEach(b => {
+    b.hidden = index || b.dataset.cat !== cat;
+  });
+  $("#setPied").hidden = index || SET_SANS_PIED.includes(cat);
+  $("#setModal").scrollTop = 0;
+}
 function openSettings(){
   const s = getSettings();
   $("#sProj").value = s.proj;
@@ -7866,6 +7966,7 @@ function openSettings(){
   refreshPlanSectionsUI();
   $("#sKey").value = localStorage.getItem("apiKey") || "";
   $("#sAutoLock").value = String(autoLockDelay());
+  setAfficher(null);            // on entre toujours par le sommaire
   refreshLogoState();
   refreshTuilesState();
   renderAnnexeList();
@@ -7948,7 +8049,7 @@ async function main(){
 
   $("#btnUnlock").addEventListener("click", submitPin);
   $("#pinInput").addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
-  $("#btnLock").addEventListener("click", showLock);
+  /* le cadenas de l'en-tête a été retiré : le verrouillage passe par le tiroir */
   setupAutoLock();
 
   $("#btnNewVisit").addEventListener("click", async () => {
@@ -8144,7 +8245,12 @@ async function main(){
   });
 
   $("#btnSettings").addEventListener("click", () => { closeDrawer(); openSettings(); });
-  $("#btnSetClose").addEventListener("click", () => $("#setModal").classList.remove("on"));
+  /* la flèche remonte au sommaire, puis ferme : on ne quitte pas les réglages par surprise */
+  $("#btnSetClose").addEventListener("click", () => {
+    if (setCat) setAfficher(null); else $("#setModal").classList.remove("on");
+  });
+  document.querySelectorAll("#setIndex .set-cat").forEach(b =>
+    b.addEventListener("click", () => setAfficher(b.dataset.go)));
   $("#btnSetSave").addEventListener("click", saveSettingsUI);
   $("#sPhase").addEventListener("change", refreshPhaseUI);
   $("#sPlanSections").addEventListener("change", refreshPlanSectionsUI);
