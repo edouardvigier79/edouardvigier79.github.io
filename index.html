@@ -80,6 +80,9 @@
   }
   .ico.sm{width:1.15em; height:1.15em; vertical-align:-.2em}
   .ico.lg{width:1.6em; height:1.6em; vertical-align:-.35em}
+  /* pictogramme des états vides : grand, discret, centré */
+  .ico.glyph{width:34px; height:34px; display:block; margin:0 auto 10px; color:var(--ink2); opacity:.7; stroke-width:1.5}
+  .visit-thumb-empty .ico, .rr-th-none .ico{width:20px; height:20px; opacity:.55}
 
   .wrap{max-width:640px; margin:0 auto; padding:0 14px 96px}
   .mono{font-family:ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-variant-numeric:tabular-nums}
@@ -761,7 +764,7 @@
   <g id="i-map"><path d="m3 6.5 6-2.5v13.5l-6 2.5z"/><path d="m9 4 6 2.5v13.5L9 17.5z"/><path d="m15 6.5 6-2.5v13.5l-6 2.5z"/></g>
   <g id="i-chart"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></g>
   <g id="i-history"><path d="M12 7v5l3.5 2"/><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3 4v4h4"/></g>
-  <g id="i-settings"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z"/><path d="M19.4 14.2a1.6 1.6 0 0 0 .3 1.8l.1.1a1.9 1.9 0 1 1-2.7 2.7l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a1.9 1.9 0 1 1-3.8 0v-.2a1.6 1.6 0 0 0-2.8-1.1l-.1.1a1.9 1.9 0 1 1-2.7-2.7l.1-.1a1.6 1.6 0 0 0-1.1-2.7h-.3a1.9 1.9 0 1 1 0-3.8h.2a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a1.9 1.9 0 1 1 2.7-2.7l.1.1a1.6 1.6 0 0 0 1.8.3h.1a1.6 1.6 0 0 0 1-1.5v-.3a1.9 1.9 0 1 1 3.8 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a1.9 1.9 0 1 1 2.7 2.7l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a1.9 1.9 0 1 1 0 3.8h-.2a1.6 1.6 0 0 0-1.5 1Z"/></g>
+  <g id="i-settings"><circle cx="12" cy="12" r="3.3"/><path d="M12 2.6v3.1M12 18.3v3.1M2.6 12h3.1M18.3 12h3.1M5.4 5.4l2.2 2.2M16.4 16.4l2.2 2.2M18.6 5.4l-2.2 2.2M7.6 16.4l-2.2 2.2"/></g>
   <g id="i-plus"><path d="M12 5v14M5 12h14"/></g>
   <g id="i-camera"><path d="M4 7.5h3.5L9 5h6l1.5 2.5H20V20H4z"/><path d="M12 16.8a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z"/></g>
   <g id="i-mic"><path d="M12 3.5a2.5 2.5 0 0 1 2.5 2.5v6a2.5 2.5 0 0 1-5 0V6A2.5 2.5 0 0 1 12 3.5Z"/><path d="M6 11.5a6 6 0 0 0 12 0"/><path d="M12 17.5V21M9 21h6"/></g>
@@ -776,7 +779,7 @@
   <g id="i-check"><path d="m5 12.5 4.5 4.5L19 7"/></g>
   <g id="i-search"><path d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Z"/><path d="m16.2 16.2 4.3 4.3"/></g>
   <g id="i-trash"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7v13.5h11V7"/><path d="M10 11v6M14 11v6"/></g>
-  <g id="i-worker"><path d="M4 15.5a8 8 0 0 1 16 0"/><path d="M2.5 15.5h19"/><path d="M9.5 15.5 11 8h2l1.5 7.5"/><path d="M7 19.5h10"/></g>
+  <g id="i-worker"><path d="M3.5 16.8h17"/><path d="M6.2 16.8a5.8 5.8 0 0 1 11.6 0"/><path d="M9.8 11.6V7.4h4.4v4.2"/></g>
   <g id="i-scale"><path d="M12 3.5v17M7 20.5h10"/><path d="M4 8h16"/><path d="m4 8-2.5 5.5h5L4 8Z"/><path d="m20 8-2.5 5.5h5L20 8Z"/></g>
   <g id="i-flag"><path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/></g>
   <g id="i-expand"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></g>
@@ -790,12 +793,12 @@
 
 <header class="top">
   <div class="top-inner">
-    <button class="iconbtn" id="btnDrawer" title="Menu" aria-label="Ouvrir le menu" aria-expanded="false"><svg class="ico"><use href="#i-menu"/></svg></button>
+    <button class="iconbtn" id="btnDrawer" title="Menu" aria-label="Ouvrir le menu" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24"><use href="#i-menu"/></svg></button>
     <button class="top-id" id="btnProjSwitch" aria-label="Changer de chantier">
       <span class="top-title" id="projTitle">Mon chantier</span>
       <span class="eyebrow" id="projSub">Changer de chantier ▾</span>
     </button>
-    <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller"><svg class="ico"><use href="#i-lock"/></svg></button>
+    <button class="iconbtn" id="btnLock" title="Verrouiller" aria-label="Verrouiller"><svg class="ico" viewBox="0 0 24 24"><use href="#i-lock"/></svg></button>
   </div>
   <div class="hazard"></div>
 </header>
@@ -812,21 +815,21 @@
     <b id="drChantierName">—</b>
   </button>
   <nav>
-    <button class="dr-item" id="btnDrPlan"><svg class="ico dr-ico"><use href="#i-map"/></svg>Plans et repérage</button>
-    <button class="dr-item" id="btnDrDash"><svg class="ico dr-ico"><use href="#i-chart"/></svg>Tableau de bord</button>
-    <button class="dr-item" id="btnDrJournal"><svg class="ico dr-ico"><use href="#i-history"/></svg>Journal des modifications</button>
+    <button class="dr-item" id="btnDrPlan"><svg class="ico dr-ico" viewBox="0 0 24 24"><use href="#i-map"/></svg>Plans et repérage</button>
+    <button class="dr-item" id="btnDrDash"><svg class="ico dr-ico" viewBox="0 0 24 24"><use href="#i-chart"/></svg>Tableau de bord</button>
+    <button class="dr-item" id="btnDrJournal"><svg class="ico dr-ico" viewBox="0 0 24 24"><use href="#i-history"/></svg>Journal des modifications</button>
     <div class="dr-sep"></div>
-    <button class="dr-item" id="btnSettings"><svg class="ico dr-ico"><use href="#i-settings"/></svg>Réglages du chantier</button>
-    <button class="dr-item" id="btnDrLock"><svg class="ico dr-ico"><use href="#i-lock"/></svg>Verrouiller</button>
+    <button class="dr-item" id="btnSettings"><svg class="ico dr-ico" viewBox="0 0 24 24"><use href="#i-settings"/></svg>Réglages du chantier</button>
+    <button class="dr-item" id="btnDrLock"><svg class="ico dr-ico" viewBox="0 0 24 24"><use href="#i-lock"/></svg>Verrouiller</button>
   </nav>
 </aside>
 
 <!-- ================= BARRE D'ONGLETS ================= -->
 <nav class="tabbar" id="tabbar" role="tablist" aria-label="Navigation principale">
-  <button role="tab" data-tab="home"><svg class="ico tb-ico"><use href="#i-home"/></svg>Accueil</button>
-  <button role="tab" data-tab="reserves"><svg class="ico tb-ico"><use href="#i-alert"/></svg>Réserves<span class="tb-badge" id="tbResBadge" hidden></span></button>
-  <button role="tab" data-tab="controls"><svg class="ico tb-ico"><use href="#i-clipboard"/></svg>Contrôles</button>
-  <button role="tab" data-tab="reports"><svg class="ico tb-ico"><use href="#i-file"/></svg>Rapports</button>
+  <button role="tab" data-tab="home"><svg class="ico tb-ico" viewBox="0 0 24 24"><use href="#i-home"/></svg>Accueil</button>
+  <button role="tab" data-tab="reserves"><svg class="ico tb-ico" viewBox="0 0 24 24"><use href="#i-alert"/></svg>Réserves<span class="tb-badge" id="tbResBadge" hidden></span></button>
+  <button role="tab" data-tab="controls"><svg class="ico tb-ico" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg>Contrôles</button>
+  <button role="tab" data-tab="reports"><svg class="ico tb-ico" viewBox="0 0 24 24"><use href="#i-file"/></svg>Rapports</button>
 </nav>
 
 <!-- ================= VERROUILLAGE ================= -->
@@ -867,8 +870,8 @@
   <div class="wrap">
     <div class="sect-label"><span id="regTitre">Réserves</span><span id="regProjName"></span></div>
     <div class="seg" id="regSeg">
-      <button data-vue="liste" class="on"><span aria-hidden="true"LISTE</button>
-      <button data-vue="plan"><svg class="ico sm"><use href="#i-map"/></svg>Plan</button>
+      <button data-vue="liste" class="on"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-list"/></svg>Liste</button>
+      <button data-vue="plan"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-map"/></svg>Plan</button>
     </div>
     <div class="reg-bar" id="regSorts">
       <button class="sortchip on" data-sort="urgence">Urgence</button>
@@ -880,7 +883,7 @@
     <div id="regList"></div>
     <div class="btnrow">
       <button class="btn block" id="btnRegAdd">+ Réserve manuelle</button>
-      <button class="btn blue block" id="btnExtract"><svg class="ico sm"><use href="#i-share"/></svg> Extraire par entreprise</button>
+      <button class="btn blue block" id="btnExtract"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-share"/></svg> Extraire par entreprise</button>
     </div>
   </div>
 </section>
@@ -907,15 +910,15 @@
     <div class="sect-label">Rapports<span id="rapProjName"></span></div>
     <div class="hint" style="margin:0 4px 12px">Produire à l'échelle du chantier</div>
     <div class="btnrow" style="margin-top:0">
-      <button class="btn primary block" id="btnRapPilotage"><svg class="ico sm"><use href="#i-chart"/></svg> Rapport de pilotage (PDF)</button>
-      <button class="btn blue block" id="btnRapExtract"><svg class="ico sm"><use href="#i-share"/></svg> Extraire les réserves par entreprise</button>
+      <button class="btn primary block" id="btnRapPilotage"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-chart"/></svg> Rapport de pilotage (PDF)</button>
+      <button class="btn blue block" id="btnRapExtract"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-share"/></svg> Extraire les réserves par entreprise</button>
       <div class="hint" id="rapAvenir" style="margin:-2px 4px 0"></div>
     </div>
     <div id="rapOS" hidden>
       <div class="sect-label">Ordres de service</div>
       <div id="osList"></div>
       <div class="btnrow" style="margin-top:6px">
-        <button class="btn ghost block" id="btnOsNew"><svg class="ico sm"><use href="#i-clipboard"/></svg> Nouvel ordre de service</button>
+        <button class="btn ghost block" id="btnOsNew"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg> Nouvel ordre de service</button>
         <div class="hint" style="margin:-2px 4px 0">
           Numérotés et conservés par chantier. <b>Un ordre de service engage</b> : vérifiez la
           prescription et les incidences au regard du CCAP avant notification.
@@ -925,9 +928,9 @@
     <div id="rapPV" hidden>
       <div class="sect-label">Procès-verbaux</div>
       <div class="btnrow" style="margin-top:0">
-        <button class="btn ghost block" data-pv="opr"><svg class="ico sm"><use href="#i-scale"/></svg> PV des opérations préalables (OPR)</button>
-        <button class="btn ghost block" data-pv="reception"><svg class="ico sm"><use href="#i-flag"/></svg> PV de réception des travaux</button>
-        <button class="btn ghost block" data-pv="levee"><svg class="ico sm"><use href="#i-check"/></svg> PV de levée des réserves</button>
+        <button class="btn ghost block" data-pv="opr"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-scale"/></svg> PV des opérations préalables (OPR)</button>
+        <button class="btn ghost block" data-pv="reception"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-flag"/></svg> PV de réception des travaux</button>
+        <button class="btn ghost block" data-pv="levee"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-check"/></svg> PV de levée des réserves</button>
         <div class="hint" style="margin:-2px 4px 0">
           Établis à partir du registre, avec pavés de signature à remplir contradictoirement.
           <b>Vérifiez les mentions et les délais au regard du CCAP avant signature</b> — l'application
@@ -946,7 +949,7 @@
     <div class="modal-top">
       <button class="iconbtn" id="btnPlanClose" aria-label="Fermer">←</button>
       <b id="planTitle">Plan</b>
-      <button class="iconbtn" id="btnPlanFit" title="Vue d'ensemble" aria-label="Vue d'ensemble"><svg class="ico sm"><use href="#i-expand"/></svg></button>
+      <button class="iconbtn" id="btnPlanFit" title="Vue d'ensemble" aria-label="Vue d'ensemble"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-expand"/></svg></button>
     </div>
   </div>
   <div class="planwrap" id="planWrap">
@@ -959,7 +962,7 @@
     <div class="wrap" style="padding-bottom:0">
       <div id="planQueue" class="plan-queue"></div>
       <div class="btnrow" style="margin:8px 0 10px">
-        <button class="btn primary block" id="btnPlanPose" hidden><svg class="ico sm"><use href="#i-pin"/></svg> Poser le repère ici</button>
+        <button class="btn primary block" id="btnPlanPose" hidden><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-pin"/></svg> Poser le repère ici</button>
         <button class="btn ghost block" id="btnPlanSkip" hidden>Passer ce constat</button>
       </div>
       <!-- repères libres : annotations du plan, indépendantes des clichés -->
@@ -968,11 +971,11 @@
           <input type="text" id="markLab" placeholder="Intitulé du repère (ex. : emprise de travaux)">
         </div>
         <div class="btnrow" style="margin:0 0 10px">
-          <button class="btn blue block" id="btnMarkPose"><svg class="ico sm"><use href="#i-pin"/></svg> Poser ce repère libre ici</button>
+          <button class="btn blue block" id="btnMarkPose"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-pin"/></svg> Poser ce repère libre ici</button>
         </div>
         <div id="markList"></div>
       </div>
-      <button class="btn ghost block" id="btnMarkToggle" style="margin:0 0 12px"><svg class="ico sm"><use href="#i-plus"/></svg> Repères libres</button>
+      <button class="btn ghost block" id="btnMarkToggle" style="margin:0 0 12px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Repères libres</button>
     </div>
   </div>
 </div>
@@ -987,7 +990,7 @@
     <p class="hint" id="dashInfo" style="margin:2px 2px 14px"></p>
     <div id="dashBody"></div>
     <div class="btnrow">
-      <button class="btn primary block" id="btnDashPdf"><svg class="ico sm"><use href="#i-file"/></svg> Rapport de pilotage (PDF)</button>
+      <button class="btn primary block" id="btnDashPdf"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Rapport de pilotage (PDF)</button>
     </div>
   </div>
 </div>
@@ -1009,7 +1012,7 @@
     </div>
     <div id="jrnList"></div>
     <div class="btnrow">
-      <button class="btn blue block" id="btnJrnCsv"><svg class="ico sm"><use href="#i-chart"/></svg> Exporter le journal (.csv)</button>
+      <button class="btn blue block" id="btnJrnCsv"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-chart"/></svg> Exporter le journal (.csv)</button>
     </div>
   </div>
 </div>
@@ -1048,16 +1051,16 @@
     <button class="backlink" id="btnBack">← Visites</button>
     <div style="display:flex; align-items:center; gap:8px">
       <div class="sect-label" id="visitLabel" style="margin:20px 2px 8px; flex:1">Visite</div>
-      <button class="iconbtn" id="btnRenameVisit" title="Renommer la visite" aria-label="Renommer la visite" style="width:34px; height:34px; font-size:14px">✎</button>
+      <button class="iconbtn" id="btnRenameVisit" title="Renommer la visite" aria-label="Renommer la visite" data-ren="1" style="width:34px; height:34px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
     </div>
-    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 8px"><svg class="ico sm"><use href="#i-worker"/></svg> Moyens sur site (effectif, engins)</button>
-    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 8px"><svg class="ico sm"><use href="#i-clipboard"/></svg> Fiches de contrôle / points d'arrêt</button>
-    <button class="btn ghost block" id="btnPlanScreen" style="margin:0 0 12px"><svg class="ico sm"><use href="#i-map"/></svg> Pointer les constats sur le plan</button>
+    <button class="btn ghost block" id="btnMoyens" style="margin:2px 0 8px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-worker"/></svg> Moyens sur site (effectif, engins)</button>
+    <button class="btn ghost block" id="btnCtrl" style="margin:0 0 8px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg> Fiches de contrôle / points d'arrêt</button>
+    <button class="btn ghost block" id="btnPlanScreen" style="margin:0 0 12px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-map"/></svg> Pointer les constats sur le plan</button>
     <div id="photoList"></div>
     <div class="btnrow">
-      <button class="btn primary block" id="btnPdf"><svg class="ico sm"><use href="#i-file"/></svg> Rapport PDF</button>
-      <button class="btn blue block" id="btnDocx"><svg class="ico sm"><use href="#i-file"/></svg> Rapport Word (.docx)</button>
-      <button class="btn ghost block" id="btnSharePhotos"><svg class="ico sm"><use href="#i-photo"/></svg> Partager les photos renommées</button>
+      <button class="btn primary block" id="btnPdf"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Rapport PDF</button>
+      <button class="btn blue block" id="btnDocx"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Rapport Word (.docx)</button>
+      <button class="btn ghost block" id="btnSharePhotos"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-photo"/></svg> Partager les photos renommées</button>
       <div class="hint" style="margin:-2px 4px 0">
         Les rapports se génèrent sur le téléphone puis s'ouvrent dans la feuille de partage :
         Gmail, Outlook, WhatsApp… Sans réseau, ils sont enregistrés dans Téléchargements.
@@ -1073,10 +1076,10 @@
 <div class="addsheet" id="addSheet">
   <b>Ajouter des clichés</b>
   <div class="btnrow">
-    <button class="btn primary block" id="btnOpenTimestamp"><svg class="ico sm"><use href="#i-camera"/></svg> Ouvrir Timestamp Camera (prise de vue)</button>
+    <button class="btn primary block" id="btnOpenTimestamp"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-camera"/></svg> Ouvrir Timestamp Camera (prise de vue)</button>
     <div class="hint" style="margin:-4px 4px 2px">Prenez vos clichés horodatés, revenez ici, puis importez-les.</div>
-    <button class="btn block" id="btnPickGallery"><svg class="ico sm"><use href="#i-photo"/></svg> Importer depuis la galerie</button>
-    <button class="btn blue block" id="btnPickDrive"><svg class="ico sm"><use href="#i-folder"/></svg> Depuis Fichiers / Google Drive</button>
+    <button class="btn block" id="btnPickGallery"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-photo"/></svg> Importer depuis la galerie</button>
+    <button class="btn blue block" id="btnPickDrive"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-folder"/></svg> Depuis Fichiers / Google Drive</button>
     <button class="btn ghost block" id="btnPickCamera">Appareil photo simple (sans horodatage)</button>
     <button class="btn ghost block" id="btnAddCancel">Annuler</button>
   </div>
@@ -1099,11 +1102,11 @@
     <p class="cap-meta mono" id="editMeta" style="margin:8px 2px 10px"></p>
 
     <div class="chips" style="margin-bottom:12px">
-      <button class="chip" id="btnCopyComment"><svg class="ico sm"><use href="#i-clipboard"/></svg> Copier ce commentaire</button>
-      <button class="chip" id="btnPasteComment" hidden><svg class="ico sm"><use href="#i-clipboard"/></svg> Coller le commentaire</button>
+      <button class="chip" id="btnCopyComment"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg> Copier ce commentaire</button>
+      <button class="chip" id="btnPasteComment" hidden><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg> Coller le commentaire</button>
     </div>
 
-    <button class="btn block aibtn" id="btnAI" hidden>✨ Décrire le cliché (IA — constat VRD)</button>
+    <button class="btn block aibtn" id="btnAI" hidden><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg> Décrire le cliché (IA — constat VRD)</button>
     <div class="hint" id="aiHint" hidden style="margin:-6px 4px 12px">
       L'IA analyse chaussée, bordures, tampons, réseaux, éclairage, mobilier…
       Elle ignore personnes, animaux et véhicules. Relisez toujours avant d'enregistrer.
@@ -1123,7 +1126,7 @@
       <label for="fTitre">Titre du constat (sert au nom du fichier photo)</label>
       <div class="microw">
         <input type="text" id="fTitre" placeholder="Ex. : Épaufrure bordure Comblanchien">
-        <button type="button" class="micbtn" data-mic="fTitre" aria-label="Dictée vocale">🎤</button>
+        <button type="button" class="micbtn" data-mic="fTitre" aria-label="Dictée vocale"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mic"/></svg></button>
       </div>
     </div>
 
@@ -1145,7 +1148,7 @@
       <label for="fDesc">Description factuelle</label>
       <div class="microw">
         <textarea id="fDesc" placeholder="Ce qui est constaté sur le cliché…"></textarea>
-        <button type="button" class="micbtn" data-mic="fDesc" aria-label="Dictée vocale">🎤</button>
+        <button type="button" class="micbtn" data-mic="fDesc" aria-label="Dictée vocale"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mic"/></svg></button>
       </div>
     </div>
 
@@ -1153,13 +1156,13 @@
       <label for="fSuite">Suite à donner</label>
       <div class="microw">
         <textarea id="fSuite" placeholder="Action attendue, registre, relance…"></textarea>
-        <button type="button" class="micbtn" data-mic="fSuite" aria-label="Dictée vocale">🎤</button>
+        <button type="button" class="micbtn" data-mic="fSuite" aria-label="Dictée vocale"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mic"/></svg></button>
       </div>
     </div>
 
     <div class="field">
       <label>Position sur le plan</label>
-      <button class="btn ghost block" id="btnPlacePin" type="button"><svg class="ico sm"><use href="#i-map"/></svg> Placer ce constat sur le plan</button>
+      <button class="btn ghost block" id="btnPlacePin" type="button"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-map"/></svg> Placer ce constat sur le plan</button>
       <div class="hint" id="pinState"></div>
     </div>
 
@@ -1190,7 +1193,7 @@
     </div>
     <p class="hint" style="margin:2px 2px 10px">Pour cette visite, indiquez l'effectif constaté et les engins / matériel observés, par entreprise. Les entreprises repérées sur vos constats sont pré-listées.</p>
     <div id="moyensList"></div>
-    <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter une entreprise</button>
+    <button class="btn ghost block" id="btnMoyensAdd" style="margin-top:6px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Ajouter une entreprise</button>
     <button class="btn primary block" id="btnMoyensSave" style="margin-top:12px">Enregistrer</button>
   </div>
 </div>
@@ -1206,7 +1209,7 @@
     <div id="ctrlList"></div>
     <div class="sect-label" style="margin-top:18px">Ouvrir une nouvelle fiche</div>
     <div id="ctrlPicker"></div>
-    <button class="btn ghost block" id="btnTplEdit" style="margin-top:14px"><svg class="ico sm"><use href="#i-edit"/></svg> Modifier les modèles de fiches</button>
+    <button class="btn ghost block" id="btnTplEdit" style="margin-top:14px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-edit"/></svg> Modifier les modèles de fiches</button>
     <div class="hint">Les seuils proposés sont des valeurs de référence courantes. Adaptez-les à votre CCTP : les modèles appartiennent à ce chantier.</div>
   </div>
 </div>
@@ -1221,7 +1224,7 @@
     <p class="hint" style="margin:2px 2px 12px">Propres à ce chantier. Les fiches déjà établies ne sont pas modifiées.</p>
     <div id="tplList"></div>
     <div class="btnrow">
-      <button class="btn primary block" id="btnTplNew"><svg class="ico sm"><use href="#i-plus"/></svg> Nouveau modèle</button>
+      <button class="btn primary block" id="btnTplNew"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Nouveau modèle</button>
       <button class="btn danger block" id="btnTplReset">↺ Restaurer la bibliothèque d'origine</button>
     </div>
   </div>
@@ -1258,7 +1261,7 @@
     </div>
     <div class="sect-label" style="margin-top:16px">Points de contrôle</div>
     <div id="tplItems"></div>
-    <button class="btn ghost block" id="btnTplAddItem" style="margin-top:8px"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter un point</button>
+    <button class="btn ghost block" id="btnTplAddItem" style="margin-top:8px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Ajouter un point</button>
     <div class="btnrow" id="tDelRow">
       <button class="btn danger block" id="btnTplDelete">Supprimer ce modèle</button>
     </div>
@@ -1325,7 +1328,7 @@
       <label for="rObjet">Objet de la réserve</label>
       <div class="microw">
         <input type="text" id="rObjet" placeholder="Ex. : Épaufrure bordure Comblanchien">
-        <button type="button" class="micbtn" data-mic="rObjet" aria-label="Dictée vocale">🎤</button>
+        <button type="button" class="micbtn" data-mic="rObjet" aria-label="Dictée vocale"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mic"/></svg></button>
       </div>
     </div>
 
@@ -1339,7 +1342,7 @@
       <label for="rAction">Action corrective / justification attendue</label>
       <div class="microw">
         <textarea id="rAction" placeholder="Ce que l'entreprise doit faire…"></textarea>
-        <button type="button" class="micbtn" data-mic="rAction" aria-label="Dictée vocale">🎤</button>
+        <button type="button" class="micbtn" data-mic="rAction" aria-label="Dictée vocale"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mic"/></svg></button>
       </div>
     </div>
 
@@ -1409,7 +1412,7 @@
     </div>
     <div class="btnrow">
       <button class="btn primary block" id="btnOsSave">Enregistrer</button>
-      <button class="btn blue block" id="btnOsPdf"><svg class="ico sm"><use href="#i-file"/></svg> Éditer l'ordre de service (PDF)</button>
+      <button class="btn blue block" id="btnOsPdf"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Éditer l'ordre de service (PDF)</button>
       <button class="btn danger block" id="btnOsDelete" hidden>Supprimer cet ordre de service</button>
     </div>
   </div>
@@ -1427,7 +1430,7 @@
       <h3>Chantiers</h3>
       <p>Chaque chantier a ses propres réglages, contacts, logos, plan et registre. Les visites sont classées par chantier.</p>
       <div class="btnrow" style="margin:0">
-        <button class="btn block" id="btnManageSwitch"><svg class="ico sm"><use href="#i-swap"/></svg> Changer / créer un chantier</button>
+        <button class="btn block" id="btnManageSwitch"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-swap"/></svg> Changer / créer un chantier</button>
         <button class="btn danger block" id="btnDeleteProject">Supprimer le chantier courant</button>
       </div>
     </div>
@@ -1537,7 +1540,7 @@
       <h3>Documents annexes</h3>
       <p>Pièces jointes du chantier (fiches techniques, plans, courriers…). Une page de garde et un sommaire des annexes sont ajoutés automatiquement au rapport dès qu'au moins un document est déposé. Les annexes <b>image</b> (photo, plan scanné, capture) sont intégrées en pleine page ; les PDF/Word sont listés et restent des fichiers joints séparés. Depuis le téléphone : Galerie, Fichiers ou Google Drive.</p>
       <div class="btnrow" style="margin:0">
-        <button class="btn block" id="btnAddAnnexe"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter un ou plusieurs documents</button>
+        <button class="btn block" id="btnAddAnnexe"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Ajouter un ou plusieurs documents</button>
       </div>
       <div id="annexeList" class="annexe-list"></div>
       <input type="file" id="fileAnnexe" multiple hidden>
@@ -1602,8 +1605,8 @@
         </div>
         <div class="hint" id="axState" style="margin-bottom:8px"></div>
         <div class="btnrow" style="margin:0">
-          <button class="btn primary block" id="axSetOrigin"><svg class="ico sm"><use href="#i-pin"/></svg> Définir l'origine ici</button>
-          <button class="btn blue block" id="axAddPoint"><svg class="ico sm"><use href="#i-plus"/></svg> Ajouter un point d'axe ici</button>
+          <button class="btn primary block" id="axSetOrigin"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-pin"/></svg> Définir l'origine ici</button>
+          <button class="btn blue block" id="axAddPoint"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Ajouter un point d'axe ici</button>
           <button class="btn ghost block" id="axFromPhotos">Reconstituer l'axe depuis les clichés</button>
           <button class="btn danger block" id="axClear">Effacer l'axe</button>
         </div>
@@ -1614,17 +1617,17 @@
     <div class="settings-block">
       <h3>Journal des modifications</h3>
       <p>Trace horodatée de tout ce qui a été créé, modifié ou supprimé sur ce chantier. En cas de litige, elle établit qu'un constat n'a pas été retouché après coup.</p>
-      <button class="btn block" id="btnJournal"><svg class="ico sm"><use href="#i-history"/></svg> Consulter le journal</button>
+      <button class="btn block" id="btnJournal"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-history"/></svg> Consulter le journal</button>
     </div>
 
     <div class="settings-block">
       <h3>Sauvegarde &amp; restauration</h3>
       <p>Tout est stocké uniquement dans ce téléphone. Faites une sauvegarde complète régulièrement — c'est votre filet de sécurité (téléphone perdu, changement d'appareil).</p>
-      <button class="btn primary block" id="btnBackupFull"><svg class="ico sm"><use href="#i-database"/></svg> Sauvegarde complète (tous chantiers + photos)</button>
+      <button class="btn primary block" id="btnBackupFull"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-database"/></svg> Sauvegarde complète (tous chantiers + photos)</button>
       <div class="hint">Vous choisirez la destination : Google Drive, appli Fichiers (dossier au choix), e-mail…</div>
-      <button class="btn block" id="btnRestore" style="margin-top:10px"><svg class="ico sm"><use href="#i-refresh"/></svg> Restaurer depuis une sauvegarde</button>
+      <button class="btn block" id="btnRestore" style="margin-top:10px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Restaurer depuis une sauvegarde</button>
       <input type="file" id="fileRestore" accept="application/json,.json" hidden>
-      <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px"><svg class="ico sm"><use href="#i-download"/></svg> Export léger (notes seules, sans photos)</button>
+      <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-download"/></svg> Export léger (notes seules, sans photos)</button>
       <div class="hint" id="storageState" style="margin-top:12px">Espace utilisé : calcul…</div>
     </div>
   </div>
@@ -2019,7 +2022,10 @@ async function addAnnexe(file){
   return rec;
 }
 async function listAnnexes(){ return CUR ? (await idbAll("annexes","projectId",CUR.id)).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)) : []; }
-function annexeIcon(a){ return a.isImg ? "🖼️" : (/pdf/i.test(a.type) ? "📕" : (/word|officedocument|msword/i.test(a.type) ? "📘" : "📄")); }
+function annexeIcon(a){
+  const n = a.isImg ? "photo" : "file";
+  return `<svg class="ico" viewBox="0 0 24 24"><use href="#i-${n}"/></svg>`;
+}
 function fmtSize(n){ return n > 1048576 ? (n/1048576).toFixed(1)+" Mo" : n > 1024 ? Math.round(n/1024)+" Ko" : (n||0)+" o"; }
 async function renderAnnexeList(){
   const box = $("#annexeList");
@@ -2568,7 +2574,7 @@ async function showControls(){
   const list = $("#ctlList");
   const fiches = CUR ? ((await idbAll("controls", "projectId", CUR.id)) || []) : [];
   if (!fiches.length){
-    list.innerHTML = `<div class="empty"><span class="glyph">📋</span>Aucune fiche de contrôle sur ce chantier.<br>Ouvrez la visite du jour, puis créez votre première fiche.</div>`;
+    list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg>Aucune fiche de contrôle sur ce chantier.<br>Ouvrez la visite du jour, puis créez votre première fiche.</div>`;
     return;
   }
   /* un point d'arrêt non levé bloque l'exécution : il passe devant tout le reste */
@@ -2605,7 +2611,7 @@ async function showReports(){
   setActiveTab("reports");
   const v = vocab();
   $("#rapProjName").textContent = " · " + v.phase;
-  $("#btnRapExtract").textContent = "📤 Extraire les " + v.des + " par entreprise";
+  $("#btnRapExtract").textContent = '<svg class="ico sm" viewBox="0 0 24 24"><use href="#i-share"/></svg> Extraire les ' + v.des + " par entreprise";
   /* à chaque phase ses livrables : ordres de service en exécution, procès-verbaux en réception */
   $("#rapPV").hidden = v.phase !== "AOR";
   $("#rapOS").hidden = v.phase !== "DET";
@@ -2616,7 +2622,7 @@ async function showReports(){
     .sort((a, b) => b.date.localeCompare(a.date));
   const list = $("#rapVisitList");
   if (!visits.length){
-    list.innerHTML = `<div class="empty"><span class="glyph">📄</span>Aucune visite sur ce chantier : rien à éditer pour l'instant.</div>`;
+    list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-file"/></svg>Aucune visite sur ce chantier : rien à éditer pour l'instant.</div>`;
     return;
   }
   const photos = await idbAll("photos");
@@ -2649,7 +2655,7 @@ async function showHome(){
   renderHomeCounters(k);
   const list = $("#visitList");
   if (!visits.length){
-    list.innerHTML = `<div class="empty"><span class="glyph">🚧</span>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
+    list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-cone"/></svg>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
     return;
   }
   list.innerHTML = visits.map(v => {
@@ -2662,7 +2668,7 @@ async function showHome(){
     const first = ph[0];
     const thumb = first && first.blob
       ? `<img class="visit-thumb" src="${mkURL(first.blob)}" alt="">`
-      : `<span class="visit-thumb visit-thumb-empty">🚧</span>`;
+      : `<span class="visit-thumb visit-thumb-empty"><svg class="ico" viewBox="0 0 24 24"><use href="#i-photo"/></svg></span>`;
     return `<button class="visit-card" data-id="${v.id}">
       ${thumb}
       <div class="visit-date"><b>${titre}</b>
@@ -2711,7 +2717,7 @@ function moyenRowHtml(ent, effectif, engins){
     <div class="mr-field"><label>Effectif constaté</label><input type="text" class="mr-eff" inputmode="numeric" placeholder="Ex. : 5 (dont 1 chef)" value="${esc(effectif||"")}"></div>
     <div class="mr-field"><label>Engins / matériel observé</label><div class="microw">
       <input type="text" class="mr-eng" placeholder="Ex. : finisseur, mini-pelle, PL 8×4" value="${esc(engins||"")}">
-      <button type="button" class="micbtn mr-mic" aria-label="Dictée vocale">🎤</button></div></div>
+      <button type="button" class="micbtn mr-mic" aria-label="Dictée vocale"><svg class="ico" viewBox="0 0 24 24"><use href="#i-mic"/></svg></button></div></div>
   </div>`;
 }
 function bindMoyenRow(row){
@@ -2786,7 +2792,7 @@ async function newProjectFlow(){
   p.name = p.settings.proj; // garder nom du chantier et en-tête cohérents
   await tx("projects","readwrite", s => s.put(p));
   setCurrentProject(p); closeProjectSheet(); await showHome();
-  toast("Chantier créé — pensez à compléter les réglages (⚙)");
+  toast("Chantier créé — pensez à compléter les réglages");
 }
 async function deleteCurrentProject(){
   if (!CUR) return;
@@ -2961,10 +2967,10 @@ function refreshAxisUI(){
   const pts = [a.origin, ...(a.points || [])].filter(Boolean);
   const pret = axisOf();
   $("#axState").innerHTML = !a.origin
-    ? "⚠️ Origine non définie : placez-vous au point de départ et appuyez sur « Définir l'origine ici »."
+    ? "Origine non définie : placez-vous au point de départ et appuyez sur « Définir l'origine ici »."
     : (pret
         ? (axisLength() < 5
-            ? `⚠️ Axe de <b>${Math.round(axisLength())} m</b> : les points sont quasiment confondus, le repérage ne peut pas fonctionner. Supprimez-les et reprenez en vous déplaçant réellement le long du chantier.`
+            ? `Axe de <b>${Math.round(axisLength())} m</b> : les points sont quasiment confondus, le repérage ne peut pas fonctionner. Supprimez-les et reprenez en vous déplaçant réellement le long du chantier.`
             : `Axe défini : <b>${pts.length} points</b> sur <b>${Math.round(axisLength())} m</b>. Repérage actif de ${esc(fmtAbs(a.originAbs||0, a.mode))} à ${esc(fmtAbs((a.originAbs||0)+axisLength(), a.mode))}.`)
         : "Origine posée. Ajoutez au moins un second point pour définir la direction de l'axe.");
   $("#axList").innerHTML = pts.map((p, i) => {
@@ -3345,7 +3351,7 @@ async function renderRegister(){
   const brutes = await registreRows();
   if (!brutes.length){
     $("#regCount").textContent = "";
-    list.innerHTML = `<div class="empty"><span class="glyph">📋</span>Aucune réserve ni constat à suivre.<br>Les constats NC / PA apparaissent ici dès qu'ils sont saisis,<br>ou ajoutez une réserve manuellement.</div>`;
+    list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg>Aucune réserve ni constat à suivre.<br>Les constats NC / PA apparaissent ici dès qu'ils sont saisis,<br>ou ajoutez une réserve manuellement.</div>`;
     return;
   }
   freeURLs();
@@ -3366,7 +3372,7 @@ async function renderRegister(){
     const pos = r.abs != null ? " · " + fmtAbs(r.abs, r.mode) : "";
     const th = r.photo && r.photo.blob
       ? `<img class="rr-th" src="${mkURL(r.photo.blob)}" alt="">`
-      : `<span class="rr-th-none" aria-hidden="true">🚧</span>`;
+      : `<span class="rr-th-none" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><use href="#i-photo"/></svg></span>`;
     const badge = r.kind === "reserve"
       ? `<button class="rr-n" data-toggle="${r.id}" title="${r.statut === "Soldé" ? "Rouvrir" : "Solder"} la réserve n°${r.num}" aria-label="${r.statut === "Soldé" ? "Rouvrir" : "Solder"} la réserve n°${r.num}">${repere}</button>`
       : `<span class="rr-n">${repere}</span>`;
@@ -3899,7 +3905,7 @@ function planToggleMarks(forcer){
   const box = $("#planMarks");
   const ouvre = forcer != null ? forcer : box.hidden;
   box.hidden = !ouvre;
-  $("#btnMarkToggle").textContent = ouvre ? "▲ Masquer les repères libres" : "➕ Repères libres";
+  $("#btnMarkToggle").textContent = ouvre ? "Masquer les repères libres" : "Repères libres";
   // le viseur sert aussi à poser un repère libre
   if (ouvre && PLAN.idx < 0) $("#planViseur").hidden = false;
   if (!ouvre && PLAN.idx < 0) $("#planViseur").hidden = true;
@@ -3992,7 +3998,7 @@ async function openDashboard(){
   $("#dashInfo").textContent = `${CUR.name} · ${s.visites} visite(s) · ${s.constats.total} constat(s) · ${s.res.total} réserve(s)`;
   const body = $("#dashBody");
   if (!s.res.total && !s.constats.total){
-    body.innerHTML = `<div class="empty"><span class="glyph">📊</span>Pas encore de données.<br>Le tableau de bord se construit à partir de vos constats et réserves.</div>`;
+    body.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-chart"/></svg>Pas encore de données.<br>Le tableau de bord se construit à partir de vos constats et réserves.</div>`;
     $("#dashModal").classList.add("on"); window.scrollTo(0,0); return;
   }
   const nn = v => v == null ? "—" : v;
@@ -4234,7 +4240,7 @@ async function renderJournal(){
     + (tout.length ? ` Depuis le ${frDate(tout[tout.length-1].at.split("T")[0])}.` : "");
   const box = $("#jrnList");
   if (!ents.length){
-    box.innerHTML = `<div class="empty"><span class="glyph">🕘</span>Aucune entrée.<br>Le journal se remplit dès la première saisie.</div>`;
+    box.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-history"/></svg>Aucune entrée.<br>Le journal se remplit dès la première saisie.</div>`;
     return;
   }
   let html = "", jourCourant = "";
@@ -4288,7 +4294,7 @@ async function renderExtractList(){
   const ents = await listEntreprises();
   const box = $("#extList");
   if (!ents.length){
-    box.innerHTML = `<div class="empty"><span class="glyph">🏗</span>Aucun intervenant identifié.<br>Renseignez l'entreprise sur vos constats ou vos réserves.</div>`;
+    box.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-worker"/></svg>Aucun intervenant identifié.<br>Renseignez l'entreprise sur vos constats ou vos réserves.</div>`;
     return;
   }
   // décompte réel dans le périmètre choisi
@@ -4302,8 +4308,8 @@ async function renderExtractList(){
       <b>${esc(e.nom)}</b>
       <div class="ex-meta">${enCours} réserve(s) en cours${retard ? ` · <span class="late">${retard} en retard</span>` : ""} · ${d.photos.length} constat(s) · ${d.fiches.length} fiche(s)</div>
       <div class="ex-act">
-        <button class="btn primary" data-pdf="${esc(e.nom)}">📄 Relevé PDF</button>
-        <button class="btn ghost" data-csv="${esc(e.nom)}">📊 Réserves .csv</button>
+        <button class="btn primary" data-pdf="${esc(e.nom)}"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Relevé PDF</button>
+        <button class="btn ghost" data-csv="${esc(e.nom)}"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-chart"/></svg> Réserves .csv</button>
       </div></div>`);
   }
   box.innerHTML = cartes.length ? cartes.join("")
@@ -4346,7 +4352,7 @@ async function openTplList(){
       `<div class="ctrl-card" style="cursor:default">
          <span class="cc-txt"><b>${esc(t.name)}</b><small>${esc(t.ref || "")} · ${t.items.length} point(s)</small></span>
          <button class="btn ghost" data-dup="${esc(t.id)}" style="padding:7px 10px;font-size:12px">Dupliquer</button>
-         <button class="btn blue" data-edit="${esc(t.id)}" style="padding:7px 12px;font-size:12px">✎</button>
+         <button class="btn blue" data-edit="${esc(t.id)}" style="padding:7px 12px;font-size:12px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-edit"/></svg></button>
        </div>`).join("") + `</div>`;
   }).join("");
   box.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => openTplForm(b.dataset.edit)));
@@ -4604,7 +4610,7 @@ async function renderPhotos(){
   /* compteur de clichés à compléter (sans statut ou sans description) */
   const todo = photos.filter(photoIncomplete);
   const todoHtml = todo.length
-    ? `<button class="todo-chip" id="btnTodo">⚠️ <span><b>${todo.length} cliché${todo.length > 1 ? "s" : ""} à compléter</b> — statut ou description manquants. Appuyez pour ouvrir le premier.</span></button>`
+    ? `<button class="todo-chip" id="btnTodo"><span><b>${todo.length} cliché${todo.length > 1 ? "s" : ""} à compléter</b> — statut ou description manquants. Appuyez pour ouvrir le premier.</span></button>`
     : "";
 
   /* réserves encore ouvertes : photographier la levée sans quitter la visite */
@@ -4615,8 +4621,8 @@ async function renderPhotos(){
       const ech = r.dateLimite ? `échéance ${frDate(r.dateLimite)}` : "sans échéance";
       return `<div class="or-row">
         <span class="or-txt"><b>n°${r.num} — ${esc((r.objet || "(sans objet)").slice(0, 60))}</b>
-          <small class="${st === "En retard" ? "late" : ""}">${st === "En retard" ? "⚠ En retard · " : ""}${esc(ech)}${r.entreprise ? " · " + esc(r.entreprise) : ""}</small></span>
-        <button class="btn blue" data-levee="${r.id}">📷 Photo de levée</button>
+          <small class="${st === "En retard" ? "late" : ""}">${st === "En retard" ? "En retard · " : ""}${esc(ech)}${r.entreprise ? " · " + esc(r.entreprise) : ""}</small></span>
+        <button class="btn blue" data-levee="${r.id}"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-camera"/></svg> Photo de levée</button>
       </div>`;
     }).join("") + `</div>` : "";
 
@@ -4626,7 +4632,7 @@ async function renderPhotos(){
 
   if (!photos.length){
     list.innerHTML = openHtml +
-      `<div class="empty"><span class="glyph">📷</span>Aucun cliché.<br>Prenez vos photos avec Timestamp Camera,<br>puis ajoutez-les avec le bouton +.</div>`;
+      `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-camera"/></svg>Aucun cliché.<br>Prenez vos photos avec Timestamp Camera,<br>puis ajoutez-les avec le bouton +.</div>`;
     bindLevee();
     return;
   }
@@ -4636,11 +4642,11 @@ async function renderPhotos(){
     if (p.takenAt){ const [d, t] = p.takenAt.split("T"); meta.push(`${frDate(d)} ${t}`); }
     if (photoLat(p) != null){
       const la = photoLat(p), lo = photoLon(p);
-      meta.push(`<a href="https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}" target="_blank" rel="noopener">📍 ${photoRectifie(p) ? "✎ " : (p.gpsApprox ? "≈ " : "")}${la.toFixed(5)}, ${lo.toFixed(5)}</a>`);
+      meta.push(`<a href="https://maps.google.com/?q=${la.toFixed(6)},${lo.toFixed(6)}" target="_blank" rel="noopener"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-pin"/></svg> ${photoRectifie(p) ? "· rectifié " : (p.gpsApprox ? "≈ " : "")}${la.toFixed(5)}, ${lo.toFixed(5)}</a>`);
     }
     const fields = [];
     const pk = photoAbsText(p, true);
-    if (pk) fields.push(`<div class="pk-chip">📏 ${esc(pk)}</div>`);
+    if (pk) fields.push(`<div class="pk-chip"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-ruler"/></svg> ${esc(pk)}</div>`);
     if (p.zone) fields.push(`<div class="cap-field"><span class="k">Localisation</span>${esc(p.zone)}</div>`);
     if (p.entreprise) fields.push(`<div class="cap-field"><span class="k">Entreprise / lot</span>${esc(p.entreprise)}</div>`);
     if (p.description) fields.push(`<div class="cap-field"><span class="k">Description factuelle</span>${esc(p.description)}</div>`);
@@ -4660,7 +4666,7 @@ async function renderPhotos(){
         : (r.dateLimite ? `Échéance ${frDate(r.dateLimite)}` : "Sans échéance");
       const btn = st === "Soldé"
         ? `<button class="btn ghost" data-act="reopen">↩ Réouvrir</button>`
-        : `<button class="btn blue" data-act="solder">✓ Solder avec ce cliché</button>`;
+        : `<button class="btn blue" data-act="solder"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-check"/></svg> Solder avec ce cliché</button>`;
       resHtml = `<div class="cap-res${cls}">
         <span class="cr-lab">Réserve n°${r.num} · ${st}<small>${esc(sub)}</small></span>${btn}</div>`;
     }
@@ -4677,7 +4683,7 @@ async function renderPhotos(){
         ${fields.join("")}
         ${resHtml}
         <div class="cap-actions">
-          <button class="btn" data-act="edit">✎ Commentaire</button>
+          <button class="btn" data-act="edit"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-edit"/></svg> Commentaire</button>
         </div>
       </div>
     </article>`;
@@ -4933,7 +4939,7 @@ async function openEditor(id){
 }
 async function buildReserveSelect(){
   const res = (await idbAll("reserves","projectId",CUR.id)).sort((a,b) => a.num - b.num);
-  const opts = [`<option value="">— aucune —</option>`, `<option value="new"><svg class="ico sm"><use href="#i-plus"/></svg> Nouvelle réserve (depuis ce constat)</option>`]
+  const opts = [`<option value="">— aucune —</option>`, `<option value="new">+ Nouvelle réserve (depuis ce constat)</option>`]
     .concat(res.map(r => `<option value="${r.id}">n°${r.num} — ${esc((r.objet||"").slice(0,48))}${r.statut === "Soldé" ? " (soldée)" : ""}</option>`));
   const sel = $("#fReserve");
   sel.innerHTML = opts.join("");
@@ -4961,7 +4967,7 @@ function micToField(btn, target){
   };
   micRec.onerror = ev => { if (ev.error === "not-allowed") toast("Micro : autorisez l'accès dans le navigateur"); stopMic(); };
   micRec.onend = () => { if (micBtnActive === btn) stopMic(); };
-  try{ micRec.start(); btn.classList.add("rec"); micBtnActive = btn; toast("🎤 Dictée — parlez, réappuyez pour arrêter"); }
+  try{ micRec.start(); btn.classList.add("rec"); micBtnActive = btn; toast("Dictée — parlez, réappuyez pour arrêter"); }
   catch{ stopMic(); }
 }
 function setupMics(){
@@ -7164,7 +7170,7 @@ async function docxForVisit(visit, photos, settings){
 
   /* ---- avertissement clichés illisibles ---- */
   if (badShots.length){
-    body.push(wP(wR(`⚠ Cliché(s) illisible(s) non intégré(s) : n°${badShots.join(", n°")} — vérifiez ces fichiers dans l'application.`,
+    body.push(wP(wR(`ATTENTION — cliché(s) illisible(s) non intégré(s) : n°${badShots.join(", n°")} — vérifiez ces fichiers dans l'application.`,
       `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/><w:sz w:val="17"/>`),
       `<w:shd w:val="clear" w:fill="FCEAE7"/><w:spacing w:before="160" w:after="120"/><w:ind w:left="113" w:right="113"/>`));
   }
@@ -7351,7 +7357,7 @@ async function restoreBackup(file){
     if (data.app !== "notes-chantier" || !Array.isArray(data.projects))
       throw new Error("fichier non reconnu");
     const nP = data.projects.length, nV = (data.visits||[]).length, nPh = (data.photos||[]).length;
-    if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\n⚠️ Cela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
+    if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\nCela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
     // vider les stores
     for (const st of ["photos","visits","reserves","projects","annexes","controls","journal","os"]){
@@ -7466,7 +7472,7 @@ async function describeAI(){
     toast("IA : " + (err && err.message || err), true);
   }finally{
     btn.classList.remove("busy");
-    btn.textContent = "✨ Décrire le cliché (IA — constat VRD)";
+    btn.textContent = "Décrire le cliché (IA — constat VRD)";
   }
 }
 
@@ -7560,11 +7566,11 @@ async function refreshStorageState(){
   const s = await storageInfo();
   if (!s){ el.textContent = "Espace utilisé : information indisponible sur ce navigateur."; return; }
   const pct = s.quota ? Math.round(s.usage / s.quota * 100) : 0;
-  const warn = pct >= 80 ? " ⚠️ Espace bientôt saturé : faites une sauvegarde et allégez d'anciens chantiers." : "";
+  const warn = pct >= 80 ? " Espace bientôt saturé : faites une sauvegarde et allégez d'anciens chantiers." : "";
   el.innerHTML = `Espace utilisé : <b>${fmtMo(s.usage)}</b> sur ${fmtMo(s.quota)} (${pct} %).<br>` +
     (s.persisted
       ? `Stockage <b>persistant ✔</b> — Android ne peut pas effacer vos données pour libérer de l'espace.`
-      : `⚠️ Stockage <b>non persistant</b> : Android pourrait effacer vos données si le téléphone sature. Installez l'application sur l'écran d'accueil pour l'activer.`) + warn;
+      : `Stockage <b>non persistant</b> : Android pourrait effacer vos données si le téléphone sature. Installez l'application sur l'écran d'accueil pour l'activer.`) + warn;
 }
 
 async function main(){

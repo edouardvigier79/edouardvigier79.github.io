@@ -1,6 +1,6 @@
 /* Service worker — cache hors-ligne + réception des photos partagées depuis la galerie */
 /* abraCADabra — application version 3.0 */
-const CACHE = "chantier-v50";
+const CACHE = "chantier-v51";
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable.png",
   "./fond-plan.jpg", "./logo.png", "./logo-dark.png", "./pdf.min.js", "./pdf.worker.min.js"];
 
