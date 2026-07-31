@@ -522,14 +522,17 @@
     border:2.5px solid var(--accent); border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.55), 0 2px 10px rgba(0,0,0,.4)}
   .viseur .v-o::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px;
     background:var(--accent); border-radius:50%}
-  .planbar{flex:none; background:var(--bg); border-top:1px solid var(--line)}
-  .plan-queue{display:flex; align-items:center; gap:10px; padding:10px 0 2px; font-size:13.5px}
+  /* la barre ne doit jamais manger le plan : elle se limite au tiers de l'écran et
+     défile pour elle-même si son contenu déborde */
+  .planbar{flex:none; background:var(--bg); border-top:1px solid var(--line);
+    max-height:34dvh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom)}
+  .plan-queue{display:flex; align-items:center; gap:10px; padding:4px 0 0; font-size:13.5px}
   .plan-queue .pq-n{flex:none; width:32px; height:32px; border-radius:50%; background:var(--grad); color:#fff;
     font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center}
   .plan-queue .pq-t{flex:1; min-width:0}
   .plan-queue .pq-t b{display:block}
   .plan-queue .pq-t small{color:var(--ink2); font-size:12px}
-  .plan-empty{padding:14px 0; color:var(--ink2); font-size:13.5px; text-align:center}
+  .plan-empty{padding:8px 0; color:var(--ink2); font-size:12.5px; text-align:center; line-height:1.4}
   #planMarks .field input{width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--card);
     border:1.5px solid var(--line); border-radius:var(--r-md); padding:11px 13px}
   #planMarks .field input:focus{border-color:var(--blue); outline:none}
@@ -974,7 +977,7 @@
   <div class="planbar">
     <div class="wrap" style="padding-bottom:0">
       <div id="planQueue" class="plan-queue"></div>
-      <div class="btnrow" style="margin:8px 0 10px">
+      <div class="btnrow" id="planPoseRow" style="margin:8px 0 10px" hidden>
         <button class="btn primary block" id="btnPlanPose" hidden><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-pin"/></svg> Poser le repère ici</button>
         <button class="btn ghost block" id="btnPlanSkip" hidden>Passer ce constat</button>
       </div>
@@ -3715,7 +3718,8 @@ const PLAN = {
   img: null, cv: null, ctx: null,
   vue: {x:0, y:0, k:1},      // décalage en pixels écran + facteur d'échelle
   photos: [], file: [], idx: -1,
-  geo: null                  // renseigné en vue aérienne : permet de rectifier une position
+  geo: null,                 // renseigné en vue aérienne : permet de rectifier une position
+  focusId: null              // constat mis en évidence par « Voir sur le plan »
 };
 /* position d'affichage d'un constat sur le plan courant, en relatif (0→1) */
 function planPinRel(p){
@@ -3738,45 +3742,73 @@ function markLetter(i){
   return s;
 }
 
-async function openPlanScreen(cible){
+/* Ouvre le plan. `cible` met un constat en file d'attente pour être POSÉ ;
+   `voir` le met en évidence sans rien demander — c'est le chemin inverse du pointage. */
+async function openPlanScreen(cible, voir){
   if (!CUR) return;
   if (!curVisit){ toast("Ouvrez une visite.", true); return; }
   const s = getSettings();
   const charge = getLogo("planImg");
   PLAN.geo = null;
   let plan = null;
+  /* L'écran s'ouvre AVANT la composition : d'une part la zone de plan doit être mesurable
+     pour lui donner son format, d'autre part on voit le chargement au lieu d'un figement. */
+  $("#planTitle").textContent = "Plan";
+  $("#planModal").classList.add("on");
+  await new Promise(r => requestAnimationFrame(r));
+  const fermerSiEchec = () => $("#planModal").classList.remove("on");
+
   // vue aérienne géoréférencée si le chantier est en mode automatique
   if (s.planMode !== "image"){
     const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
     const cl = clusterPhotos(photos);
     if (cl.some(c => !c.noGps)){
       toast("Chargement de la vue aérienne…");
-      const auto = await buildAutoPlan(cl, s.planZoom).catch(() => null);
+      /* format de l'écran, et non celui du document : la vue doit remplir le téléphone */
+      const rw = $("#planWrap").getBoundingClientRect();
+      const ratioEcran = rw.height > 40 ? rw.width / rw.height : null;
+      const auto = await buildAutoPlan(cl, s.planZoom, ratioEcran).catch(() => null);
       if (auto && auto.dataUrl){ plan = {d: auto.dataUrl, nom: "Vue aérienne IGN"}; PLAN.geo = auto.geo; }
     }
   }
   if (!plan && charge) plan = charge;
   if (!plan){
+    fermerSiEchec();
     toast(s.planMode === "image"
       ? "Chargez d'abord un plan dans les Réglages."
       : "Vue aérienne indisponible — chargez un plan ou vérifiez le réseau.", true);
     return;
   }
-  PLAN.img = await chargerImage(plan.d);
+  try{ PLAN.img = await chargerImage(plan.d); }
+  catch(e){ fermerSiEchec(); toast("Plan illisible.", true); return; }
   PLAN.cv = $("#planCanvas"); PLAN.ctx = PLAN.cv.getContext("2d");
   PLAN.photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
   // file d'attente : les constats sans repère, ou celui qu'on vient demander explicitement
   // en vue aérienne les constats ont déjà une position : la file ne sert qu'à corriger,
   // ou à situer un cliché dépourvu de GPS.
-  PLAN.file = cible ? [cible]
-    : (PLAN.geo ? PLAN.photos.filter(p => photoLat(p) == null).map(p => p.id)
-                : PLAN.photos.filter(p => !planPhotoPin(p)).map(p => p.id));
+  PLAN.focusId = voir ? cible : null;
+  PLAN.file = (cible && !voir) ? [cible]
+    : (voir ? []
+            : (PLAN.geo ? PLAN.photos.filter(p => photoLat(p) == null).map(p => p.id)
+                        : PLAN.photos.filter(p => !planPhotoPin(p)).map(p => p.id)));
   PLAN.idx = PLAN.file.length ? 0 : -1;
   $("#planTitle").textContent = plan.nom ? `Plan — ${plan.nom}`.slice(0, 40) : "Plan";
-  $("#planModal").classList.add("on");
   planToggleMarks(false);
   $("#markLab").value = "";
-  requestAnimationFrame(() => { planFit(); planSetupGestes(); planMajFile(); });
+  requestAnimationFrame(() => {
+    planFit(); planSetupGestes(); planMajFile();
+    if (PLAN.focusId != null) planCentrerSur(PLAN.focusId);
+  });
+}
+/* amène une pastille au centre de l'écran, sans changer l'échelle */
+function planCentrerSur(photoId){
+  const p = PLAN.photos.find(x => x.id === photoId);
+  const pin = p && planPinRel(p);
+  if (!pin) { toast("Ce constat n'a pas encore de position sur le plan.", true); return; }
+  const d = planDims(), v = PLAN.vue;
+  v.x = d.w/2 - pin.x * PLAN.img.width * v.k;
+  v.y = d.h/2 - pin.y * PLAN.img.height * v.k;
+  planDessine();
 }
 function chargerImage(src){
   return new Promise((res, rej) => {
@@ -3819,9 +3851,44 @@ function planDessine(){
     const pin = planPinRel(p);
     if (!pin) continue;
     const enCours = PLAN.idx >= 0 && PLAN.file[PLAN.idx] === p.id;
-    planPastille(g, v.x + pin.x * PLAN.img.width * v.k, v.y + pin.y * PLAN.img.height * v.k,
-      String(p.num), STATUT_CSS[p.statut] || "#8A8A8A", enCours ? 0.35 : 1);
+    const x = v.x + pin.x * PLAN.img.width * v.k, y = v.y + pin.y * PLAN.img.height * v.k;
+    if (PLAN.focusId === p.id){                       // halo de mise en évidence
+      g.save();
+      g.beginPath(); g.arc(x, y, 22, 0, 7);
+      g.lineWidth = 3; g.strokeStyle = "rgba(217,106,11,.95)"; g.stroke();
+      g.restore();
+    }
+    planPastille(g, x, y, String(p.num), STATUT_CSS[p.statut] || "#8A8A8A", enCours ? 0.35 : 1);
   }
+}
+/* Quelle pastille se trouve sous le doigt ? Les pastilles sont peintes sur le canevas,
+   donc invisibles au navigateur : on refait le calcul de position et on cherche la plus
+   proche dans un rayon confortable — 22 px, plus large que le dessin, pour le doigt ganté. */
+function planHitTest(sx, sy){
+  const v = PLAN.vue, W = PLAN.img.width * v.k, H = PLAN.img.height * v.k;
+  let best = null;
+  PLAN.photos.forEach(p => {
+    const pin = planPinRel(p);
+    if (!pin) return;
+    const d = Math.hypot(v.x + pin.x * W - sx, v.y + pin.y * H - sy);
+    if (d <= 22 && (!best || d < best.d)) best = {d, type:"photo", photo:p};
+  });
+  planMarks().forEach((m, i) => {
+    const d = Math.hypot(v.x + m.x * W - sx, v.y + m.y * H - sy);
+    if (d <= 22 && (!best || d < best.d)) best = {d, type:"mark", index:i, mark:m};
+  });
+  return best;
+}
+async function planOuvrirPastille(hit){
+  if (hit.type === "mark"){
+    PLAN.focusId = null; planDessine();
+    toast(`Repère ${markLetter(hit.index)}${hit.mark.lab ? " — " + hit.mark.lab : ""}`);
+    return;
+  }
+  const p = hit.photo;
+  $("#planModal").classList.remove("on");
+  try{ await openEditor(p.id); }
+  catch(e){ toast("Cliché introuvable : " + (e && e.message || e), true); }
 }
 const STATUT_CSS = {C:"#2E7D45", NC:"#C0392B", PA:"#A87407", AC:"#3D6E9E"};
 function planPastille(g, x, y, txt, couleur, alpha){
@@ -3845,9 +3912,13 @@ function planSetupGestes(){
     const t = [...pts.values()];
     return {x:(t[0].x + t[1].x)/2, y:(t[0].y + t[1].y)/2, d:Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y)};
   };
+  /* un appui n'est un appui que s'il n'a ni glissé ni traîné : sinon c'est un
+     déplacement du plan, et ouvrir un cliché à ce moment-là serait exaspérant */
+  let tap = null;
   w.addEventListener("pointerdown", e => {
     w.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    tap = pts.size === 1 ? {id:e.pointerId, x:e.clientX, y:e.clientY, t:Date.now()} : null;
     if (pts.size === 2) base = {...centre(), k:PLAN.vue.k, vx:PLAN.vue.x, vy:PLAN.vue.y};
   });
   w.addEventListener("pointermove", e => {
@@ -3855,6 +3926,7 @@ function planSetupGestes(){
     const av = pts.get(e.pointerId);
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     if (pts.size === 1){
+      if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) tap = null;
       PLAN.vue.x += e.clientX - av.x; PLAN.vue.y += e.clientY - av.y;
       planDessine();
     } else if (pts.size === 2 && base){
@@ -3870,9 +3942,20 @@ function planSetupGestes(){
     }
   });
   const fin = e => { pts.delete(e.pointerId); if (pts.size < 2) base = null; };
-  w.addEventListener("pointerup", fin);
-  w.addEventListener("pointercancel", fin);
-  w.addEventListener("pointerleave", fin);
+  w.addEventListener("pointerup", e => {
+    const t = tap; tap = null;
+    fin(e);
+    if (!t || t.id !== e.pointerId || Date.now() - t.t > 600) return;
+    if (Math.hypot(e.clientX - t.x, e.clientY - t.y) > 8) return;
+    /* pendant un pointage en cours, le viseur commande : un appui ne doit pas
+       détourner l'utilisateur vers un autre cliché */
+    if (PLAN.idx >= 0) return;
+    const r = w.getBoundingClientRect();
+    const hit = planHitTest(e.clientX - r.left, e.clientY - r.top);
+    if (hit) planOuvrirPastille(hit);
+  });
+  w.addEventListener("pointercancel", e => { tap = null; fin(e); });
+  w.addEventListener("pointerleave", e => { tap = null; fin(e); });
   window.addEventListener("resize", () => { if ($("#planModal").classList.contains("on")) planDessine(); });
 }
 /* position du viseur, en coordonnées relatives au plan */
@@ -3889,13 +3972,16 @@ function planMajFile(){
   $("#planViseur").hidden = !enCours && !planMarksVisible();
   $("#btnPlanPose").hidden = !enCours;
   $("#btnPlanSkip").hidden = !enCours;
+  /* la rangée entière disparaît hors pointage : ses marges étaient prises sur le plan */
+  $("#planPoseRow").hidden = !enCours;
   const q = $("#planQueue");
   if (!enCours){
     const restants = PLAN.photos.filter(p => !planPinRel(p)).length;
+    /* message tenu sur une ligne : chaque ligne ici est prise sur la hauteur du plan */
     q.innerHTML = `<div class="plan-empty">${
-      restants ? `${restants} constat(s) sans position — rouvrez le plan pour les placer.`
-      : (PLAN.geo ? "Positions issues du GPS. Pour en corriger une, ouvrez le cliché puis « Placer ce constat sur le plan »."
-                  : "Tous les constats de cette visite sont placés ✔")}</div>`;
+      restants ? `${restants} constat(s) sans position`
+      : (PLAN.geo ? "Positions GPS — appuyez sur une pastille pour ouvrir son cliché"
+                  : "Appuyez sur une pastille pour ouvrir son cliché")}</div>`;
     planDessine();
     return;
   }
@@ -4697,6 +4783,8 @@ async function renderPhotos(){
         ${resHtml}
         <div class="cap-actions">
           <button class="btn" data-act="edit"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-edit"/></svg> Commentaire</button>
+          ${(planPhotoPin(p) || photoLat(p) != null)
+            ? `<button class="btn" data-act="voirplan"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-map"/></svg> Voir sur le plan</button>` : ""}
         </div>
       </div>
     </article>`;
@@ -4705,6 +4793,10 @@ async function renderPhotos(){
   bindLevee();
   const cardId = e => Number(e.target.closest(".photo-card").dataset.id);
   list.querySelectorAll("[data-act=edit]").forEach(b => b.addEventListener("click", e => openEditor(cardId(e))));
+  list.querySelectorAll("[data-act=voirplan]").forEach(b => b.addEventListener("click", async e => {
+    try{ await openPlanScreen(cardId(e), true); }
+    catch(err){ toast("Plan indisponible : " + (err && err.message || err), true); }
+  }));
   list.querySelectorAll("[data-act=solder]").forEach(b => b.addEventListener("click", e => {
     const id = cardId(e);
     solderReserve(photos.find(x => x.id === id).reserveId, id);
@@ -5166,8 +5258,11 @@ function zoneLabel(cluster, n){
   return `Zone ${n}${pk ? " — " + pk : ""}${top ? " — " + top[0] : ""}`;
 }
 
-/* =============== plan de situation automatique (IGN, format bandeau 3,44:1) =============== */
-async function buildAutoPlan(clusters, widthMeters){
+/* =============== plan de situation automatique (IGN) ===============
+   `ratio` = largeur / hauteur de l'image composée. Le document PDF veut un bandeau
+   3,44:1 ; l'écran d'un téléphone veut son propre format, sinon la vue s'affiche en
+   timbre-poste entre deux bandes noires. */
+async function buildAutoPlan(clusters, widthMeters, ratio){
   const pts = clusters.filter(c => !c.noGps);
   if (!pts.length) return null;
   const lat = pts.reduce((s, c) => s + c.lat, 0) / pts.length;
@@ -5182,7 +5277,8 @@ async function buildAutoPlan(clusters, widthMeters){
   const mpp = mppAt(z);
   const Wg = Math.max(1, targetW / mpp);                    // largeur "géographique" (px de tuiles)
   const k = Math.min(4, Math.max(1, Math.round(1150 / Wg))); // sur-échantillonnage pour la netteté d'impression
-  const W = Math.round(Wg * k), H = Math.round(W / 3.44);    // format bandeau du document modèle
+  const rr = Math.max(0.4, Math.min(3.44, ratio || 3.44));   // bandeau par défaut (document PDF)
+  const W = Math.round(Wg * k), H = Math.round(W / rr);
   const n = Math.pow(2, z);
   const cx = (lon + 180) / 360 * n * 256;
   const cy = (1 - Math.log(Math.tan(latR) + 1 / Math.cos(latR)) / Math.PI) / 2 * n * 256;
