@@ -381,17 +381,9 @@
   .proj-row{display:flex; align-items:center; gap:10px; width:100%; text-align:left; background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:13px 16px; margin-bottom:8px; font:inherit; color:var(--ink); cursor:pointer; box-shadow:var(--shadow)}
   .proj-row.active{border-color:var(--blue); border-width:2px; background:var(--blue-soft)}
   .proj-row b{flex:1}
-  .reg-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:13px 15px; margin-bottom:10px; box-shadow:var(--shadow)}
-  .reg-card.solde{opacity:.62}
-  .reg-head{display:flex; align-items:center; gap:9px; margin-bottom:5px}
-  .reg-num{width:32px; height:32px; border-radius:50% 50% 50% 12px; background:var(--grad); color:#fff; font-weight:600; font-size:13px; display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 5px 14px -5px rgba(217,106,11,.6)}
-  .reg-obj{flex:1; font-weight:700; font-size:14.5px}
-  .reg-state{font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; cursor:pointer}
-  .reg-state.encours{background:#FBE3C7; color:#9a5a12}
-  .reg-state.solde-b{background:#D7EEDD; color:#256b39}
-  .reg-state.retard-b{background:#F8D2CE; color:#a02617}
-  @media (prefers-color-scheme: dark){.reg-state.encours{background:#4a3418; color:#f0c48a}.reg-state.solde-b{background:#1f3f2b; color:#7fd39a}.reg-state.retard-b{background:#4a1f19; color:#e88a7d}}
-  .reg-meta{font-size:12.5px; color:var(--ink2)}
+  /* .reg-card / .reg-head / .reg-num / .reg-obj / .reg-state / .reg-meta supprimées :
+     l'ancien rendu du registre par cartes a été remplacé par les lignes .rr au lot 3.
+     Elles portaient trois couleurs codées en dur et leur propre bloc de mode sombre. */
   .visit-card{
     display:flex; align-items:center; gap:12px; width:100%; text-align:left;
     background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl);
@@ -411,10 +403,26 @@
   /* pastilles sur leur propre ligne, alignées sous le texte (vignette 56 + gap 12) */
   .visit-counts{display:flex; gap:5px; flex-wrap:wrap; flex:1 0 100%; padding-left:68px; margin-top:4px}
 
-  .pill{display:inline-flex; align-items:center; border-radius:99px; padding:2.5px 9px; font-size:11.5px; font-weight:600; letter-spacing:.03em; color:#fff}
-  .pill.C{background:var(--c)} .pill.NC{background:var(--nc)}
-  .pill.PA{background:var(--pa)} .pill.AC{background:var(--ac)}
+  /* Pastilles de statut : fond tenu et texte coloré, jamais d'aplat vif. Le color-mix
+     part de --card, donc le mode sombre suit sans une règle de plus. */
+  .pill{display:inline-flex; align-items:center; border-radius:99px; padding:2.5px 9px;
+    font-size:11px; font-weight:600; letter-spacing:.03em}
+  /* Le texte est foncé en le mélangeant à l'encre : le procédé s'inverse de lui-même en
+     mode sombre, où --ink est clair. Sans cela, le contraste tombait à 3,8:1 sur NC. */
+  .pill.C {background:color-mix(in srgb, var(--c)  13%, var(--card)); color:color-mix(in srgb, var(--c)  62%, var(--ink))}
+  .pill.NC{background:color-mix(in srgb, var(--nc) 13%, var(--card)); color:color-mix(in srgb, var(--nc) 62%, var(--ink))}
+  .pill.PA{background:color-mix(in srgb, var(--pa) 13%, var(--card)); color:color-mix(in srgb, var(--pa) 62%, var(--ink))}
+  .pill.AC{background:color-mix(in srgb, var(--ac) 13%, var(--card)); color:color-mix(in srgb, var(--ac) 62%, var(--ink))}
   .pill.none{background:var(--chip); color:var(--ink2)}
+  /* Exception assumée : posée sur une photo, la pastille redevient un aplat opaque.
+     Un fond tenu sur un cliché de chantier ne se lirait pas. */
+  .shot-statut .pill{color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .shot-statut .pill.C {background:var(--c)}  .shot-statut .pill.NC{background:var(--nc)}
+  /* l'ambre est la seule teinte trop claire pour porter du blanc : on la fonce ici, et
+     ici seulement, pour atteindre 4,5:1 */
+  .shot-statut .pill.PA{background:color-mix(in srgb, var(--pa) 80%, #000)}
+  .shot-statut .pill.AC{background:var(--ac)}
+  .shot-statut .pill.none{background:rgba(34,29,23,.72); color:#fff}
 
   .photo-card{background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl); overflow:hidden; margin-bottom:16px; box-shadow:var(--shadow)}
   .shot-wrap{position:relative}
@@ -465,8 +473,10 @@
   .ctrl-card .cc-txt{flex:1; min-width:0}
   .ctrl-card .cc-txt b{display:block; font-size:14.5px}
   .ctrl-card .cc-txt small{color:var(--ink2); font-size:12px}
-  .cc-verdict{flex:none; font-size:11px; font-weight:600; padding:5px 11px; border-radius:99px; color:#fff; text-align:center}
-  .cc-verdict.ok{background:var(--c)} .cc-verdict.ko{background:var(--nc)} .cc-verdict.res{background:var(--pa)}
+  .cc-verdict{flex:none; font-size:11px; font-weight:600; padding:4px 11px; border-radius:99px; text-align:center}
+  .cc-verdict.ok {background:color-mix(in srgb, var(--c)  13%, var(--card)); color:color-mix(in srgb, var(--c)  62%, var(--ink))}
+  .cc-verdict.ko {background:color-mix(in srgb, var(--nc) 13%, var(--card)); color:color-mix(in srgb, var(--nc) 62%, var(--ink))}
+  .cc-verdict.res{background:color-mix(in srgb, var(--pa) 13%, var(--card)); color:color-mix(in srgb, var(--pa) 62%, var(--ink))}
   .cc-verdict.wip{background:var(--chip); color:var(--ink2)}
   .ctrl-fam{margin-bottom:12px}
   .ctrl-fam > h5{margin:0 0 6px; font-size:10.5px; font-weight:600; letter-spacing:.08em;
@@ -630,12 +640,15 @@
   .sig-state.ok{color:var(--c)}
   /* compteur de clichés à compléter */
   .todo-chip{display:flex; align-items:center; gap:10px; width:100%; text-align:left; font:inherit;
-    margin:0 0 12px; padding:12px 15px; border-radius:var(--r-lg); cursor:pointer; color:var(--ink);
-    background:rgba(168,116,7,.13); border:1px solid rgba(168,116,7,.4); font-weight:700; font-size:13.5px}
+    margin:0 0 12px; padding:12px 15px; border-radius:var(--r-md); cursor:pointer; color:var(--ink);
+    background:color-mix(in srgb, var(--pa) 13%, var(--card));
+    border:1px solid color-mix(in srgb, var(--pa) 40%, var(--line));
+    font-weight:600; font-size:13.5px}
   .todo-chip b{color:var(--pa)}
+  /* .todo-chip n'a plus besoin d'un correctif de mode sombre : son color-mix part de
+     --card, qui bascule déjà. */
   @media (prefers-color-scheme: dark){
     .cap-res.done{background:rgba(92,180,124,.15)} .cap-res.late{background:rgba(224,96,82,.15)}
-    .todo-chip{background:rgba(220,164,37,.15); border-color:rgba(220,164,37,.42)}
   }
 
   .fab{
