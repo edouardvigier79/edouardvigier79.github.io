@@ -965,6 +965,7 @@
     <div class="modal-top">
       <button class="iconbtn" id="btnPlanClose" aria-label="Fermer">←</button>
       <b id="planTitle">Plan</b>
+      <button class="iconbtn" id="btnPlanLive" title="Carte navigable" aria-label="Basculer en carte navigable" hidden><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-map"/></svg></button>
       <button class="iconbtn" id="btnPlanFit" title="Vue d'ensemble" aria-label="Vue d'ensemble"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-expand"/></svg></button>
     </div>
   </div>
@@ -1514,10 +1515,10 @@
         <input type="file" id="fileLogoR" hidden>
       </div>
       <div class="field">
-        <label for="sPlanMode">Plan de situation</label>
+        <label for="sPlanMode">Plan affiché dans l'application</label>
         <select id="sPlanMode">
-          <option value="auto">Automatique — vue aérienne IGN + repères de zones (recommandé)</option>
-          <option value="image">Image chargée ci-dessous</option>
+          <option value="auto">Vue aérienne IGN (recommandé)</option>
+          <option value="image">Plan déposé ci-dessous</option>
         </select>
         <div class="chips" style="margin-top:8px">
           <button class="chip" id="btnPlan">Choisir un plan…</button>
@@ -1528,12 +1529,36 @@
         <input type="file" id="filePlan" hidden>
       </div>
       <div class="field">
+        <label for="sPlanGarde">Plan de la page de garde (rapport)</label>
+        <select id="sPlanGarde">
+          <option value="auto">Vue aérienne IGN</option>
+          <option value="image">Plan déposé</option>
+        </select>
+        <div class="hint">Le plan d'ensemble en tête de rapport. En cas d'indisponibilité — pas de réseau, ou aucun cliché géolocalisé — l'autre source prend le relais automatiquement.</div>
+      </div>
+      <div class="field">
         <label for="sPlanSections">Extrait de plan par section</label>
         <select id="sPlanSections">
           <option value="1">Oui — chaque section porte son extrait recadré</option>
           <option value="0">Non — vue d'ensemble seule</option>
         </select>
         <div class="hint">Recadre le plan sur chaque section, avec ses seuls repères. Rapport plus lisible sur un linéaire, mais plus long à produire — en vue aérienne, chaque extrait télécharge ses tuiles.</div>
+      </div>
+      <div class="field" id="fldPlanSectionsMode">
+        <label for="sPlanSectionsMode">Plan des sections (rapport)</label>
+        <select id="sPlanSectionsMode">
+          <option value="auto">Vue aérienne IGN</option>
+          <option value="image">Plan déposé</option>
+        </select>
+        <div class="hint">Indépendant de la page de garde : on peut vouloir un plan de récolement en tête et des vues aériennes par section, ou l'inverse.</div>
+      </div>
+      <div class="field">
+        <label>Tuiles conservées hors ligne</label>
+        <div class="chips" style="margin-top:4px">
+          <button class="chip" id="btnTuilesPurge">Vider le cache des tuiles</button>
+        </div>
+        <div class="hint" id="tuilesState"></div>
+        <div class="hint">La carte navigable conserve les tuiles déjà consultées : ce que vous avez survolé au bureau reste lisible sur un chantier sans réseau. Au-delà, la carte se grise.</div>
       </div>
       <div class="field">
         <label for="sPlanZoom">Échelle du plan automatique</label>
@@ -1893,7 +1918,12 @@ function normSettings(s){
     cartouche: Array.isArray(s.cartouche) ? s.cartouche : [],
     contacts: Array.isArray(s.contacts) ? s.contacts : [],
     planZoom: s.planZoom || "300",
-    planMode: s.planMode || "auto",
+    planMode: s.planMode || "auto",                       // vue affichée dans l'application
+    /* Page de garde et sections sont indépendantes : on peut vouloir un plan de récolement
+       en tête et des vues aériennes par section, ou l'inverse. Les chantiers antérieurs
+       héritent de l'ancien réglage unique. */
+    planGarde: s.planGarde || s.planMode || "auto",
+    planSectionsMode: s.planSectionsMode || s.planMode || "auto",
     planSections: s.planSections === undefined ? true : !!s.planSections,
     /* phase de la mission : pilote le vocabulaire, les compteurs et les livrables */
     phase: s.phase === "AOR" ? "AOR" : "DET",
@@ -2070,9 +2100,12 @@ const DB_SCHEMA = {
   annexes:  ["projectId"],
   controls: ["projectId","visitId"],
   journal:  ["projectId"],
-  os:       ["projectId"]
+  os:       ["projectId"],
+  /* tuiles IGN conservées : la clé est « z/x/y », donc partagée entre chantiers couvrant
+     la même emprise. Index sur la date de dernier usage, pour purger les plus anciennes. */
+  tiles:    ["vu"]
 };
-const DB_VERSION = 7;
+const DB_VERSION = 8;
 /* Ouvre la base puis vérifie magasins ET index. Une montée de version interrompue laissait
    l'application inutilisable ; on rouvre alors en version+1 pour compléter ce qui manque. */
 async function openDB(){
@@ -2166,6 +2199,14 @@ function tx(store, mode, fn){
     const t = db.transaction(store, mode);
     fn(t.objectStore(store));
     t.oncomplete = () => res();
+    t.onerror = () => rej(t.error);
+  });
+}
+function idbGet(store, key){
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, "readonly");
+    const rq = t.objectStore(store).get(key);
+    rq.onsuccess = () => res(rq.result || null);
     t.onerror = () => rej(t.error);
   });
 }
@@ -3793,12 +3834,36 @@ async function openPlanScreen(cible, voir){
                         : PLAN.photos.filter(p => !planPhotoPin(p)).map(p => p.id)));
   PLAN.idx = PLAN.file.length ? 0 : -1;
   $("#planTitle").textContent = plan.nom ? `Plan — ${plan.nom}`.slice(0, 40) : "Plan";
+  /* la carte navigable n'est proposée que s'il existe un point d'ancrage géographique */
+  MAP.on = false;
+  $("#btnPlanLive").hidden = !PLAN.photos.some(p => photoLat(p) != null);
+  $("#btnPlanLive").setAttribute("aria-pressed", "false");
   planToggleMarks(false);
   $("#markLab").value = "";
   requestAnimationFrame(() => {
     planFit(); planSetupGestes(); planMajFile();
     if (PLAN.focusId != null) planCentrerSur(PLAN.focusId);
   });
+}
+/* bascule entre la vue composée (image figée) et la carte navigable */
+function planBasculerCarte(actif){
+  const geoloc = PLAN.photos.filter(p => photoLat(p) != null);
+  if (actif && !geoloc.length){ toast("Aucun constat géolocalisé : la carte n'a pas de point d'ancrage.", true); return; }
+  MAP.on = !!actif;
+  $("#btnPlanLive").setAttribute("aria-pressed", MAP.on ? "true" : "false");
+  $("#btnPlanLive").title = MAP.on ? "Revenir à la vue composée" : "Carte navigable";
+  $("#planTitle").textContent = MAP.on ? "Carte IGN — navigable" : "Plan";
+  /* le viseur et le pointage n'ont de sens que sur la vue composée, dont le repère est
+     l'image ; sur la carte, la position vient du GPS */
+  if (MAP.on){
+    PLAN.idx = -1;
+    planToggleMarks(false);
+    if (!mapCadrerSur(geoloc)) { MAP.on = false; return; }
+    mapDessine();
+  } else {
+    planFit();
+  }
+  planMajFile();
 }
 /* amène une pastille au centre de l'écran, sans changer l'échelle */
 function planCentrerSur(photoId){
@@ -3836,6 +3901,8 @@ function planFit(){
   planDessine();
 }
 function planDessine(){
+  /* point d'entrée unique du rendu : en mode carte, c'est le moteur de tuiles qui peint */
+  if (MAP.on) return mapDessine();
   const d = planDims(), g = PLAN.ctx, v = PLAN.vue;
   g.setTransform(d.dpr, 0, 0, d.dpr, 0, 0);
   g.fillStyle = "#2A2622"; g.fillRect(0, 0, d.w, d.h);
@@ -3919,7 +3986,7 @@ function planSetupGestes(){
     w.setPointerCapture(e.pointerId);
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     tap = pts.size === 1 ? {id:e.pointerId, x:e.clientX, y:e.clientY, t:Date.now()} : null;
-    if (pts.size === 2) base = {...centre(), k:PLAN.vue.k, vx:PLAN.vue.x, vy:PLAN.vue.y};
+    if (pts.size === 2) base = {...centre(), k:PLAN.vue.k, vx:PLAN.vue.x, vy:PLAN.vue.y, mz:MAP.z};
   });
   w.addEventListener("pointermove", e => {
     if (!pts.has(e.pointerId)) return;
@@ -3927,9 +3994,25 @@ function planSetupGestes(){
     pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
     if (pts.size === 1){
       if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) tap = null;
+      if (MAP.on){
+        /* en mode carte, glisser déplace le centre géographique, pas une image */
+        const z = Math.round(MAP.z), ech = Math.pow(2, MAP.z - z);
+        const c = mapMondePx(MAP.lat, MAP.lon, z);
+        const n = mapLatLon(c.x - (e.clientX - av.x) / ech, c.y - (e.clientY - av.y) / ech, z);
+        MAP.lat = n.lat; MAP.lon = n.lon;
+        mapDessine();
+        return;
+      }
       PLAN.vue.x += e.clientX - av.x; PLAN.vue.y += e.clientY - av.y;
       planDessine();
     } else if (pts.size === 2 && base){
+      if (MAP.on){
+        const c2 = centre();
+        MAP.z = Math.max(MAP_ZMIN, Math.min(MAP_ZMAX,
+          base.mz + Math.log2(Math.max(0.05, c2.d / (base.d || 1)))));
+        mapDessine();
+        return;
+      }
       const c = centre();
       const r = w.getBoundingClientRect();
       const f = Math.max(0.15, Math.min(14, base.k * (c.d / (base.d || 1))));
@@ -3951,7 +4034,8 @@ function planSetupGestes(){
        détourner l'utilisateur vers un autre cliché */
     if (PLAN.idx >= 0) return;
     const r = w.getBoundingClientRect();
-    const hit = planHitTest(e.clientX - r.left, e.clientY - r.top);
+    const hit = MAP.on ? mapHitTest(e.clientX - r.left, e.clientY - r.top)
+                       : planHitTest(e.clientX - r.left, e.clientY - r.top);
     if (hit) planOuvrirPastille(hit);
   });
   w.addEventListener("pointercancel", e => { tap = null; fin(e); });
@@ -5258,6 +5342,156 @@ function zoneLabel(cluster, n){
   return `Zone ${n}${pk ? " — " + pk : ""}${top ? " — " + top[0] : ""}`;
 }
 
+/* =============== carte IGN vivante ===============
+   Contrairement à la vue composée, la carte n'est pas une image : elle est redessinée à
+   chaque geste à partir des tuiles du niveau courant. Le repère de travail est le pixel
+   monde de la projection Web Mercator, celui-là même qu'emploient les tuiles. */
+const MAP = { on:false, lat:0, lon:0, z:18, redraw:0 };
+const MAP_ZMIN = 12, MAP_ZMAX = 19;          // 19 = plafond réel de la couche ORTHOPHOTOS
+
+function mapMondePx(lat, lon, z){
+  const n = Math.pow(2, z) * 256, lr = lat * Math.PI / 180;
+  return { x: (lon + 180) / 360 * n,
+           y: (1 - Math.log(Math.tan(lr) + 1 / Math.cos(lr)) / Math.PI) / 2 * n };
+}
+function mapLatLon(px, py, z){
+  const n = Math.pow(2, z) * 256;
+  const k = Math.PI - 2 * Math.PI * py / n;
+  return { lat: 180 / Math.PI * Math.atan(0.5 * (Math.exp(k) - Math.exp(-k))),
+           lon: px / n * 360 - 180 };
+}
+/* repère d'écran d'un point géographique, dans la vue courante */
+function mapEcran(lat, lon, d){
+  const z = Math.round(MAP.z), ech = Math.pow(2, MAP.z - z);
+  const c = mapMondePx(MAP.lat, MAP.lon, z), p = mapMondePx(lat, lon, z);
+  return { x: (p.x - c.x) * ech + d.w / 2, y: (p.y - c.y) * ech + d.h / 2 };
+}
+/* un seul redessin par trame, quel que soit le nombre de tuiles qui arrivent */
+function mapRedessinePlusTard(){
+  if (MAP.redraw) return;
+  MAP.redraw = requestAnimationFrame(() => { MAP.redraw = 0; if (MAP.on) mapDessine(); });
+}
+function mapDessine(){
+  const d = planDims(), g = PLAN.ctx;
+  const z = Math.round(MAP.z), ech = Math.pow(2, MAP.z - z), T = 256 * ech;
+  g.setTransform(d.dpr, 0, 0, d.dpr, 0, 0);
+  g.fillStyle = "#2A2622"; g.fillRect(0, 0, d.w, d.h);
+  g.imageSmoothingQuality = "high";
+  const c = mapMondePx(MAP.lat, MAP.lon, z);
+  const x0 = c.x - (d.w / 2) / ech, y0 = c.y - (d.h / 2) / ech;
+  const nmax = Math.pow(2, z);
+  let manquantes = 0;
+  for (let tx = Math.floor(x0 / 256); tx <= Math.floor((x0 + d.w / ech) / 256); tx++){
+    for (let ty = Math.floor(y0 / 256); ty <= Math.floor((y0 + d.h / ech) / 256); ty++){
+      if (tx < 0 || ty < 0 || tx >= nmax || ty >= nmax) continue;
+      const sx = (tx * 256 - x0) * ech, sy = (ty * 256 - y0) * ech;
+      const im = tuileImage(z, tx, ty, mapRedessinePlusTard);
+      if (im) g.drawImage(im, sx, sy, T + 1, T + 1);      // +1 : évite les liserés entre tuiles
+      else { manquantes++; g.fillStyle = "#dfe8ee"; g.fillRect(sx, sy, T, T); }
+    }
+  }
+  // pastilles des constats géolocalisés
+  for (const p of PLAN.photos){
+    const la = photoLat(p), lo = photoLon(p);
+    if (la == null) continue;
+    const s = mapEcran(la, lo, d);
+    if (s.x < -30 || s.y < -30 || s.x > d.w + 30 || s.y > d.h + 30) continue;
+    if (PLAN.focusId === p.id){
+      g.save(); g.beginPath(); g.arc(s.x, s.y, 22, 0, 7);
+      g.lineWidth = 3; g.strokeStyle = "rgba(217,106,11,.95)"; g.stroke(); g.restore();
+    }
+    planPastille(g, s.x, s.y, String(p.num), STATUT_CSS[p.statut] || "#8A8A8A", 1);
+  }
+  MAP.manquantes = manquantes;
+}
+/* quelle pastille sous le doigt, en mode carte */
+function mapHitTest(sx, sy){
+  const d = planDims();
+  let best = null;
+  for (const p of PLAN.photos){
+    const la = photoLat(p);
+    if (la == null) continue;
+    const s = mapEcran(la, photoLon(p), d);
+    const dist = Math.hypot(s.x - sx, s.y - sy);
+    if (dist <= 22 && (!best || dist < best.d)) best = {d:dist, type:"photo", photo:p};
+  }
+  return best;
+}
+function mapCadrerSur(photos){
+  const pts = photos.filter(p => photoLat(p) != null);
+  if (!pts.length) return false;
+  const lats = pts.map(photoLat), lons = pts.map(photoLon);
+  MAP.lat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  MAP.lon = (Math.min(...lons) + Math.max(...lons)) / 2;
+  /* niveau le plus détaillé qui contienne l'étendue des constats */
+  const d = planDims();
+  let z = MAP_ZMAX;
+  while (z > MAP_ZMIN){
+    const a = mapMondePx(Math.min(...lats), Math.min(...lons), z);
+    const b = mapMondePx(Math.max(...lats), Math.max(...lons), z);
+    if (Math.abs(b.x - a.x) < d.w * 0.82 && Math.abs(b.y - a.y) < d.h * 0.82) break;
+    z--;
+  }
+  MAP.z = z;
+  return true;
+}
+
+/* =============== tuiles IGN : cache local ===============
+   La carte vivante va chercher ses tuiles au fil du déplacement. Sur un chantier sans
+   réseau, ce qui a déjà été consulté doit rester lisible : chaque tuile obtenue est donc
+   conservée, et retrouvée par sa clé « z/x/y ». Le cache est commun aux chantiers — deux
+   opérations voisines partagent leurs tuiles plutôt que de les télécharger deux fois. */
+const TUILE_URL = (z, x, y) =>
+  `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/jpeg&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}`;
+
+const TUILES = { memoire: new Map(), enVol: new Map() };   // images décodées, et requêtes en cours
+
+async function tuileBlob(z, x, y){
+  const id = `${z}/${x}/${y}`;
+  const cache = await idbGet("tiles", id).catch(() => null);
+  if (cache && cache.blob){
+    /* on rafraîchit la date d'usage sans attendre : elle sert à purger les plus anciennes */
+    tx("tiles", "readwrite", s => s.put({...cache, vu: Date.now()})).catch(() => {});
+    return cache.blob;
+  }
+  const r = await fetch(TUILE_URL(z, x, y), {mode:"cors", cache:"default"});
+  if (!r.ok) throw new Error("tuile indisponible (" + r.status + ")");
+  const blob = await r.blob();
+  await tx("tiles", "readwrite", s => s.put({id, blob, vu: Date.now(), o: blob.size})).catch(() => {});
+  return blob;
+}
+/* Renvoie une image prête à dessiner, ou null si elle n'est ni en cache ni joignable.
+   Ne lève jamais : une tuile manquante est un trou dans la carte, pas une panne. */
+function tuileImage(z, x, y, onPret){
+  const id = `${z}/${x}/${y}`;
+  if (TUILES.memoire.has(id)) return TUILES.memoire.get(id);
+  if (TUILES.enVol.has(id)) return null;
+  const p = (async () => {
+    try{
+      const blob = await tuileBlob(z, x, y);
+      const im = await createImageBitmap(blob);
+      TUILES.memoire.set(id, im);
+      /* la mémoire vive n'est pas extensible : au-delà de 400 tuiles on oublie les plus anciennes */
+      if (TUILES.memoire.size > 400){
+        const vieilles = [...TUILES.memoire.keys()].slice(0, 100);
+        for (const k of vieilles) TUILES.memoire.delete(k);
+      }
+      if (onPret) onPret();
+    }catch{ /* trou dans la carte, silencieux */ }
+    finally{ TUILES.enVol.delete(id); }
+  })();
+  TUILES.enVol.set(id, p);
+  return null;
+}
+async function tuilesPoids(){
+  const all = await idbAll("tiles").catch(() => []);
+  return {n: all.length, o: all.reduce((s, t) => s + (t.o || 0), 0)};
+}
+async function tuilesPurger(){
+  await tx("tiles", "readwrite", s => s.clear());
+  TUILES.memoire.clear();
+}
+
 /* =============== plan de situation automatique (IGN) ===============
    `ratio` = largeur / hauteur de l'image composée. Le document PDF veut un bandeau
    3,44:1 ; l'écran d'un téléphone veut son propre format, sinon la vue s'affiche en
@@ -5377,8 +5611,8 @@ async function planExtraitSection(cluster, settings){
   if (cluster.noGps && !cluster.items.some(planPhotoPin)) return null;
   const charge = getLogo("planImg");
 
-  // --- vue aérienne
-  if (settings.planMode !== "image"){
+  // --- vue aérienne (réglage propre aux sections, indépendant de la page de garde)
+  if (settings.planSectionsMode !== "image"){
     const pts = cluster.items.filter(p => photoLat(p) != null)
       .map(p => ({lat: photoLat(p), lon: photoLon(p)}));
     if (!pts.length) return null;
@@ -5474,7 +5708,8 @@ async function getPlanForReport(clusters, settings){
     return marque || {bytes: logoBytes(up), w: up.w, h: up.h, auto: false};
   };
   let plan = null;
-  if (settings.planMode === "image"){
+  /* page de garde : réglage qui lui est propre, avec repli automatique sur l'autre source */
+  if (settings.planGarde === "image"){
     plan = (await planCharge()) || await tryAuto();
   } else {
     plan = await tryAuto();
@@ -7591,6 +7826,19 @@ function applyHeader(s){
   /* la seconde ligne de l'en-tête est désormais l'invitation à changer de chantier ;
      le sous-titre du chantier (s.sub) continue d'alimenter les rapports. */
 }
+async function refreshTuilesState(){
+  const el = $("#tuilesState");
+  if (!el) return;
+  try{
+    const {n, o} = await tuilesPoids();
+    el.textContent = n ? `${n} tuile${n > 1 ? "s" : ""} conservée${n > 1 ? "s" : ""} · ${fmtSize(o)}`
+                       : "Aucune tuile conservée pour l'instant.";
+  }catch{ el.textContent = ""; }
+}
+/* le plan des sections n'a de sens que si les extraits par section sont demandés */
+function refreshPlanSectionsUI(){
+  $("#fldPlanSectionsMode").hidden = $("#sPlanSections").value !== "1";
+}
 /* les deux champs de réception n'ont de sens qu'en AOR */
 function refreshPhaseUI(){
   const aor = $("#sPhase").value === "AOR";
@@ -7612,10 +7860,14 @@ function openSettings(){
   $("#sContacts").value = s.contacts.join("\n");
   $("#sPlanZoom").value = s.planZoom;
   $("#sPlanMode").value = s.planMode;
+  $("#sPlanGarde").value = s.planGarde;
+  $("#sPlanSectionsMode").value = s.planSectionsMode;
   $("#sPlanSections").value = s.planSections ? "1" : "0";
+  refreshPlanSectionsUI();
   $("#sKey").value = localStorage.getItem("apiKey") || "";
   $("#sAutoLock").value = String(autoLockDelay());
   refreshLogoState();
+  refreshTuilesState();
   renderAnnexeList();
   refreshStorageState();
   refreshAxisUI();
@@ -7632,6 +7884,8 @@ async function saveSettingsUI(){
     contacts: $("#sContacts").value.split("\n").map(x => x.trim()).filter(Boolean),
     planZoom: $("#sPlanZoom").value,
     planMode: $("#sPlanMode").value,
+    planGarde: $("#sPlanGarde").value,
+    planSectionsMode: $("#sPlanSectionsMode").value,
     planSections: $("#sPlanSections").value === "1",
     phase: $("#sPhase").value === "AOR" ? "AOR" : "DET",
     dateReception: $("#sReception").value || "",
@@ -7893,6 +8147,15 @@ async function main(){
   $("#btnSetClose").addEventListener("click", () => $("#setModal").classList.remove("on"));
   $("#btnSetSave").addEventListener("click", saveSettingsUI);
   $("#sPhase").addEventListener("change", refreshPhaseUI);
+  $("#sPlanSections").addEventListener("change", refreshPlanSectionsUI);
+  $("#btnTuilesPurge").addEventListener("click", async () => {
+    const {n} = await tuilesPoids();
+    if (!n){ toast("Aucune tuile à supprimer."); return; }
+    if (!confirm(`Vider le cache des tuiles ?\n\n${n} tuile(s) seront supprimées. La carte devra les retélécharger, ce qui exige du réseau.`)) return;
+    await tuilesPurger();
+    await refreshTuilesState();
+    toast("Cache des tuiles vidé");
+  });
   $("#btnManageSwitch").addEventListener("click", () => { $("#setModal").classList.remove("on"); openProjectSheet(); });
   $("#btnDeleteProject").addEventListener("click", deleteCurrentProject);
   $("#btnChangePin").addEventListener("click", () => {
@@ -7933,8 +8196,11 @@ async function main(){
   $("#btnPlanScreen").addEventListener("click", async () => {
     try{ await openPlanScreen(null); }catch(e){ toast("Plan indisponible : " + (e && e.message || e), true); }
   });
-  $("#btnPlanClose").addEventListener("click", () => $("#planModal").classList.remove("on"));
-  $("#btnPlanFit").addEventListener("click", () => planFit());
+  $("#btnPlanClose").addEventListener("click", () => { MAP.on = false; $("#planModal").classList.remove("on"); });
+  $("#btnPlanFit").addEventListener("click", () => {
+    if (MAP.on){ mapCadrerSur(PLAN.photos); mapDessine(); } else planFit();
+  });
+  $("#btnPlanLive").addEventListener("click", () => planBasculerCarte(!MAP.on));
   $("#btnPlanPose").addEventListener("click", async () => {
     try{ await planPoser(); }catch(e){ toast("Impossible de poser le repère : " + (e && e.message || e), true); }
   });
