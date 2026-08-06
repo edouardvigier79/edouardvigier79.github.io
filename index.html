@@ -24,8 +24,11 @@
     --plan-op:.13; --plan-op-lock:.62;
     --halo-b:rgba(47,134,197,.05); --halo-o:rgba(217,106,11,.03);
   }
+  /* Mode sombre : suit le téléphone par défaut, mais l'attribut data-theme posé sur la
+     racine peut le forcer dans un sens ou dans l'autre. Le « :not([data-theme=light]) »
+     est ce qui permet d'imposer le clair alors que le système est en sombre. */
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#14110E; --card:#1F1B16; --ink:#EDE7DC; --ink2:#A79C8C; --line:#332D25;
       --accent:#F07E1A; --accent-ink:#1B140C; --chip:#2A251E; --chip-on:#EDE7DC; --chip-on-ink:#161310;
       --blue:#6FB6E8; --blue-soft:#16242F; --blue-line:#2A4457; --blue-deep:#9CCDF0;
@@ -36,6 +39,17 @@
       --plan-op:.16; --plan-op-lock:.66;
       --halo-b:rgba(111,182,232,.05); --halo-o:rgba(240,126,26,.03);
     }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14110E; --card:#1F1B16; --ink:#EDE7DC; --ink2:#A79C8C; --line:#332D25;
+    --accent:#F07E1A; --accent-ink:#1B140C; --chip:#2A251E; --chip-on:#EDE7DC; --chip-on-ink:#161310;
+    --blue:#6FB6E8; --blue-soft:#16242F; --blue-line:#2A4457; --blue-deep:#9CCDF0;
+    --c:#5CB47C; --nc:#E06052; --pa:#DCA425; --ac:#7AA6CE;
+    --shadow:0 1px 3px rgba(0,0,0,.45);
+    --shadow-lg:0 14px 36px rgba(0,0,0,.55);
+    --danger:#E06052;
+    --plan-op:.16; --plan-op-lock:.66;
+    --halo-b:rgba(111,182,232,.05); --halo-o:rgba(240,126,26,.03);
   }
   :root{
     --grad:linear-gradient(135deg,#F7A23B 0%,#E8700F 52%,#D95B0B 100%);
@@ -289,10 +303,20 @@
   /* en retard : toute la ligne est teintée. Un liseré de 2 px ne se voit pas en plein
      soleil, et reste invisible pour un daltonien. */
   .rr.late{background:color-mix(in srgb, var(--nc) 11%, var(--card)); border-color:color-mix(in srgb, var(--nc) 40%, var(--line))}
-  .rr.late .rr-n{border-color:var(--nc); background:var(--nc); color:#fff}
+  /* rouge profond fixe, et non var(--nc) : en mode sombre le rouge du thème est clair,
+     et le texte blanc y tombait à 3,5:1 */
+  .rr.late .rr-n{border-color:#9E2B20; background:#9E2B20; color:#fff}
   .rr.late .rr-txt small{color:var(--nc); font-weight:700}
-  .rr.soon .rr-n{border-color:var(--pa); color:var(--pa)}
+  /* l'échéance proche teinte la sous-ligne, pas le repère : celui-ci doit garder le code
+     de conformité, sinon un NC à échéance devient ambre et perd sa nature */
   .rr.soon .rr-txt small{color:var(--pa)}
+  /* Code de conformité du constat, cohérent avec les pastilles de visite et le plan.
+     Le texte est foncé par mélange à l'encre — même recette que les pastilles — sans quoi
+     l'ambre tombait à 4,1:1 sur fond blanc. */
+  .rr-n.cNC{border-color:var(--nc); color:color-mix(in srgb, var(--nc) 62%, var(--ink))}
+  .rr-n.cPA{border-color:var(--pa); color:color-mix(in srgb, var(--pa) 62%, var(--ink))}
+  .rr-n.cAC{border-color:var(--ac); color:color-mix(in srgb, var(--ac) 62%, var(--ink))}
+  .rr-n.cC {border-color:var(--c);  color:color-mix(in srgb, var(--c)  62%, var(--ink))}
   /* une ligne soldée s'efface, mais reste lisible : le barré et le repère vert suffisent */
   .rr.done{opacity:.82}
   .rr.done .rr-n{border-color:var(--c); background:var(--c); color:#fff}
@@ -327,6 +351,40 @@
   }
   .sortchip.on{background:var(--blue-soft); border-color:var(--blue-line); color:var(--blue-deep)}
   .sortchip:disabled{opacity:.45; cursor:default}
+
+  /* recherche dans le registre : au-dessus des tris, car elle réduit l'ensemble sur lequel ils portent */
+  .reg-search{
+    display:flex; align-items:center; gap:8px; margin:8px 0 2px; padding:0 12px;
+    border:1px solid var(--line); background:var(--card); border-radius:99px; box-shadow:var(--shadow);
+  }
+  .reg-search .ico{color:var(--ink2); flex:none}
+  .reg-search input{
+    flex:1; min-width:0; border:0; background:none; font:inherit; font-size:14px; color:var(--ink);
+    padding:11px 0; outline:none;
+  }
+  .reg-search input::placeholder{color:var(--ink2); opacity:.8}
+  /* la croix native de type=search est masquée : la nôtre garde la cible au doigt */
+  .reg-search input::-webkit-search-cancel-button{display:none}
+  #regQClear{
+    flex:none; border:0; background:none; color:var(--ink2); cursor:pointer;
+    font-size:22px; line-height:1; padding:4px 2px; margin-right:-4px;
+  }
+
+  /* rappel de sauvegarde : information, pas alerte — sauf quand le délai devient long */
+  .rappel-sauv{
+    display:flex; align-items:center; gap:9px; width:100%; text-align:left; cursor:pointer;
+    margin:0 0 12px; padding:10px 13px; font:inherit; font-size:12.5px; font-weight:600;
+    border:1px solid var(--line); border-radius:12px; background:var(--card); color:var(--ink2);
+  }
+  .rappel-sauv .ico{flex:none}
+  /* Ambre, et non orange : l'orange reste l'action dans toute l'application, jamais un état.
+     Même recette que .ctl-alerte, avec le mélange à l'encre qui tient le contraste — l'ambre
+     pur tombe à 4,1:1 sur fond blanc. */
+  .rappel-sauv.tard{
+    border-color:color-mix(in srgb, var(--pa) 40%, var(--line));
+    background:color-mix(in srgb, var(--pa) 12%, var(--card));
+    color:color-mix(in srgb, var(--pa) 62%, var(--ink));
+  }
 
   /* bascule Plan | Liste, en pied d'écran mais au-dessus de la barre d'onglets */
   .seg{
@@ -386,13 +444,16 @@
   .lockfoot{margin-top:22px; font-size:11px; color:var(--ink2); opacity:.8}
 
   /* étiquette de section : pastille translucide pour rester lisible sur le fond de plan */
+  /* Vrai titre de section, et non plus une pastille en petites capitales : à 11 px en
+     majuscules espacées, il se lisait comme une étiquette secondaire et disparaissait. */
   .sect-label{
-    font-size:11px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; color:var(--ink);
-    margin:20px 2px 8px; display:inline-flex; align-items:center;
-    background:var(--card);
-    border:1px solid var(--line); border-radius:99px; padding:7px 14px;
-    box-shadow:var(--shadow);
+    display:block; margin:26px 2px 10px;
+    font-size:17px; font-weight:600; letter-spacing:-.015em; line-height:1.3;
+    color:var(--ink); text-transform:none;
   }
+  /* la première section d'un écran n'a pas besoin d'autant d'air au-dessus */
+  section.screen > .wrap > .sect-label:first-child{margin-top:16px}
+  .sect-label span{color:var(--ink2); font-weight:500}
   /* filet bleu supprimé : il n'apportait rien et serrait le texte contre le bord */
   /* accueille désormais la grille des compteurs, plus le rang de pastilles : bloc, pas flex */
   .home-project{display:block; margin:14px 0 2px}
@@ -490,6 +551,18 @@
   .ctrl-card{display:flex; align-items:center; gap:11px; width:100%; text-align:left; font:inherit; color:var(--ink);
     background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:12px 14px;
     margin-bottom:9px; cursor:pointer; box-shadow:var(--shadow)}
+  /* ---- onglet Rapports : une visite, ses deux formats ---- */
+  .rap-visite{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+    margin-bottom:9px; box-shadow:var(--shadow); overflow:hidden}
+  .rap-ouvre{display:flex; width:100%; text-align:left; font:inherit; color:var(--ink);
+    background:none; border:none; cursor:pointer; padding:12px 14px 8px}
+  /* l'empilement titre / date était porté par .ctrl-card, que cette carte n'utilise pas */
+  .rap-ouvre .cc-txt{flex:1; min-width:0}
+  .rap-ouvre .cc-txt b{display:block; font-size:14.5px; font-weight:600; line-height:1.3}
+  .rap-ouvre .cc-txt small{display:block; font-size:12.5px; color:var(--ink2); margin-top:2px}
+  .rap-actions{display:flex; gap:8px; padding:0 14px 12px}
+  .rap-actions .btn{flex:1; padding:10px 12px; font-size:13.5px}
+
   .ctrl-card .cc-txt{flex:1; min-width:0}
   .ctrl-card .cc-txt b{display:block; font-size:14.5px}
   .ctrl-card .cc-txt small{color:var(--ink2); font-size:12px}
@@ -671,8 +744,11 @@
   /* .todo-chip n'a plus besoin d'un correctif de mode sombre : son color-mix part de
      --card, qui bascule déjà. */
   @media (prefers-color-scheme: dark){
-    .cap-res.done{background:rgba(92,180,124,.15)} .cap-res.late{background:rgba(224,96,82,.15)}
+    :root:not([data-theme="light"]) .cap-res.done{background:rgba(92,180,124,.15)}
+    :root:not([data-theme="light"]) .cap-res.late{background:rgba(224,96,82,.15)}
   }
+  :root[data-theme="dark"] .cap-res.done{background:rgba(92,180,124,.15)}
+  :root[data-theme="dark"] .cap-res.late{background:rgba(224,96,82,.15)}
 
   .fab{
     /* dégage la barre d'onglets */
@@ -833,6 +909,7 @@
   <g id="i-scale"><path d="M12 3.5v17M7 20.5h10"/><path d="M4 8h16"/><path d="m4 8-2.5 5.5h5L4 8Z"/><path d="m20 8-2.5 5.5h5L20 8Z"/></g>
   <g id="i-flag"><path d="M5.5 21V3.5"/><path d="M5.5 4.5h12l-2.5 4 2.5 4h-12"/></g>
   <g id="i-expand"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></g>
+  <g id="i-eye"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3.2"/></g>
   <g id="i-sparkle"><path d="M12 3.5 13.9 9l5.6 2-5.6 2-1.9 5.5L10.1 13 4.5 11l5.6-2L12 3.5Z"/><path d="M19 4v3M17.5 5.5h3"/></g>
   <g id="i-refresh"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20.5 4v4.5H16"/></g>
   <g id="i-download"><path d="M12 3.5V15"/><path d="m8 11 4 4 4-4"/><path d="M4.5 15.5v5h15v-5"/></g>
@@ -886,9 +963,10 @@
   <div class="wrap">
     <div class="lockbox">
       <div class="lockpanel">
+        <!-- la source est choisie en JavaScript : une requête média ne suivrait pas un
+             thème forcé depuis les réglages -->
         <picture class="brand-logo">
-          <source srcset="logo-dark.png" media="(prefers-color-scheme: dark)">
-          <img src="logo.png" alt="abraCADabra" width="720" height="149">
+          <img id="brandLogo" src="logo.png" alt="abraCADabra" width="720" height="149">
         </picture>
         <div class="brand-tag">Taillé pour satelliser le problème</div>
         <div class="sep"></div>
@@ -906,6 +984,7 @@
 <section class="screen" id="scrHome">
   <div class="wrap">
     <div class="home-project" id="homeProject"></div>
+    <button class="rappel-sauv" id="rappelSauv" hidden></button>
     <div class="sect-label">Visites de chantier</div>
     <div id="visitList"></div>
     <div class="btnrow">
@@ -921,6 +1000,11 @@
     <div class="seg" id="regSeg">
       <button data-vue="liste" class="on"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-list"/></svg>Liste</button>
       <button data-vue="plan"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-map"/></svg>Plan</button>
+    </div>
+    <div class="reg-search">
+      <svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="search" id="regQ" placeholder="Rechercher : objet, entreprise, zone, n°…" autocomplete="off" enterkeyhint="search">
+      <button type="button" id="regQClear" aria-label="Effacer la recherche" hidden>&times;</button>
     </div>
     <div class="reg-bar" id="regSorts">
       <button class="sortchip on" data-sort="urgence">Urgence</button>
@@ -1439,8 +1523,10 @@
     </div>
     <div class="field">
       <label for="oDest">Destinataire (entreprise)</label>
+      <!-- pas de <datalist> ici : « entsList3 » est déclaré une seule fois, dans le
+           formulaire de constat. Un second élément portant le même identifiant restait
+           vide, et les deux champs résolvaient de toute façon vers le premier. -->
       <input type="text" id="oDest" list="entsList3" placeholder="Ex. : COLAS">
-      <datalist id="entsList3"></datalist>
     </div>
     <div class="field">
       <label for="oPrescription">Prescription</label>
@@ -1494,20 +1580,25 @@
         <span><b>Journal des modifications</b><small>Historique du chantier</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="sauvegarde"><svg class="ico" viewBox="0 0 24 24"><use href="#i-database"/></svg>
         <span><b>Sauvegarde et stockage</b><small>Filet de sécurité, espace occupé</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="affichage"><svg class="ico" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
+        <span><b>Affichage</b><small>Thème clair ou sombre</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="securite"><svg class="ico" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
         <span><b>Sécurité</b><small>Code et verrouillage automatique</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="ia"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg>
         <span><b>Description par IA</b><small>Facultatif, avec une clé Anthropic</small></span><i class="set-chev">›</i></button>
-      <button class="set-cat" data-go="chantiers"><svg class="ico" viewBox="0 0 24 24"><use href="#i-swap"/></svg>
-        <span><b>Chantiers</b><small>Changer, créer, supprimer</small></span><i class="set-chev">›</i></button>
     </nav>
 
-    <div class="settings-block" data-cat="chantiers">
-      <h3>Chantiers</h3>
-      <p>Chaque chantier a ses propres réglages, contacts, logos, plan et registre. Les visites sont classées par chantier.</p>
-      <div class="btnrow" style="margin:0">
-        <button class="btn block" id="btnManageSwitch"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-swap"/></svg> Changer / créer un chantier</button>
-        <button class="btn danger block" id="btnDeleteProject">Supprimer le chantier courant</button>
+    <div class="settings-block" data-cat="affichage">
+      <h3>Affichage</h3>
+      <p>Sur un chantier en plein soleil, le mode clair se lit nettement mieux : les écrans montent plus haut en luminosité sur fond blanc. Le soir, le sombre fatigue moins.</p>
+      <div class="field">
+        <label for="sTheme">Thème</label>
+        <select id="sTheme">
+          <option value="auto">Automatique — suit le téléphone</option>
+          <option value="light">Toujours clair</option>
+          <option value="dark">Toujours sombre</option>
+        </select>
+        <div class="hint">Le changement est immédiat, et retenu sur cet appareil.</div>
       </div>
     </div>
 
@@ -1542,6 +1633,14 @@
       <div class="field">
         <label for="sRedac">Rédacteur (apparaît sur les rapports)</label>
         <input type="text" id="sRedac" placeholder="Ex. : E. Vigier (PCM Ingénierie, AMOE)">
+      </div>
+      <!-- Supprimer se trouve là où l'on édite : c'est le même objet. Le changement de
+           chantier, lui, reste dans l'en-tête — c'est de la navigation, pas un réglage. -->
+      <!-- écarté du pied « Enregistrer » : au pouce ganté, une action destructrice ne doit
+           pas jouxter l'action courante -->
+      <div class="field" style="margin-top:30px">
+        <button class="btn danger block" id="btnDeleteProject">Supprimer le chantier courant</button>
+        <div class="hint">Efface ce chantier et tout ce qu'il contient : visites, clichés, réserves, fiches de contrôle et journal. Sans retour possible — sauf restauration d'une sauvegarde.</div>
       </div>
     </div>
 
@@ -1737,9 +1836,9 @@
       <h3>Sauvegarde &amp; restauration</h3>
       <p>Tout est stocké uniquement dans ce téléphone. Faites une sauvegarde complète régulièrement — c'est votre filet de sécurité (téléphone perdu, changement d'appareil).</p>
       <button class="btn primary block" id="btnBackupFull"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-database"/></svg> Sauvegarde complète (tous chantiers + photos)</button>
-      <div class="hint">Vous choisirez la destination : Google Drive, appli Fichiers (dossier au choix), e-mail…</div>
+      <div class="hint">Archive <b>.zip</b> — vous choisirez la destination : Google Drive, appli Fichiers (dossier au choix), e-mail… Les anciennes sauvegardes <b>.json</b> restent restaurables.</div>
       <button class="btn block" id="btnRestore" style="margin-top:10px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Restaurer depuis une sauvegarde</button>
-      <input type="file" id="fileRestore" accept="application/json,.json" hidden>
+      <input type="file" id="fileRestore" accept="application/zip,.zip,application/json,.json" hidden>
       <button class="btn ghost block" id="btnBackupJson" style="margin-top:10px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-download"/></svg> Export léger (notes seules, sans photos)</button>
       <div class="hint" id="storageState" style="margin-top:12px">Espace utilisé : calcul…</div>
     </div>
@@ -1767,12 +1866,27 @@ function toast(msg, long){
   clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove("on"), long ? 5200 : 2800);
 }
 function pad(n){ return String(n).padStart(2,"0"); }
-function frDate(iso){ const [y,m,d] = iso.split("-"); return `${d}/${m}/${y}`; }
-function frDayName(iso){
-  const days = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
-  return days[new Date(iso+"T12:00:00").getDay()];
+/* Une date absente ne doit jamais faire échouer un document : une fiche ancienne, ou restaurée
+   depuis une sauvegarde antérieure au champ concerné, arrive sans date. On affiche un tiret
+   plutôt que d'interrompre la génération du rapport entier sur un message incompréhensible. */
+function frDate(iso){
+  if (!iso || typeof iso !== "string") return "—";
+  const [y,m,d] = iso.split("-");
+  return d ? `${d}/${m}/${y}` : iso;
 }
-function shortDate(iso){ const [y,m,d]=iso.split("-"); return `${d}.${m}.${y.slice(2)}`; }
+/* Mêmes précautions que frDate, et pour la même raison : ces deux fonctions alimentent des
+   documents remis au maître d'ouvrage. Sans garde, une fiche sans date écrivait « undefined »
+   dans l'en-tête d'un rapport (frDayName), ou faisait échouer la génération (shortDate). */
+function frDayName(iso){
+  if (!iso || typeof iso !== "string") return "";
+  const days = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  return days[new Date(iso+"T12:00:00").getDay()] || "";
+}
+function shortDate(iso){
+  if (!iso || typeof iso !== "string") return "";
+  const [y,m,d] = iso.split("-");
+  return d ? `${d}.${m}.${y.slice(2)}` : iso;
+}
 function sanitizeFilename(s){
   return String(s).replace(/[\\/:*?"<>|]/g, " ").replace(/\s+/g," ").trim().slice(0,120);
 }
@@ -2038,6 +2152,10 @@ function setCurrentProject(p){
      à l'ouverture pour que le reste du code n'ait jamais à composer avec un champ absent. */
   if (p) p.settings = normSettings(p.settings);
   if (p) localStorage.setItem("currentProjectId", String(p.id));
+  /* une recherche laissée en place masquerait une partie du registre du chantier suivant,
+     sans que rien à l'écran n'explique pourquoi il paraît vide */
+  regQ = "";
+  const q = $("#regQ"); if (q){ q.value = ""; $("#regQClear").hidden = true; }
   applyHeader(getSettings());
 }
 
@@ -2082,7 +2200,9 @@ async function pdfPremierePageEnImage(file, largeurCible){
   const doc = await lib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
   const page = await doc.getPage(1);
   const base = page.getViewport({scale: 1});
-  const scale = Math.min(4, Math.max(1, (largeurCible || 2200) / base.width));
+  /* le plancher à 1 garantit qu'on ne descend jamais sous la définition native ; le plafond à 4
+     évite qu'une petite page (un A4) ne produise un canevas démesuré pour rien */
+  const scale = Math.min(4, Math.max(1, (largeurCible || PLAN_LARGEURS[0]) / base.width));
   const vp = page.getViewport({scale});
   const cv = document.createElement("canvas");
   cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
@@ -2095,20 +2215,66 @@ async function pdfPremierePageEnImage(file, largeurCible){
 }
 function estPdf(f){ return /pdf/i.test(f.type || "") || /\.pdf$/i.test(f.name || ""); }
 
+/* Un plan n'existe qu'à un exemplaire par chantier : il peut s'offrir de la définition, là où
+   un cliché doit rester léger.
+   L'ancienne cible de 2200 px était un piège pour les grands formats, ceux du VRD justement :
+   l'échelle valait `Math.max(1, 2200 / largeur_du_PDF)`, et un A1 fait 2384 points de large.
+   Le rapport tombait sous 1, le plancher le ramenait à 1, et le plan sortait à **l'échelle
+   native du PDF, soit 72 dpi**, sans le moindre suréchantillonnage. À 3500 px, un A1 monte
+   vers 120 dpi et un cartouche redevient lisible au zoom.
+   Les largeurs suivantes sont des replis : un canevas de cette taille pèse une trentaine de
+   Mo en mémoire vive, et tous les téléphones ne l'allouent pas. Mieux vaut un plan un peu
+   moins fin qu'un import qui échoue. */
+const PLAN_LARGEURS = [4500, 3500, 2600, 1800];
+const PLAN_Q = 0.92;   // du dessin au trait, pas une photo : 0,88 posait des halos sur les lignes
+
+/* Encode UNE seule fois. La chaîne précédente sortait le canevas en JPEG, puis le redécodait
+   pour le réencoder à la même taille — une seconde compression qui ne redimensionnait rien et
+   ne servait donc qu'à dégrader le trait. */
+function canvasEnPlan(cv){
+  const d = cv.toDataURL("image/jpeg", PLAN_Q);
+  if (!d || d.length < 512) return null;   // canevas non alloué ou encodage refusé
+  return {d, w: cv.width, h: cv.height};
+}
+async function imagePlanEnStocke(file){
+  const bmp = await createImageBitmap(file);
+  try{
+    for (const largeur of PLAN_LARGEURS){
+      const scale = Math.min(1, largeur / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale));
+      const h = Math.max(1, Math.round(bmp.height * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext("2d");
+      cx.fillStyle = "#FFFFFF"; cx.fillRect(0, 0, w, h);   // un PNG transparent doit rester lisible
+      cx.drawImage(bmp, 0, 0, w, h);
+      const st = canvasEnPlan(cv);
+      if (st) return st;
+    }
+  } finally { bmp.close(); }
+  throw new Error("image de plan illisible sur cet appareil");
+}
 async function storePlan(file){
   if (!CUR) return;
   if (estPdf(file)){
     toast("Rendu du plan PDF…");
-    const {canvas, nbPages} = await pdfPremierePageEnImage(file, 2200);
-    // on repasse par imgToStored pour homogénéiser le stockage (JPEG, fond blanc)
-    const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg", 0.9));
-    CUR.planImg = await imgToStored(new File([blob], "plan.jpg", {type:"image/jpeg"}), 2200, 0.88);
+    let stocke = null, nbPages = 1, souci = null;
+    for (const largeur of PLAN_LARGEURS){
+      try{
+        const r = await pdfPremierePageEnImage(file, largeur);
+        nbPages = r.nbPages;
+        stocke = canvasEnPlan(r.canvas);
+        if (stocke) break;
+      }catch(e){ souci = e; }   // canevas trop grand pour cet appareil : on retente plus petit
+    }
+    if (!stocke) throw souci || new Error("rendu du plan impossible sur cet appareil");
+    CUR.planImg = stocke;
     CUR.planImg.src = "pdf"; CUR.planImg.nom = file.name || "plan.pdf";
     await saveCurrentProject();
     if (nbPages > 1) toast(`Plan importé — 1re page sur ${nbPages}. Pour une autre page, exportez-la seule depuis votre PDF.`, true);
     return;
   }
-  CUR.planImg = await imgToStored(file, 2200, 0.88);
+  CUR.planImg = await imagePlanEnStocke(file);
   CUR.planImg.src = "image"; CUR.planImg.nom = file.name || "";
   await saveCurrentProject();
 }
@@ -2746,7 +2912,11 @@ async function showReports(){
   setActiveTab("reports");
   const v = vocab();
   $("#rapProjName").textContent = " · " + v.phase;
-  $("#btnRapExtract").textContent = '<svg class="ico sm" viewBox="0 0 24 24"><use href="#i-share"/></svg> Extraire les ' + v.des + " par entreprise";
+  /* innerHTML et non textContent : le libellé porte une icône. Avec textContent, le
+     balisage s'affichait littéralement dans le bouton. */
+  $("#btnRapExtract").innerHTML =
+    '<svg class="ico sm" viewBox="0 0 24 24"><use href="#i-share"/></svg> Extraire les '
+    + esc(v.des) + " par entreprise";
   /* à chaque phase ses livrables : ordres de service en exécution, procès-verbaux en réception */
   $("#rapPV").hidden = v.phase !== "AOR";
   $("#rapOS").hidden = v.phase !== "DET";
@@ -2763,15 +2933,28 @@ async function showReports(){
   const photos = await idbAll("photos");
   const byVisit = {};
   photos.forEach(p => { (byVisit[p.visitId] = byVisit[p.visitId] || []).push(p); });
+  /* on édite directement depuis cet écran : entrer dans la visite pour obtenir son
+     rapport obligeait à un aller-retour sans objet */
   list.innerHTML = visits.map(v => {
     const n = (byVisit[v.id] || []).length;
     const titre = v.label ? esc(v.label) : `Visite du ${esc(frDate(v.date))}`;
-    return `<button class="ctrl-card" data-id="${v.id}">
-      <span class="cc-txt"><b>${titre}</b><small>${esc(frDate(v.date))} · ${n} cliché${n > 1 ? "s" : ""}</small></span>
-      <span class="cc-verdict wip">Éditer</span></button>`;
+    return `<div class="rap-visite">
+      <button class="rap-ouvre" data-ouvrir="${v.id}">
+        <span class="cc-txt"><b>${titre}</b><small>${esc(frDate(v.date))} · ${n} cliché${n > 1 ? "s" : ""}</small></span>
+      </button>
+      <div class="rap-actions">
+        <button class="btn primary" data-pdf="${v.id}"${n ? "" : " disabled"}><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> PDF</button>
+        <button class="btn blue" data-docx="${v.id}"${n ? "" : " disabled"}><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Word</button>
+      </div>
+    </div>`;
   }).join("");
-  list.querySelectorAll("[data-id]").forEach(b =>
-    b.addEventListener("click", () => showVisit(Number(b.dataset.id))));
+  const trouver = id => visits.find(v => v.id === Number(id));
+  list.querySelectorAll("[data-ouvrir]").forEach(b =>
+    b.addEventListener("click", () => showVisit(Number(b.dataset.ouvrir))));
+  list.querySelectorAll("[data-pdf]").forEach(b =>
+    b.addEventListener("click", () => exportPdf(trouver(b.dataset.pdf))));
+  list.querySelectorAll("[data-docx]").forEach(b =>
+    b.addEventListener("click", () => exportDocx(trouver(b.dataset.docx))));
 }
 
 async function showHome(){
@@ -2788,6 +2971,7 @@ async function showHome(){
   const k = await homeCounters();
   refreshResBadge(k.ouvert);
   renderHomeCounters(k);
+  renderRappelSauvegarde();   // avant le retour anticipé « aucune visite » : il vaut aussi là
   const list = $("#visitList");
   if (!visits.length){
     list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-cone"/></svg>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
@@ -2940,8 +3124,13 @@ async function deleteCurrentProject(){
     for (const p of ph) await tx("photos","readwrite", s => s.delete(p.id));
     await tx("visits","readwrite", s => s.delete(v.id));
   }
-  const res = await idbAll("reserves","projectId",CUR.id);
-  for (const r of res) await tx("reserves","readwrite", s => s.delete(r.id));
+  /* Tout ce qui porte projectId doit partir. Les fiches de contrôle, le journal, les ordres
+     de service et les pièces annexes étaient oubliés : ils survivaient au chantier supprimé,
+     invisibles mais bien présents dans la base et dans les sauvegardes. */
+  for (const st of ["reserves","controls","journal","os","annexes"]){
+    const lignes = await idbAll(st, "projectId", CUR.id).catch(() => []);
+    for (const l of lignes) await tx(st, "readwrite", s => s.delete(l.id));
+  }
   await tx("projects","readwrite", s => s.delete(CUR.id));
   const rest = await listProjects();
   setCurrentProject(rest[0]);
@@ -3405,6 +3594,26 @@ async function showRegister(){
    constats NC/PA/AC pas encore portés au registre. Deux comptes différents pour la même
    chose seraient pires que pas de compte du tout. */
 let regSort = "urgence";
+let regQ = "";   // texte de recherche courant
+
+/* Comparaison insensible aux accents et à la casse : personne ne tape « réserve » avec son
+   accent sur un clavier de téléphone, une main gantée, en plein soleil. */
+function sansAccents(s){
+  return String(s == null ? "" : s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+/* Tous les mots doivent être présents, dans n'importe quel ordre et n'importe quel champ :
+   « colas regard » trouve le regard de Colas sans qu'il faille se souvenir de l'intitulé exact. */
+function registreFiltre(rows, q){
+  const mots = sansAccents(q).trim().split(/\s+/).filter(Boolean);
+  if (!mots.length) return rows;
+  return rows.filter(r => {
+    const rec = r.rec || {};
+    const foin = sansAccents([r.titre, r.entreprise, r.zone, r.code,
+      r.num != null ? "n°" + r.num : "", rec.description, rec.suite, rec.objet, rec.titre
+    ].join(" "));
+    return mots.every(m => foin.includes(m));
+  });
+}
 
 function joursEntre(isoA, isoB){
   const a = new Date(isoA + "T12:00:00"), b = new Date(isoB + "T12:00:00");
@@ -3490,9 +3699,17 @@ async function renderRegister(){
     return;
   }
   freeURLs();
-  const res = trierRegistre(brutes, regSort);
+  const trouvees = registreFiltre(brutes, regQ);
+  if (!trouvees.length){
+    $("#regCount").textContent = `0 sur ${brutes.length}`;
+    list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-search"/></svg>Aucun résultat pour « ${esc(regQ.trim())} ».<br>La recherche porte sur l'objet, l'entreprise, la zone et le numéro.</div>`;
+    return;
+  }
+  const res = trierRegistre(trouvees, regSort);
   const ouvertes = res.filter(r => r.statut !== "Soldé").length;
-  $("#regCount").textContent = `${ouvertes} ouverte${ouvertes > 1 ? "s" : ""} · ${res.length} au total`;
+  $("#regCount").textContent = regQ.trim()
+    ? `${res.length} trouvée${res.length > 1 ? "s" : ""} sur ${brutes.length}`
+    : `${ouvertes} ouverte${ouvertes > 1 ? "s" : ""} · ${res.length} au total`;
   /* le tri par abscisse n'a de sens qu'avec un axe renseigné */
   const axe = !!axisOf();
   $("#regSorts").querySelector('[data-sort="abscisse"]').disabled = !axe;
@@ -3510,7 +3727,7 @@ async function renderRegister(){
       : `<span class="rr-th-none" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><use href="#i-photo"/></svg></span>`;
     const badge = r.kind === "reserve"
       ? `<button class="rr-n" data-toggle="${r.id}" title="${r.statut === "Soldé" ? "Rouvrir" : "Solder"} la réserve n°${r.num}" aria-label="${r.statut === "Soldé" ? "Rouvrir" : "Solder"} la réserve n°${r.num}">${repere}</button>`
-      : `<span class="rr-n">${repere}</span>`;
+      : `<span class="rr-n c${esc(r.code || "")}">${repere}</span>`;
     return `<div class="rr ${cls}${r.kind === "constat" ? " draft" : ""}">
       ${badge}
       <button class="rr-open" data-kind="${r.kind}" data-id="${r.id}"${r.visitId ? ` data-visit="${r.visitId}"` : ""}>
@@ -3530,7 +3747,9 @@ async function renderRegister(){
       const r = res.find(x => x.kind === "reserve" && x.id === id);
       if (r) openReserveForm(r.rec);
     }else{
-      /* un constat vit dans sa visite : on y va, puis on ouvre son cliché */
+      /* un constat vit dans sa visite : on y va, puis on ouvre son cliché.
+         On note d'où l'on vient pour y revenir en refermant. */
+      editRetour = {type:"tab", tab:"reserves"};
       await showVisit(Number(b.dataset.visit));
       await openEditor(id);
     }
@@ -4024,6 +4243,20 @@ function planHitTest(sx, sy){
   });
   return best;
 }
+/* D'où l'éditeur de cliché a-t-il été ouvert ? Sans cette mémoire, on referme toujours
+   sur l'écran de visite — même en venant du plan ou du registre, ce qui oblige à refaire
+   tout le chemin. */
+let editRetour = null;
+async function fermerEditeur(){
+  stopMic();
+  $("#editModal").classList.remove("on");
+  const r = editRetour; editRetour = null;
+  if (!r) return;
+  try{
+    if (r.type === "plan") await openPlanScreen(r.photoId, true);
+    else if (r.type === "tab") await showTab(r.tab);
+  }catch(e){ /* le retour ne doit jamais empêcher la fermeture */ }
+}
 async function planOuvrirPastille(hit){
   if (hit.type === "mark"){
     PLAN.focusId = null; planDessine();
@@ -4031,9 +4264,11 @@ async function planOuvrirPastille(hit){
     return;
   }
   const p = hit.photo;
+  /* on se souvient du plan pour y revenir en refermant le cliché */
+  editRetour = {type:"plan", photoId:p.id};
   $("#planModal").classList.remove("on");
   try{ await openEditor(p.id); }
-  catch(e){ toast("Cliché introuvable : " + (e && e.message || e), true); }
+  catch(e){ editRetour = null; toast("Cliché introuvable : " + (e && e.message || e), true); }
 }
 const STATUT_CSS = {C:"#2E7D45", NC:"#C0392B", PA:"#A87407", AC:"#3D6E9E"};
 function planPastille(g, x, y, txt, couleur, alpha){
@@ -5118,7 +5353,7 @@ async function importFiles(files, opts){
     }
     const rec = {
       visitId: curVisit.id, num,
-      blob: f, name: f.name || "",
+      blob: await clicheAConserver(f), name: f.name || "",
       takenAt: exif.takenAt || null,
       lat, lon, gpsApprox,
       statut: "", titre: "", zone, entreprise: "", description: "", suite: "",
@@ -5315,10 +5550,10 @@ async function saveEdit(){
     await logAction("Constat", `n°${curEdit.num}`, vierge ? "Renseigné" : "Modifié", chgs);
   }
   editAvant = null;
-  stopMic();
-  $("#editModal").classList.remove("on");
   await renderPhotos();
   toast("Commentaire enregistré" + regMsg);
+  /* après enregistrement aussi, on rend la main là où l'on était */
+  await fermerEditeur();
 }
 
 /* Les sélecteurs de logos/plan/photos n'imposent plus « image/* » (sinon Android masque Google
@@ -5354,6 +5589,22 @@ async function normalizeJpeg(blob, maxDim, q){
   bmp.close();
   const out = await new Promise(res => canvas.toBlob(res, "image/jpeg", q || 0.85));
   return { blob: out, bytes: new Uint8Array(await out.arrayBuffer()), w, h };
+}
+
+/* Résolution de conservation des clichés. Le fichier brut d'un téléphone pèse 3 à 5 Mo, alors
+   qu'aucun document généré n'exploite le cliché au-delà de 900 px. On conserve 2000 px : il
+   reste un vrai zoom à l'écran pour environ dix fois moins de place, et la sauvegarde complète
+   redevient tenable sur la durée d'une opération.
+   Les données EXIF (position, date de prise de vue) sont lues AVANT cet appel et rangées dans
+   la fiche du cliché — le ré-encodage par le canevas les efface du fichier. */
+const CLICHE_MAXDIM = 2000, CLICHE_Q = 0.82;
+async function clicheAConserver(f){
+  try{
+    const n = await normalizeJpeg(f, CLICHE_MAXDIM, CLICHE_Q);
+    // un cliché déjà léger ne gagne rien à être ré-encodé : on garde l'original
+    if (n.blob && n.blob.size < f.size) return n.blob;
+  }catch{}
+  return f; // format non décodable : conserver tel quel plutôt que perdre le constat
 }
 
 /* =============== zones automatiques (regroupement GPS à ± 10 m) =============== */
@@ -5536,6 +5787,7 @@ async function tuileBlob(z, x, y){
   if (!r.ok) throw new Error("tuile indisponible (" + r.status + ")");
   const blob = await r.blob();
   await tx("tiles", "readwrite", s => s.put({id, blob, vu: Date.now(), o: blob.size})).catch(() => {});
+  tuilesVeiller();   // sans attendre : la carte ne doit pas marquer un temps pour un ménage
   return blob;
 }
 /* Renvoie une image prête à dessiner, ou null si elle n'est ni en cache ni joignable.
@@ -5568,6 +5820,43 @@ async function tuilesPoids(){
 async function tuilesPurger(){
   await tx("tiles", "readwrite", s => s.clear());
   TUILES.memoire.clear();
+}
+
+/* Plafond du cache de tuiles. Une orthophoto IGN pèse 20 à 60 Ko : 3000 tuiles représentent
+   de l'ordre de 100 à 150 Mo, largement de quoi couvrir une opération et ses abords, sans
+   que le fond de carte finisse par disputer la place aux clichés — eux, irremplaçables.
+   L'éviction se fait par date de dernier usage : ce qu'on regarde souvent reste. */
+const TUILES_MAX = 3000;
+let tuilesDepuisControle = 0;
+
+async function tuilesVeiller(){
+  /* le contrôle est périodique : compter à chaque tuile coûterait une transaction par image */
+  if (++tuilesDepuisControle < 50) return;
+  tuilesDepuisControle = 0;
+  try{
+    const n = await new Promise((res, rej) => {
+      const q = db.transaction("tiles").objectStore("tiles").count();
+      q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+    });
+    if (n <= TUILES_MAX) return;
+    /* on redescend sous le plafond avec une marge, pour ne pas repurger à la tuile suivante */
+    let reste = n - Math.floor(TUILES_MAX * 0.85);
+    await new Promise((res, rej) => {
+      const t = db.transaction("tiles", "readwrite");
+      const st = t.objectStore("tiles");
+      /* openKeyCursor : on parcourt l'index « vu » sans charger les images elles-mêmes.
+         Un curseur ordinaire lirait chaque blob en mémoire — exactement ce qu'on évite. */
+      st.index("vu").openKeyCursor().onsuccess = e => {
+        const c = e.target.result;
+        if (!c || reste <= 0) return;
+        st.delete(c.primaryKey);
+        TUILES.memoire.delete(c.primaryKey);
+        reste--;
+        c.continue();
+      };
+      t.oncomplete = res; t.onerror = () => rej(t.error);
+    });
+  }catch{}   // la carte n'est pas un contenu de valeur : un échec de purge ne doit rien interrompre
 }
 
 /* =============== plan de situation automatique (IGN) ===============
@@ -7192,22 +7481,32 @@ function crc32(u8){
   for (let i = 0; i < u8.length; i++) c = (c >>> 8) ^ CRC_T[(c ^ u8[i]) & 255];
   return (~c) >>> 0;
 }
-function makeZip(entries, mime){
+/* Archive ZIP en mode « stocké » (aucune compression : des JPEG n'y gagneraient rien face au
+   coût d'un compresseur écrit à la main). `data` accepte une chaîne, un Uint8Array ou un Blob.
+   Le cas Blob sert à la sauvegarde complète : on ne lit qu'un cliché à la fois pour calculer son
+   empreinte, puis on laisse le Blob parmi les parties de l'archive — le navigateur les conserve
+   hors du tas JavaScript. C'est ce qui permet de sauvegarder des centaines de clichés sans
+   saturer la mémoire du téléphone. */
+async function makeZip(entries, mime){
   const enc = new TextEncoder();
   const chunks = [], central = [];
   let offset = 0;
   for (const e of entries){
     const data = typeof e.data === "string" ? enc.encode(e.data) : e.data;
+    const estBlob = data instanceof Blob;
+    // lecture ponctuelle : `octets` n'est vivant que le temps de l'empreinte
+    const octets = estBlob ? new Uint8Array(await data.arrayBuffer()) : data;
+    const taille = octets.length;
     const nameB = enc.encode(e.name);
-    const crc = crc32(data);
+    const crc = crc32(octets);
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
     lh.setUint16(8, 0, true);
-    lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, taille, true); lh.setUint32(22, taille, true);
     lh.setUint16(26, nameB.length, true);
-    chunks.push(new Uint8Array(lh.buffer), nameB, data);
-    central.push({nameB, crc, size:data.length, offset});
-    offset += 30 + nameB.length + data.length;
+    chunks.push(new Uint8Array(lh.buffer), nameB, estBlob ? data : octets);
+    central.push({nameB, crc, size:taille, offset});
+    offset += 30 + nameB.length + taille;
   }
   const cd = [];
   let cdSize = 0;
@@ -7226,6 +7525,43 @@ function makeZip(entries, mime){
   eocd.setUint16(8, central.length, true); eocd.setUint16(10, central.length, true);
   eocd.setUint32(12, cdSize, true); eocd.setUint32(16, offset, true);
   return new Blob([...chunks, ...cd, new Uint8Array(eocd.buffer)], {type:mime});
+}
+
+/* Lecture d'une archive produite par makeZip : on passe par l'annuaire central, seul endroit
+   qui donne la position de chaque entrée de façon fiable. Le mode « stocké » est le seul géré,
+   et c'est le seul que nous écrivions — une archive compressée par un autre outil est refusée
+   explicitement plutôt que restituée en octets illisibles. */
+async function readZip(file){
+  const u8 = new Uint8Array(await file.arrayBuffer());
+  const dv = new DataView(u8.buffer);
+  const illisible = () => new Error("archive illisible ou incomplète");
+  /* fin de l'annuaire : cherchée depuis la fin, un commentaire pouvant la suivre */
+  let fin = -1;
+  for (let i = u8.length - 22; i >= 0 && i > u8.length - 65558; i--){
+    if (dv.getUint32(i, true) === 0x06054b50){ fin = i; break; }
+  }
+  if (fin < 0) throw illisible();
+  const nb = dv.getUint16(fin + 10, true);
+  let p = dv.getUint32(fin + 16, true);
+  const dec = new TextDecoder();
+  const out = new Map();
+  for (let k = 0; k < nb; k++){
+    if (p + 46 > u8.length || dv.getUint32(p, true) !== 0x02014b50) throw illisible();
+    const methode  = dv.getUint16(p + 10, true);
+    const taille   = dv.getUint32(p + 24, true);
+    const nomLen   = dv.getUint16(p + 28, true);
+    const extraLen = dv.getUint16(p + 30, true);
+    const cmtLen   = dv.getUint16(p + 32, true);
+    const lho      = dv.getUint32(p + 42, true);
+    const nom = dec.decode(u8.subarray(p + 46, p + 46 + nomLen));
+    if (methode !== 0) throw new Error(`archive compressée non gérée (${nom})`);
+    if (dv.getUint32(lho, true) !== 0x04034b50) throw illisible();
+    const debut = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+    if (debut + taille > u8.length) throw illisible();
+    out.set(nom, u8.subarray(debut, debut + taille));
+    p += 46 + nomLen + extraLen + cmtLen;
+  }
+  return out;
 }
 const wR = (t, rPr) => `<w:r>${rPr ? `<w:rPr>${rPr}</w:rPr>` : ""}<w:t xml:space="preserve">${escXml(t)}</w:t></w:r>`;
 const wP = (runs, pPr) => `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ""}${runs}</w:p>`;
@@ -7673,30 +8009,35 @@ function photoFilename(p){
   const pref = p.statut ? p.statut + " " : "";
   return `${p.num} ${pref}${base}.jpg`;
 }
-async function exportPdf(){
-  if (!curVisit) return;
-  const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+/* Les deux générateurs acceptent une visite explicite : sans argument ils travaillent sur
+   la visite ouverte, avec argument ils permettent d'éditer depuis l'onglet Rapports sans
+   avoir à entrer dans la visite. */
+async function exportPdf(visite){
+  const v = visite || curVisit;
+  if (!v) return;
+  const photos = (await idbAll("photos","visitId",v.id)).sort((a,b) => a.num - b.num);
   if (!photos.length){ toast("Aucun cliché dans cette visite."); return; }
   const settings = getSettings();
   try{
     toast("Génération du PDF…");
-    const blob = await pdfForVisit(curVisit, photos, settings);
-    const rn = CUR ? await reportNumber(curVisit) : null;
-    const name = `Rapport${rn ? ` N°${rn}` : ""} ${sanitizeFilename(visitTitle(curVisit))} — ${shortDate(curVisit.date)}.pdf`;
+    const blob = await pdfForVisit(v, photos, settings);
+    const rn = CUR ? await reportNumber(v) : null;
+    const name = `Rapport${rn ? ` N°${rn}` : ""} ${sanitizeFilename(visitTitle(v))} — ${shortDate(v.date)}.pdf`;
     const r = await shareOrDownload([new File([blob], name, {type:"application/pdf"})], name);
     toast(r === "shared" ? "Rapport PDF partagé ✔" : r === "downloaded" ? "PDF enregistré dans Téléchargements ✔" : "Partage annulé");
   }catch(err){ toast("Erreur PDF : " + (err && err.message || err), true); }
 }
-async function exportDocx(){
-  if (!curVisit) return;
-  const photos = (await idbAll("photos","visitId",curVisit.id)).sort((a,b) => a.num - b.num);
+async function exportDocx(visite){
+  const v = visite || curVisit;
+  if (!v) return;
+  const photos = (await idbAll("photos","visitId",v.id)).sort((a,b) => a.num - b.num);
   if (!photos.length){ toast("Aucun cliché dans cette visite."); return; }
   const settings = getSettings();
   try{
     toast("Génération du document Word…");
-    const blob = await docxForVisit(curVisit, photos, settings);
-    const rn = CUR ? await reportNumber(curVisit) : null;
-    const name = `Rapport${rn ? ` N°${rn}` : ""} ${sanitizeFilename(visitTitle(curVisit))} — ${shortDate(curVisit.date)}.docx`;
+    const blob = await docxForVisit(v, photos, settings);
+    const rn = CUR ? await reportNumber(v) : null;
+    const name = `Rapport${rn ? ` N°${rn}` : ""} ${sanitizeFilename(visitTitle(v))} — ${shortDate(v.date)}.docx`;
     const r = await shareOrDownload([new File([blob], name, {type:blob.type})], name);
     toast(r === "shared" ? "Rapport Word partagé ✔" : r === "downloaded" ? "Word enregistré dans Téléchargements ✔" : "Partage annulé");
   }catch(err){ toast("Erreur Word : " + (err && err.message || err), true); }
@@ -7726,15 +8067,18 @@ async function backupJson(){
 /* enregistrer un fichier en laissant l'utilisateur choisir la destination :
    1) sélecteur de dossier natif si le navigateur le gère (PC), 2) partage Android (Drive/Fichiers/mail), 3) Téléchargements. */
 async function saveFileChooseLocation(blob, filename, shareTitle){
+  /* le type est déduit du fichier lui-même : la sauvegarde complète est une archive, pas du JSON */
+  const mime = blob.type || "application/octet-stream";
+  const ext = (String(filename).match(/\.[a-z0-9]+$/i) || [".dat"])[0].toLowerCase();
   if (window.showSaveFilePicker){
     try{
       const handle = await window.showSaveFilePicker({ suggestedName: filename,
-        types: [{description:"Sauvegarde", accept:{"application/json":[".json"]}}] });
+        types: [{description:"Sauvegarde", accept:{[mime]:[ext]}}] });
       const w = await handle.createWritable(); await w.write(blob); await w.close();
       return "saved";
     }catch(e){ if (e && e.name === "AbortError") return "cancelled"; }
   }
-  const file = new File([blob], filename, {type:"application/json"});
+  const file = new File([blob], filename, {type: mime});
   if (navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file], title: shareTitle || filename}); return "shared"; }
     catch(e){ if (e && e.name === "AbortError") return "cancelled"; }
@@ -7742,6 +8086,14 @@ async function saveFileChooseLocation(blob, filename, shareTitle){
   downloadBlob(blob, filename);
   return "downloaded";
 }
+/* Sauvegarde complète, au format ZIP : les clichés y sont déposés en binaire et les notes dans
+   un unique petit JSON.
+   Le format précédent encodait chaque photo en base64 à l'intérieur d'une seule chaîne
+   JavaScript. Trois défauts cumulés : +33 % de volume, trois copies simultanées en mémoire
+   (tableau base64, chaîne JSON, Blob), et surtout le plafond dur de 512 Mo par chaîne, qui
+   faisait échouer la sauvegarde au bout d'une centaine de clichés — sans autre signe qu'un
+   « Invalid string length ». Les anciennes sauvegardes restent restaurables. */
+const BACKUP_SCHEMA = 8;
 async function fullBackup(){
   try{
     toast("Préparation de la sauvegarde complète…");
@@ -7752,32 +8104,69 @@ async function fullBackup(){
     const journal = await idbAll("journal");
     const photos = await idbAll("photos");
     const annexesRaw = await idbAll("annexes");
+    const os = await idbAll("os");
+    /* Les Blobs sont transmis tels quels : ils ne sont lus qu'un par un par makeZip. */
+    const pieces = [];
     const photoData = [];
-    for (let i = 0; i < photos.length; i++){
-      if (i % 5 === 0) toast(`Sauvegarde : photo ${i+1}/${photos.length}…`);
-      const {blob, ...rest} = photos[i];
-      rest.b64 = blob ? await blobToBase64(blob) : null;
+    for (const p of photos){
+      const {blob, ...rest} = p;
+      if (blob){ rest.f = `photos/${rest.id}.jpg`; pieces.push({name: rest.f, data: blob}); }
       photoData.push(rest);
     }
     const annexes = [];
-    for (const a of annexesRaw){ const {blob, ...rest} = a; rest.b64 = blob ? await blobToBase64(blob) : null; annexes.push(rest); }
-    const os = await idbAll("os");
-    const data = { app:"notes-chantier", schema:7, exportedAt:new Date().toISOString(),
+    for (const a of annexesRaw){
+      const {blob, ...rest} = a;
+      if (blob){ rest.f = `annexes/${rest.id}.bin`; pieces.push({name: rest.f, data: blob}); }
+      annexes.push(rest);
+    }
+    const notes = { app:"notes-chantier", format:"zip", schema:BACKUP_SCHEMA, appVersion:APP_VERSION,
+      exportedAt:new Date().toISOString(),
       currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, journal, os, annexes, photos: photoData };
-    const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+    toast(`Assemblage de l'archive — ${photos.length} cliché${photos.length > 1 ? "s" : ""}…`);
+    const blob = await makeZip([{name:"notes.json", data: JSON.stringify(notes)}, ...pieces], "application/zip");
     const d = todayIso();
-    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.json`, "Sauvegarde abraCADabra");
+    const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.zip`, "Sauvegarde abraCADabra");
     const mo = (blob.size/1048576).toFixed(1);
+    /* seule une sauvegarde réellement écrite compte : un envoi annulé ne protège rien */
+    if (r === "saved" || r === "shared" || r === "downloaded"){ noterSauvegarde(); renderRappelSauvegarde(); }
     toast(r === "saved" ? `Sauvegarde enregistrée ✔ (${mo} Mo)` :
           r === "shared" ? `Sauvegarde partagée ✔ (${mo} Mo)` :
           r === "downloaded" ? `Sauvegarde dans Téléchargements ✔ (${mo} Mo)` : "Sauvegarde annulée", true);
   }catch(err){ toast("Erreur sauvegarde : " + (err && err.message || err), true); }
 }
+/* Restitue les octets d'une pièce jointe, quel que soit le format de la sauvegarde :
+   entrée binaire de l'archive (format ZIP) ou champ base64 (anciennes sauvegardes JSON). */
+function piecesOctets(rest, bin){
+  if (bin && rest.f) return bin.get(rest.f) || null;
+  if (rest.b64){
+    const s = atob(rest.b64), u8 = new Uint8Array(s.length);
+    for (let k = 0; k < s.length; k++) u8[k] = s.charCodeAt(k);
+    return u8;
+  }
+  return null;
+}
 async function restoreBackup(file){
   try{
-    const data = JSON.parse(await file.text());
-    if (data.app !== "notes-chantier" || !Array.isArray(data.projects))
-      throw new Error("fichier non reconnu");
+    /* une archive commence par « PK\x03\x04 » : on reconnaît le format au contenu, l'extension
+       pouvant avoir été altérée par un passage en pièce jointe ou par un gestionnaire de fichiers */
+    const tete = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+    const estZip = tete[0] === 0x50 && tete[1] === 0x4B && tete[2] === 0x03 && tete[3] === 0x04;
+    let data, bin = null;
+    if (estZip){
+      bin = await readZip(file);
+      const notes = bin.get("notes.json");
+      if (!notes) throw new Error("archive sans fiche de notes — ce n'est pas une sauvegarde abraCADabra");
+      data = JSON.parse(new TextDecoder().decode(notes));
+    } else {
+      /* une erreur d'analyse JSON ne dit rien à l'utilisateur : on nomme la cause probable */
+      try{ data = JSON.parse(await file.text()); }
+      catch{ throw new Error("ce fichier n'est pas une sauvegarde abraCADabra"); }
+    }
+    if (!data || data.app !== "notes-chantier" || !Array.isArray(data.projects))
+      throw new Error("ce fichier n'est pas une sauvegarde abraCADabra");
+    /* sauvegarde plus récente que l'application : des champs seraient perdus en silence */
+    if (data.schema > BACKUP_SCHEMA &&
+        !confirm(`Cette sauvegarde vient d'une version plus récente de l'application (schéma ${data.schema} contre ${BACKUP_SCHEMA}).\n\nCertaines informations pourraient ne pas être reprises. Continuer ?`)) return;
     const nP = data.projects.length, nV = (data.visits||[]).length, nPh = (data.photos||[]).length;
     if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\nCela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
@@ -7794,16 +8183,16 @@ async function restoreBackup(file){
     /* sauvegardes antérieures au schéma 7 : aucun ordre de service à restaurer */
     for (const o of (data.os||[])) await tx("os","readwrite", s => s.put(o));
     for (const a of (data.annexes||[])){
-      const {b64, ...rest} = a;
-      if (b64){ const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
-        rest.blob = new Blob([u8], {type: rest.type || "application/octet-stream"}); }
+      const {b64, f, ...rest} = a;
+      const u8 = piecesOctets(a, bin);
+      if (u8) rest.blob = new Blob([u8], {type: rest.type || "application/octet-stream"});
       await tx("annexes","readwrite", s => s.put(rest));
     }
     for (let i = 0; i < (data.photos||[]).length; i++){
-      if (i % 5 === 0) toast(`Restauration : photo ${i+1}/${data.photos.length}…`);
-      const {b64, ...rest} = data.photos[i];
-      if (b64){ const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
-        rest.blob = new Blob([u8], {type: rest.type || "image/jpeg"}); }
+      if (i % 10 === 0) toast(`Restauration : cliché ${i+1}/${data.photos.length}…`);
+      const {b64, f, ...rest} = data.photos[i];
+      const u8 = piecesOctets(data.photos[i], bin);
+      if (u8) rest.blob = new Blob([u8], {type: rest.type || "image/jpeg"});
       await tx("photos","readwrite", s => s.put(rest));
     }
     const projects = await listProjects();
@@ -7904,14 +8293,69 @@ function applyHeader(s){
   /* la seconde ligne de l'en-tête est désormais l'invitation à changer de chantier ;
      le sous-titre du chantier (s.sub) continue d'alimenter les rapports. */
 }
+/* =============== thème d'affichage ===============
+   Préférence d'appareil, non de chantier : elle vit donc dans localStorage, comme le
+   délai de verrouillage. « auto » laisse le téléphone décider. */
+function themeChoisi(){ const v = localStorage.getItem("theme"); return v === "light" || v === "dark" ? v : "auto"; }
+function themeEffectif(){
+  const c = themeChoisi();
+  if (c !== "auto") return c;
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function appliquerTheme(){
+  const c = themeChoisi();
+  if (c === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", c);
+  const sombre = themeEffectif() === "dark";
+  const logo = $("#brandLogo");
+  if (logo){
+    const src = sombre ? "logo-dark.png" : "logo.png";
+    if (!logo.src.endsWith(src)) logo.src = src;
+  }
+  /* la couleur de la barre système doit suivre, sinon elle jure avec l'application */
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.remove());
+  const meta = document.createElement("meta");
+  meta.name = "theme-color";
+  meta.content = sombre ? "#14110E" : "#F4F1EA";
+  document.head.appendChild(meta);
+}
 async function refreshTuilesState(){
   const el = $("#tuilesState");
   if (!el) return;
   try{
     const {n, o} = await tuilesPoids();
-    el.textContent = n ? `${n} tuile${n > 1 ? "s" : ""} conservée${n > 1 ? "s" : ""} · ${fmtSize(o)}`
+    el.textContent = n ? `${n} tuile${n > 1 ? "s" : ""} conservée${n > 1 ? "s" : ""} · ${fmtSize(o)} · plafond ${TUILES_MAX} tuiles`
                        : "Aucune tuile conservée pour l'instant.";
   }catch{ el.textContent = ""; }
+}
+
+/* =============== rappel de sauvegarde ===============
+   Tout vit dans ce téléphone. La seule protection réelle est une sauvegarde régulière, et
+   la seule chose qui la déclenche est de s'en souvenir. La date de la dernière sauvegarde
+   réussie est une donnée d'appareil, pas de chantier : elle vit donc dans localStorage,
+   comme le thème et le code d'accès. */
+const RAPPEL_SAUV_JOURS = 30;
+function noterSauvegarde(){ try{ localStorage.setItem("derniereSauvegarde", new Date().toISOString()); }catch{} }
+function joursDepuisSauvegarde(){
+  const iso = localStorage.getItem("derniereSauvegarde");
+  if (!iso) return null;
+  const t = new Date(iso).getTime();
+  if (!isFinite(t)) return null;
+  return Math.max(0, Math.floor((Date.now() - t) / 86400000));
+}
+function renderRappelSauvegarde(){
+  const el = $("#rappelSauv");
+  if (!el) return;
+  const j = joursDepuisSauvegarde();
+  const tard = j === null || j >= RAPPEL_SAUV_JOURS;
+  const texte = j === null ? "Aucune sauvegarde depuis cet appareil."
+    : j === 0 ? "Sauvegarde effectuée aujourd'hui."
+    : j === 1 ? "Dernière sauvegarde hier."
+    : `Dernière sauvegarde il y a ${j} jours.`;
+  el.hidden = false;
+  el.classList.toggle("tard", tard);
+  el.innerHTML = `<svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#${tard ? "i-alert" : "i-database"}"/></svg>`
+    + `<span>${esc(texte)}${tard ? " Sauvegarder maintenant." : ""}</span>`;
 }
 /* le plan des sections n'a de sens que si les extraits par section sont demandés */
 function refreshPlanSectionsUI(){
@@ -7929,10 +8373,12 @@ const SET_TITRES = {
   identite:"Identité du chantier", saisie:"Saisie rapide", entete:"En-tête des rapports",
   plans:"Plans et vue aérienne", reperage:"Repérage linéaire", annexes:"Documents annexes",
   journal:"Journal des modifications", sauvegarde:"Sauvegarde et stockage",
-  securite:"Sécurité", ia:"Description par IA", chantiers:"Chantiers"
+  affichage:"Affichage", securite:"Sécurité", ia:"Description par IA"
 };
-/* les domaines qui ne portent aucun champ enregistrable n'ont pas besoin du pied */
-const SET_SANS_PIED = ["journal","sauvegarde","securite","chantiers","annexes"];
+/* les domaines qui ne portent aucun champ enregistrable n'ont pas besoin du pied.
+   « affichage » en fait partie : le thème s'applique et se retient dès qu'on le change,
+   et c'est une préférence d'appareil, pas un réglage de chantier. */
+const SET_SANS_PIED = ["journal","sauvegarde","securite","annexes","affichage"];
 let setCat = null;
 function setAfficher(cat){
   setCat = cat;
@@ -7967,6 +8413,7 @@ function openSettings(){
   $("#sKey").value = localStorage.getItem("apiKey") || "";
   $("#sAutoLock").value = String(autoLockDelay());
   setAfficher(null);            // on entre toujours par le sommaire
+  $("#sTheme").value = themeChoisi();
   refreshLogoState();
   refreshTuilesState();
   renderAnnexeList();
@@ -8038,6 +8485,8 @@ async function refreshStorageState(){
 }
 
 async function main(){
+  /* avant toute chose : le thème doit être posé avant le premier rendu visible */
+  appliquerTheme();
   db = await openDB();
   await requestPersistence();
   const projects = await migrateToProjects();
@@ -8103,6 +8552,20 @@ async function main(){
       $("#regSorts").querySelectorAll(".sortchip").forEach(x => x.classList.toggle("on", x === c));
       await renderRegister();
     }));
+  /* Recherche : un rendu complet relit toute la base, on laisse donc la frappe se poser.
+     120 ms est en dessous du seuil de perception, et évite un rendu par caractère. */
+  let regQT = null;
+  $("#regQ").addEventListener("input", e => {
+    regQ = e.target.value;
+    $("#regQClear").hidden = !regQ;
+    clearTimeout(regQT);
+    regQT = setTimeout(() => renderRegister(), 120);
+  });
+  $("#regQClear").addEventListener("click", async () => {
+    regQ = ""; $("#regQ").value = ""; $("#regQClear").hidden = true;
+    await renderRegister();
+    $("#regQ").focus();
+  });
   /* bascule Plan | Liste. Le plan travaille sur une visite : sans visite ouverte, on
      prend la plus récente et on le dit, plutôt que de refuser. */
   $("#regSeg").querySelectorAll("button").forEach(b =>
@@ -8155,7 +8618,7 @@ async function main(){
     pendingLeveeId = null;
   });
 
-  $("#btnEditClose").addEventListener("click", () => { stopMic(); $("#editModal").classList.remove("on"); });
+  $("#btnEditClose").addEventListener("click", fermerEditeur);
   $("#btnEditSave").addEventListener("click", saveEdit);
   $("#btnCopyComment").addEventListener("click", copyComment);
   $("#btnPasteComment").addEventListener("click", pasteComment);
@@ -8173,13 +8636,17 @@ async function main(){
     await logAction("Constat", `n°${curEdit.num}`, "Supprimé",
       [curEdit.statut || "sans statut", curEdit.titre || "sans titre"].join(" · "));
     await tx("photos","readwrite", s => s.delete(curEdit.id));
+    /* le cliché n'existe plus : revenir au plan sur un repère disparu n'aurait pas de sens */
+    editRetour = null;
+    stopMic();
     $("#editModal").classList.remove("on");
     await renderPhotos();
     toast("Cliché supprimé");
   });
 
-  $("#btnPdf").addEventListener("click", exportPdf);
-  $("#btnDocx").addEventListener("click", exportDocx);
+  /* sans la lambda, l'écouteur passerait l'objet Event comme visite */
+  $("#btnPdf").addEventListener("click", () => exportPdf());
+  $("#btnDocx").addEventListener("click", () => exportDocx());
   $("#btnSharePhotos").addEventListener("click", sharePhotos);
   $("#btnDelVisit").addEventListener("click", async () => {
     if (!curVisit) return;
@@ -8254,6 +8721,15 @@ async function main(){
   $("#btnSetSave").addEventListener("click", saveSettingsUI);
   $("#sPhase").addEventListener("change", refreshPhaseUI);
   $("#sPlanSections").addEventListener("change", refreshPlanSectionsUI);
+  /* le thème s'applique à la sélection, sans attendre l'enregistrement : on juge à l'œil */
+  $("#sTheme").addEventListener("change", () => {
+    localStorage.setItem("theme", $("#sTheme").value);
+    appliquerTheme();
+  });
+  /* si l'on est en automatique, suivre le téléphone quand il bascule */
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (themeChoisi() === "auto") appliquerTheme();
+  });
   $("#btnTuilesPurge").addEventListener("click", async () => {
     const {n} = await tuilesPoids();
     if (!n){ toast("Aucune tuile à supprimer."); return; }
@@ -8262,7 +8738,6 @@ async function main(){
     await refreshTuilesState();
     toast("Cache des tuiles vidé");
   });
-  $("#btnManageSwitch").addEventListener("click", () => { $("#setModal").classList.remove("on"); openProjectSheet(); });
   $("#btnDeleteProject").addEventListener("click", deleteCurrentProject);
   $("#btnChangePin").addEventListener("click", () => {
     $("#setModal").classList.remove("on");
@@ -8336,7 +8811,9 @@ async function main(){
     await renderJournal();
   }));
   $("#btnBackupJson").addEventListener("click", backupJson);
-  $("#btnBackupFull").addEventListener("click", fullBackup);
+  $("#btnBackupFull").addEventListener("click", () => fullBackup());
+  // le rappel n'informe pas seulement : il déclenche la sauvegarde qu'il réclame
+  $("#rappelSauv").addEventListener("click", () => fullBackup());
   $("#btnRestore").addEventListener("click", () => $("#fileRestore").click());
   $("#fileRestore").addEventListener("change", e => { if (e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value = ""; });
   $("#btnLoadExample").addEventListener("click", () => {
