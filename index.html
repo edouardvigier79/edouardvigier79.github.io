@@ -1527,6 +1527,12 @@
     </div>
 
     <div class="field">
+      <label for="rNature">Nature — où cette ligne apparaît</label>
+      <select id="rNature"></select>
+      <div class="hint">Un <b>constat sur l'ouvrage</b> figure dans les procès-verbaux de réception. Une <b>rubrique de compte rendu</b> n'y figure jamais : c'est un point de suivi, pas une réserve au sens du marché. Dans les deux cas, la ligne garde son numéro au registre.</div>
+    </div>
+
+    <div class="field">
       <label for="rEnt">Entreprise / intervenant désigné</label>
       <input type="text" id="rEnt" list="entsList" placeholder="Ex. : Colas (mandataire)">
       <datalist id="entsList"></datalist>
@@ -2495,11 +2501,16 @@ const DB_SCHEMA = {
      (magasin « reserves ») avec la numérotation continue du chantier, distingués par leur
      nature. Un seul registre, une seule vérité sur ce qui reste ouvert. */
   reunions: ["projectId"],
+  /* Corbeille : tout ce qui est supprimé y séjourne 30 jours. Sur un téléphone, au pouce
+     ganté, un bouton rouge sans retour n'est pas acceptable. Index sur la date de mise au
+     rebut, pour la purge. Volontairement HORS sauvegarde : c'est un filet local, pas une
+     archive — l'y inclure alourdirait chaque sauvegarde de photos déjà jetées. */
+  corbeille: ["at"],
   /* tuiles IGN conservées : la clé est « z/x/y », donc partagée entre chantiers couvrant
      la même emprise. Index sur la date de dernier usage, pour purger les plus anciennes. */
   tiles:    ["vu"]
 };
-const DB_VERSION = 9;
+const DB_VERSION = 10;
 /* Ouvre la base puis vérifie magasins ET index. Une montée de version interrompue laissait
    l'application inutilisable ; on rouvre alors en version+1 pour compléter ce qui manque. */
 async function openDB(){
@@ -4194,10 +4205,15 @@ async function proposeReservesFromCtrl(f){
   const liste = nouveaux.map(it => "• " + it.l).join("\n");
   if (!confirm(`Fiche n°${f.num} — ${nouveaux.length} point(s) non conforme(s) :\n\n${liste}\n\nOuvrir une réserve au registre pour chacun ?`)) return;
   for (const it of nouveaux){
+    /* L'intitulé du point de contrôle est rédigé à l'affirmative — « Décapage terminé,
+       emprise conforme ». Repris tel quel comme objet de réserve, il donnait des lignes
+       absurdes : un point réputé conforme assorti d'une mise en conformité. On énonce donc
+       l'écart, pas le critère. La référence à la fiche suffit à la traçabilité : la répéter
+       en toutes lettres occupait trois lignes sur chaque point d'un même compte rendu. */
     const r = await createReserve({
-      objet: it.l,
+      objet: `Non conforme — ${it.l}`,
       zone: f.zone, entreprise: f.entreprise,
-      action: `Mise en conformité — ${f.name} (${f.ref})`,
+      action: `Mise en conformité — fiche n°${f.num}`,
       date: f.date
     });
     r.ctrlItem = `${f.id}:${it.l}`;
@@ -5208,7 +5224,18 @@ function openReserveForm(r){
   const s = getSettings();
   $("#entsList").innerHTML = s.ents.map(z => `<option value="${esc(z)}">`).join("");
   $("#zonesList2").innerHTML = s.zones.map(z => `<option value="${esc(z)}">`).join("");
-  $("#resTitle").textContent = r ? `Réserve n°${r.num}` : "Nouvelle réserve";
+  /* Un seul choix pour la nature ET la rubrique : ce sont deux faces de la même décision —
+     cette ligne va-t-elle au procès-verbal, ou au compte rendu, et sous quelle rubrique. */
+  const rubs = s.crRubriques || CR_RUBRIQUES;
+  $("#rNature").innerHTML = `<option value="constat">Constat sur l'ouvrage</option>`
+    + rubs.map(x => `<option value="suivi:${esc(x)}">Compte rendu — ${esc(x)}</option>`).join("");
+  const nat = r && reserveNature(r) === "suivi" ? "suivi:" + (r.rubrique || rubs[rubs.length-1]) : "constat";
+  /* une rubrique retirée des réglages doit rester sélectionnable, sinon la ligne changerait
+     de nature à la première ouverture de son formulaire */
+  if (nat !== "constat" && !rubs.includes(r.rubrique || ""))
+    $("#rNature").insertAdjacentHTML("beforeend", `<option value="${esc(nat)}">Compte rendu — ${esc(r.rubrique)}</option>`);
+  $("#rNature").value = nat;
+  $("#resTitle").textContent = r ? (reserveNature(r) === "suivi" ? `Point n°${r.num}` : `Réserve n°${r.num}`) : "Nouvelle réserve";
   $("#rObjet").value = r ? (r.objet || "") : "";
   $("#rEnt").value   = r ? (r.entreprise || "") : "";
   $("#rAction").value= r ? (r.action || "") : "";
@@ -5245,9 +5272,12 @@ async function saveReserveForm(){
   if (!objet){ toast("Indiquez au moins l'objet de la réserve", true); $("#rObjet").focus(); return; }
   const on = document.querySelector("#rStatutChips .chip.on");
   const statut = on ? on.dataset.v : "En cours";
+  const nat = String($("#rNature").value || "constat");
   const data = {
     objet, entreprise: $("#rEnt").value.trim(), action: $("#rAction").value.trim(),
-    dateLimite: $("#rDate").value || "", zone: $("#rZone").value.trim(), statut
+    dateLimite: $("#rDate").value || "", zone: $("#rZone").value.trim(), statut,
+    nature: nat.startsWith("suivi:") ? "suivi" : "constat",
+    rubrique: nat.startsWith("suivi:") ? nat.slice(6) : ""
   };
   if (curRes){
     const avant = {}; for (const k in CHAMPS_RES) avant[k] = curRes[k];
