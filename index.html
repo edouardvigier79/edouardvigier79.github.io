@@ -396,6 +396,32 @@
   .cr-etat.absent{background:color-mix(in srgb, var(--nc) 12%, var(--card));
     border-color:color-mix(in srgb, var(--nc) 38%, var(--line)); color:color-mix(in srgb, var(--nc) 62%, var(--ink))}
 
+  /* Case à cocher de la feuille de saisie : cible large, lisible au doigt ganté.
+     C'est un <label> dans un .field — il faut donc défaire la mise en forme des étiquettes
+     de champ (capitales, 11 px, interlettrage), sinon la phrase devient illisible. */
+  .field label.ask-opt{
+    display:flex; align-items:center; gap:11px; cursor:pointer; margin-bottom:0;
+    padding:12px 14px; border:1.5px solid var(--line); border-radius:var(--r-md); background:var(--card);
+    font-size:13.5px; font-weight:600; line-height:1.35; color:var(--ink);
+    text-transform:none; letter-spacing:normal;
+  }
+  .ask-opt span{flex:1; min-width:0}
+  .ask-opt input{width:22px; height:22px; flex:none; margin:0; accent-color:var(--accent)}
+  .field label.ask-opt:has(input:checked){
+    border-color:color-mix(in srgb, var(--accent) 55%, var(--line));
+    background:color-mix(in srgb, var(--accent) 8%, var(--card));
+  }
+
+  /* corbeille : une ligne par élément jeté, avec son délai restant */
+  .corb{
+    display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:9px 10px;
+    border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);
+  }
+  .corb .cc-txt{flex:1; min-width:0}
+  .corb .cc-txt b{display:block; font-size:13px; font-weight:700; line-height:1.25}
+  .corb .cc-txt small{display:block; font-size:11.5px; color:var(--ink2); margin-top:1px}
+  .corb .btn{flex:none; padding:6px 12px; font-size:12px}
+
   .cr-rub{
     font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:800;
     color:var(--blue-deep); margin:14px 4px 6px;
@@ -1620,6 +1646,29 @@
   </div>
 </div>
 
+<!-- ================= SAISIE D'UNE LIGNE (remplace prompt/confirm du navigateur) ================= -->
+<div class="modal" id="askModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnAskClose" aria-label="Fermer">←</button>
+      <b id="askTitle">Saisie</b>
+    </div>
+    <div class="field">
+      <label for="askInput" id="askLabel"></label>
+      <input type="text" id="askInput" autocomplete="off" enterkeyhint="done">
+      <div class="hint" id="askHint" hidden></div>
+    </div>
+    <div class="field" id="askOptRow" hidden>
+      <label class="ask-opt"><input type="checkbox" id="askOpt"><span id="askOptLab"></span></label>
+      <div class="hint" id="askOptHint" hidden></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn primary block" id="btnAskOk">Valider</button>
+      <button class="btn ghost block" id="btnAskCancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================= COMPTE RENDU DE RÉUNION DE CHANTIER ================= -->
 <div class="modal" id="crModal">
   <div class="wrap">
@@ -1702,6 +1751,8 @@
         <span><b>Journal des modifications</b><small>Historique du chantier</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="sauvegarde"><svg class="ico" viewBox="0 0 24 24"><use href="#i-database"/></svg>
         <span><b>Sauvegarde et stockage</b><small>Filet de sécurité, espace occupé</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="corbeille"><svg class="ico" viewBox="0 0 24 24"><use href="#i-trash"/></svg>
+        <span><b>Corbeille</b><small id="setCorbCount">Ce qui a été supprimé</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="affichage"><svg class="ico" viewBox="0 0 24 24"><use href="#i-eye"/></svg>
         <span><b>Affichage</b><small>Thème clair ou sombre</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="securite"><svg class="ico" viewBox="0 0 24 24"><use href="#i-lock"/></svg>
@@ -1709,6 +1760,13 @@
       <button class="set-cat" data-go="ia"><svg class="ico" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg>
         <span><b>Description par IA</b><small>Facultatif, avec une clé Anthropic</small></span><i class="set-chev">›</i></button>
     </nav>
+
+    <div class="settings-block" data-cat="corbeille">
+      <h3>Corbeille</h3>
+      <p>Tout ce que vous supprimez y séjourne <b>30 jours</b>, avec ce qui en dépendait : les clichés d'une visite, le contenu entier d'un chantier. Passé ce délai, la purge est automatique.</p>
+      <div id="corbList"></div>
+      <div class="hint" style="margin-top:10px">La corbeille n'entre pas dans la sauvegarde : c'est un filet local, pas une archive. Restaurer une sauvegarde la vide.</div>
+    </div>
 
     <div class="settings-block" data-cat="affichage">
       <h3>Affichage</h3>
@@ -3135,7 +3193,7 @@ async function showHome(){
   const k = await homeCounters();
   refreshResBadge(k.ouvert);
   renderHomeCounters(k);
-  renderRappelSauvegarde();   // avant le retour anticipé « aucune visite » : il vaut aussi là
+  await renderRappelSauvegarde();   // avant le retour anticipé « aucune visite » : il vaut aussi là
   const list = $("#visitList");
   if (!visits.length){
     list.innerHTML = `<div class="empty"><svg class="ico glyph" viewBox="0 0 24 24"><use href="#i-cone"/></svg>Aucune visite sur ce chantier.<br>Créez votre première visite pour commencer à ajouter des clichés.</div>`;
@@ -3179,12 +3237,53 @@ function visitTitle(v){
 function refreshVisitLabel(){
   $("#visitLabel").textContent = `${visitTitle(curVisit)} — ${frDate(curVisit.date)} (${frDayName(curVisit.date)})`;
 }
+/* =============== saisie d'une ligne ===============
+   Remplace `prompt()` et le `confirm()` qui l'accompagnait. Les boîtes du navigateur étaient
+   les deux seuls endroits où l'application cessait de ressembler à elle-même : fenêtre grise,
+   indifférente au mode sombre, et de plus en plus restreinte par les navigateurs.
+   Rend une promesse : {texte, option} à la validation, null à l'annulation. */
+let _askResoudre = null;
+function demanderTexte(o){
+  o = o || {};
+  $("#askTitle").textContent = o.titre || "Saisie";
+  $("#askLabel").textContent = o.label || "";
+  $("#askInput").value = o.valeur || "";
+  $("#askInput").placeholder = o.placeholder || "";
+  $("#askHint").textContent = o.hint || "";
+  $("#askHint").hidden = !o.hint;
+  $("#askOptRow").hidden = !o.option;
+  if (o.option){
+    $("#askOptLab").textContent = o.option;
+    $("#askOpt").checked = !!o.optionCochee;
+    $("#askOptHint").textContent = o.optionHint || "";
+    $("#askOptHint").hidden = !o.optionHint;
+  }
+  $("#btnAskOk").textContent = o.valider || "Valider";
+  $("#askModal").classList.add("on");
+  $("#askModal").scrollTop = 0;
+  /* le clavier ne doit pas s'ouvrir avant que la feuille soit posée, sinon le champ
+     se retrouve masqué sur un téléphone */
+  setTimeout(() => { $("#askInput").focus(); $("#askInput").select(); }, 60);
+  return new Promise(res => { _askResoudre = res; });
+}
+function fermerAsk(valeur){
+  $("#askModal").classList.remove("on");
+  const r = _askResoudre; _askResoudre = null;
+  if (r) r(valeur);   // une feuille fermée sans réponse laisserait l'appelant en attente
+}
+
 async function renameVisit(){
   if (!curVisit) return;
-  const val = prompt("Nom de la visite (laisser vide pour le nom par défaut) :", curVisit.label || "");
-  if (val === null) return;
+  const rep = await demanderTexte({
+    titre: "Renommer la visite",
+    label: "Nom de la visite",
+    valeur: curVisit.label || "",
+    placeholder: `Visite du ${frDate(curVisit.date)}`,
+    hint: "Laissez vide pour rétablir le nom par défaut, celui de la date."
+  });
+  if (rep === null) return;
   const avant = curVisit.label || "";
-  curVisit.label = val.trim();
+  curVisit.label = rep.texte.trim();
   await tx("visits","readwrite", s => s.put(curVisit));
   if (avant !== curVisit.label)
     await logAction("Visite", frDate(curVisit.date), "Renommée", `${avant || "(nom par défaut)"} → ${curVisit.label || "(nom par défaut)"}`);
@@ -3267,40 +3366,140 @@ async function openProjectSheet(){
 }
 function closeProjectSheet(){ $("#projSheet").classList.remove("on"); $("#scrim").classList.remove("on"); }
 async function newProjectFlow(){
-  const name = prompt("Nom du nouveau chantier :", "");
-  if (name === null) return;
-  const useExample = confirm("Pré-remplir avec les intervenants/contacts de l'exemple RD120 Vincennes ?\n\n(OK = exemple, Annuler = chantier vierge — modifiable ensuite dans les réglages)");
-  const p = await createProject(name.trim() || "Nouveau chantier", useExample ? EXAMPLE : null);
+  /* Le pré-remplissage était posé par un `confirm()` après le `prompt()` : deux boîtes du
+     navigateur d'affilée, et une question à laquelle « Annuler » répondait « non » plutôt que
+     d'annuler. C'est une case à cocher, dans la même feuille que le nom. */
+  const rep = await demanderTexte({
+    titre: "Nouveau chantier",
+    label: "Nom du chantier",
+    placeholder: "Ex. : RD120 · Château de Vincennes",
+    valider: "Créer le chantier",
+    option: "Pré-remplir avec l'exemple RD120 Vincennes",
+    optionHint: "Reprend les intervenants et contacts de l'exemple. Tout reste modifiable ensuite dans les réglages."
+  });
+  if (rep === null) return;
+  const name = rep.texte;
+  const p = await createProject(name.trim() || "Nouveau chantier", rep.option ? EXAMPLE : null);
   if (name.trim()) p.settings.proj = name.trim();
   p.name = p.settings.proj; // garder nom du chantier et en-tête cohérents
   await tx("projects","readwrite", s => s.put(p));
   setCurrentProject(p); closeProjectSheet(); await showHome();
   toast("Chantier créé — pensez à compléter les réglages");
 }
+/* =============== corbeille ===============
+   Rien ne se supprime vraiment du premier coup. Ce qui est jeté part dans un magasin dédié,
+   avec tout ce qui en dépendait, et n'en sort qu'au bout de 30 jours. Les identifiants ne
+   sont jamais réattribués par IndexedDB : une restauration remet donc chaque fiche à sa
+   place, y compris ses rattachements. */
+const CORBEILLE_JOURS = 30;
+
+async function jeter(type, label, contenu, projectId){
+  const rec = {type, label, at: Date.now(),
+    projectId: projectId != null ? projectId : (CUR ? CUR.id : null), contenu};
+  await idbAdd("corbeille", rec);
+  for (const store in contenu)
+    for (const r of contenu[store]) await tx(store, "readwrite", s => s.delete(r.id));
+  return rec;
+}
+async function listerCorbeille(){
+  return (await idbAll("corbeille")).sort((a, b) => (b.at || 0) - (a.at || 0));
+}
+function corbeilleCompte(contenu){
+  return Object.values(contenu || {}).reduce((n, arr) => n + (arr ? arr.length : 0), 0);
+}
+async function restaurerCorbeille(id){
+  const e = (await idbAll("corbeille")).find(x => x.id === id);
+  if (!e) return null;
+  for (const store in e.contenu)
+    for (const r of e.contenu[store]) await tx(store, "readwrite", s => s.put(r));
+  await tx("corbeille", "readwrite", s => s.delete(id));
+  /* La trace est écrite par l'appelant, après avoir rétabli le bon chantier courant : inscrite
+     ici, elle atterrirait dans le journal du chantier ouvert au moment du clic, pas dans celui
+     de la fiche repêchée. */
+  return e;
+}
+/* Purge silencieuse au démarrage : passé le délai, la corbeille ne doit plus peser. */
+async function purgerCorbeille(){
+  try{
+    const limite = Date.now() - CORBEILLE_JOURS * 86400000;
+    for (const e of await idbAll("corbeille"))
+      if ((e.at || 0) < limite) await tx("corbeille", "readwrite", s => s.delete(e.id));
+  }catch{}
+}
+
+async function renderCorbeille(){
+  const box = $("#corbList");
+  if (!box) return;
+  const liste = await listerCorbeille();
+  const cnt = $("#setCorbCount");
+  if (cnt) cnt.textContent = liste.length
+    ? `${liste.length} élément${liste.length > 1 ? "s" : ""} · ${CORBEILLE_JOURS} jours`
+    : "Ce qui a été supprimé";
+  if (!liste.length){
+    box.innerHTML = `<div class="hint" style="margin:0 4px">La corbeille est vide.</div>`;
+    return;
+  }
+  const maintenant = Date.now();
+  box.innerHTML = liste.map(e => {
+    const reste = Math.max(0, CORBEILLE_JOURS - Math.floor((maintenant - (e.at || 0)) / 86400000));
+    const n = corbeilleCompte(e.contenu);
+    const jete = new Date(e.at || 0).toISOString().slice(0, 10);
+    return `<div class="corb">
+      <span class="cc-txt"><b>${esc(e.type)} — ${esc(e.label || "")}</b>
+      <small>${n} élément${n > 1 ? "s" : ""} · jeté le ${esc(frDate(jete))} · ${reste} jour${reste > 1 ? "s" : ""} restant${reste > 1 ? "s" : ""}</small></span>
+      <button class="btn" data-rest="${e.id}">Rétablir</button>
+      <button class="cr-p-del" data-purge="${e.id}" aria-label="Supprimer définitivement">&times;</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll("[data-rest]").forEach(b => b.addEventListener("click", async () => {
+    const e = await restaurerCorbeille(Number(b.dataset.rest));
+    if (!e) return;
+    /* un chantier rétabli redevient le chantier courant : c'est ce qu'on attend après l'avoir
+       repêché, et cela évite de le chercher dans la liste */
+    if (e.contenu.projects && e.contenu.projects.length){
+      const p = (await listProjects()).find(x => x.id === e.contenu.projects[0].id);
+      if (p) setCurrentProject(p);
+    } else if (e.projectId != null && (!CUR || CUR.id !== e.projectId)){
+      const p = (await listProjects()).find(x => x.id === e.projectId);
+      if (p) setCurrentProject(p);
+    }
+    await logAction("Corbeille", e.label || e.type, "Rétabli", `${corbeilleCompte(e.contenu)} élément(s)`);
+    await renderCorbeille();
+    await showHome();
+    toast(`${e.type} rétabli ✔`, true);
+  }));
+  box.querySelectorAll("[data-purge]").forEach(b => b.addEventListener("click", async () => {
+    const e = liste.find(x => x.id === Number(b.dataset.purge));
+    if (!e) return;
+    if (!confirm(`Supprimer définitivement « ${e.label || e.type} » ?\n\nCette fois, c'est sans retour.`)) return;
+    await tx("corbeille", "readwrite", s => s.delete(e.id));
+    await renderCorbeille();
+    toast("Supprimé définitivement");
+  }));
+}
+
 async function deleteCurrentProject(){
   if (!CUR) return;
   const projects = await listProjects();
   if (projects.length <= 1){ toast("Impossible de supprimer le seul chantier."); return; }
   const visits = (await idbAll("visits")).filter(v => v.projectId === CUR.id);
-  if (!confirm(`Supprimer le chantier « ${CUR.name} » avec ses ${visits.length} visite(s), photos et réserves ? Action définitive.`)) return;
-  for (const v of visits){
-    const ph = await idbAll("photos","visitId",v.id);
-    for (const p of ph) await tx("photos","readwrite", s => s.delete(p.id));
-    await tx("visits","readwrite", s => s.delete(v.id));
-  }
-  /* Tout ce qui porte projectId doit partir. Les fiches de contrôle, le journal, les ordres
-     de service et les pièces annexes étaient oubliés : ils survivaient au chantier supprimé,
-     invisibles mais bien présents dans la base et dans les sauvegardes. */
-  for (const st of ["reserves","controls","journal","os","reunions","annexes"]){
-    const lignes = await idbAll(st, "projectId", CUR.id).catch(() => []);
-    for (const l of lignes) await tx(st, "readwrite", s => s.delete(l.id));
-  }
-  await tx("projects","readwrite", s => s.delete(CUR.id));
+  const ids = new Set(visits.map(v => v.id));
+  const photos = (await idbAll("photos")).filter(p => ids.has(p.visitId));
+  if (!confirm(`Supprimer le chantier « ${CUR.name} » ?\n\n${visits.length} visite(s), ${photos.length} cliché(s), réserves, fiches, ordres de service et comptes rendus.\n\nIl restera ${CORBEILLE_JOURS} jours dans la corbeille, d'où vous pourrez le rétablir.`)) return;
+  /* Tout ce qui porte projectId part avec lui. Les fiches de contrôle, le journal, les ordres
+     de service, les comptes rendus et les pièces annexes étaient jadis oubliés : ils
+     survivaient au chantier supprimé, invisibles mais bien présents dans la base. */
+  const contenu = {projects:[CUR], visits, photos};
+  for (const st of ["reserves","controls","journal","os","reunions","annexes"])
+    contenu[st] = await idbAll(st, "projectId", CUR.id).catch(() => []);
+  /* pas de logAction ici : le journal du chantier part avec lui, la ligne serait orpheline.
+     La corbeille est elle-même la trace, et elle est datée. */
+  await jeter("chantier", CUR.name, contenu, CUR.id);
   const rest = await listProjects();
   setCurrentProject(rest[0]);
   $("#setModal").classList.remove("on");
   await showHome();
-  toast("Chantier supprimé");
+  toast(`Chantier mis à la corbeille — rétablissable ${CORBEILLE_JOURS} jours`, true);
 }
 
 /* =============== numérotation automatique des rapports =============== */
@@ -4225,10 +4424,11 @@ async function deleteCtrlForm(){
   if (!curCtrl || !curCtrl.id) return;
   if (!confirm(`Supprimer la fiche n°${curCtrl.num} — ${curCtrl.name} ?`)) return;
   await logAction("Fiche de contrôle", `n°${curCtrl.num}`, "Supprimée", curCtrl.name || "");
-  await tx("controls","readwrite", s => s.delete(curCtrl.id));
+  await jeter("fiche de contrôle", `n°${curCtrl.num} — ${curCtrl.name || ""}`,
+    {controls:[curCtrl]}, curCtrl.projectId);
   closeCtrlForm();
   await openCtrl();
-  toast("Fiche supprimée");
+  toast("Fiche mise à la corbeille");
 }
 
 /* =============== pointage sur plan ===============
@@ -5301,14 +5501,17 @@ async function deleteReserveForm(){
   if (!confirm(`Supprimer la réserve n°${curRes.num} du registre ?`)) return;
   await logAction("Réserve", `n°${curRes.num}`, "Supprimée", curRes.objet || "");
   const id = curRes.id;
-  // détacher les clichés qui y étaient rattachés, sinon ils pointeraient dans le vide
-  for (const p of await idbAll("photos")){
-    if (p.reserveId === id){ p.reserveId = null; p.reserveNum = null; await tx("photos","readwrite", s => s.put(p)); }
-  }
-  await tx("reserves","readwrite", s => s.delete(id));
+  /* Les clichés rattachés sont détachés, sinon ils pointeraient dans le vide. On mémorise le
+     rattachement dans la corbeille pour pouvoir le rétablir avec la réserve. */
+  const liees = (await idbAll("photos")).filter(p => p.reserveId === id);
+  const avant = liees.map(p => ({...p}));
+  for (const p of liees){ p.reserveId = null; p.reserveNum = null; await tx("photos","readwrite", s => s.put(p)); }
+  await jeter(reserveNature(curRes) === "suivi" ? "point" : "réserve",
+    `n°${curRes.num} — ${curRes.objet || "(sans objet)"}`,
+    {reserves:[curRes], photos:avant}, curRes.projectId);
   closeReserveForm();
   await renderRegister();
-  toast("Réserve supprimée");
+  toast("Mis à la corbeille — rétablissable dans les réglages");
 }
 
 async function renderPhotos(){
@@ -7238,11 +7441,12 @@ async function saveReunionForm(){
 async function deleteReunionForm(){
   if (!curCr || !curCr.id) return;
   if (!confirm(`Supprimer le compte rendu n°${curCr.num} ?\n\nLes points du registre ne sont pas supprimés : ils restent suivis.`)) return;
-  await tx("reunions", "readwrite", s => s.delete(curCr.id));
-  await logAction("Réunion", `CR n°${curCr.num}`, "Supprimé", "");
+  await jeter("compte rendu", `CR n°${curCr.num} — ${frDate(curCr.date)}`,
+    {reunions:[curCr]}, curCr.projectId);
+  await logAction("Réunion", `CR n°${curCr.num}`, "Supprimé", "mis à la corbeille");
   closeReunionForm();
   await renderReunionsList();
-  toast("Compte rendu supprimé");
+  toast("Compte rendu mis à la corbeille");
 }
 
 /* ---- Figer les points au moment de l'enregistrement ----
@@ -7612,12 +7816,13 @@ async function saveOsForm(){
 async function deleteOsForm(){
   if (!curOs || curOs.id === undefined) return;
   if (!confirm(`Supprimer l'ordre de service n°${curOs.num} ?\n\nIl restera au journal des modifications.`)) return;
-  await tx("os", "readwrite", s => s.delete(curOs.id));
-  await logAction("Ordre de service", `n°${curOs.num}`, "Supprimé", curOs.objet || "");
+  await jeter("ordre de service", `OS n°${curOs.num} — ${curOs.objet || curOs.type || ""}`,
+    {os:[curOs]}, curOs.projectId);
+  await logAction("Ordre de service", `n°${curOs.num}`, "Supprimé", "mis à la corbeille");
   $("#osModal").classList.remove("on");
   curOs = null;
   await renderOsList();
-  toast("Ordre de service supprimé");
+  toast("Ordre de service mis à la corbeille");
 }
 
 async function pdfForOS(o, settings){
@@ -9005,7 +9210,7 @@ async function fullBackup(){
     const r = await saveFileChooseLocation(blob, `sauvegarde-chantiers-${d}.zip`, "Sauvegarde abraCADabra");
     const mo = (blob.size/1048576).toFixed(1);
     /* seule une sauvegarde réellement écrite compte : un envoi annulé ne protège rien */
-    if (r === "saved" || r === "shared" || r === "downloaded"){ noterSauvegarde(); renderRappelSauvegarde(); }
+    if (r === "saved" || r === "shared" || r === "downloaded"){ noterSauvegarde(); await renderRappelSauvegarde(); }
     toast(r === "saved" ? `Sauvegarde enregistrée ✔ (${mo} Mo)` :
           r === "shared" ? `Sauvegarde partagée ✔ (${mo} Mo)` :
           r === "downloaded" ? `Sauvegarde dans Téléchargements ✔ (${mo} Mo)` : "Sauvegarde annulée", true);
@@ -9048,7 +9253,9 @@ async function restoreBackup(file){
     if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\nCela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
     // vider les stores
-    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal","os","reunions"]){
+    /* la corbeille est vidée : elle référence des identifiants du jeu de données remplacé,
+       la garder n'aurait aucun sens et pourrait rétablir des fiches étrangères */
+    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal","os","reunions","corbeille"]){
       await new Promise((res, rej) => { const t = db.transaction(st,"readwrite"); t.objectStore(st).clear(); t.oncomplete = res; t.onerror = () => rej(t.error); });
     }
     // réinsérer avec les identifiants d'origine
@@ -9213,7 +9420,12 @@ async function refreshTuilesState(){
    la seule chose qui la déclenche est de s'en souvenir. La date de la dernière sauvegarde
    réussie est une donnée d'appareil, pas de chantier : elle vit donc dans localStorage,
    comme le thème et le code d'accès. */
-const RAPPEL_SAUV_JOURS = 30;
+/* Le délai seul est un mauvais signal : trois semaines sans visite ne risquent rien, une
+   semaine chargée risque beaucoup. On compte donc **ce qui serait perdu** — clichés et
+   réserves créés depuis la dernière sauvegarde — et l'alerte se déclenche au premier des
+   deux seuils atteint. C'est aussi plus persuasif : « 34 clichés » parle, « 12 jours » non. */
+const RAPPEL_SAUV_JOURS = 14;
+const RAPPEL_SAUV_PIECES = 25;
 function noterSauvegarde(){ try{ localStorage.setItem("derniereSauvegarde", new Date().toISOString()); }catch{} }
 function joursDepuisSauvegarde(){
   const iso = localStorage.getItem("derniereSauvegarde");
@@ -9222,15 +9434,37 @@ function joursDepuisSauvegarde(){
   if (!isFinite(t)) return null;
   return Math.max(0, Math.floor((Date.now() - t) / 86400000));
 }
-function renderRappelSauvegarde(){
+/* Jamais sauvegardé : l'instant de référence est 0, donc tout compte — ce qui est exact. */
+async function nouveautesDepuisSauvegarde(){
+  const iso = localStorage.getItem("derniereSauvegarde");
+  const t = iso ? new Date(iso).getTime() : 0;
+  const ref = isFinite(t) ? t : 0;
+  try{
+    const cliches = (await idbAll("photos")).filter(p => (p.createdAt || 0) > ref).length;
+    const reserves = (await idbAll("reserves")).filter(r => (r.createdAt || 0) > ref).length;
+    return {cliches, reserves, total: cliches + reserves};
+  }catch{ return {cliches:0, reserves:0, total:0}; }
+}
+function _pluriel(n, sing, plur){ return `${n} ${n > 1 ? plur : sing}`; }
+async function renderRappelSauvegarde(){
   const el = $("#rappelSauv");
   if (!el) return;
   const j = joursDepuisSauvegarde();
-  const tard = j === null || j >= RAPPEL_SAUV_JOURS;
-  const texte = j === null ? "Aucune sauvegarde depuis cet appareil."
-    : j === 0 ? "Sauvegarde effectuée aujourd'hui."
-    : j === 1 ? "Dernière sauvegarde hier."
-    : `Dernière sauvegarde il y a ${j} jours.`;
+  const n = await nouveautesDepuisSauvegarde();
+  const tard = j === null || j >= RAPPEL_SAUV_JOURS || n.total >= RAPPEL_SAUV_PIECES;
+  const enJeu = [n.cliches ? _pluriel(n.cliches, "cliché", "clichés") : "",
+                 n.reserves ? _pluriel(n.reserves, "réserve", "réserves") : ""].filter(Boolean).join(" et ");
+  let texte;
+  if (j === null){
+    texte = n.total
+      ? `Aucune sauvegarde : ${enJeu} n'existent que sur ce téléphone.`
+      : "Aucune sauvegarde depuis cet appareil.";
+  } else if (!n.total){
+    texte = j === 0 ? "Sauvegarde à jour." : `Sauvegarde à jour — rien de neuf depuis ${j} jour${j > 1 ? "s" : ""}.`;
+  } else {
+    const quand = j === 0 ? "aujourd'hui" : j === 1 ? "hier" : `il y a ${j} jours`;
+    texte = `${enJeu} depuis la dernière sauvegarde, ${quand}.`;
+  }
   el.hidden = false;
   el.classList.toggle("tard", tard);
   el.innerHTML = `<svg class="ico sm" viewBox="0 0 24 24" aria-hidden="true"><use href="#${tard ? "i-alert" : "i-database"}"/></svg>`
@@ -9253,12 +9487,12 @@ const SET_TITRES = {
   reunions:"Réunions de chantier",
   plans:"Plans et vue aérienne", reperage:"Repérage linéaire", annexes:"Documents annexes",
   journal:"Journal des modifications", sauvegarde:"Sauvegarde et stockage",
-  affichage:"Affichage", securite:"Sécurité", ia:"Description par IA"
+  corbeille:"Corbeille", affichage:"Affichage", securite:"Sécurité", ia:"Description par IA"
 };
 /* les domaines qui ne portent aucun champ enregistrable n'ont pas besoin du pied.
    « affichage » en fait partie : le thème s'applique et se retient dès qu'on le change,
    et c'est une préférence d'appareil, pas un réglage de chantier. */
-const SET_SANS_PIED = ["journal","sauvegarde","securite","annexes","affichage"];
+const SET_SANS_PIED = ["journal","sauvegarde","securite","annexes","affichage","corbeille"];
 let setCat = null;
 function setAfficher(cat){
   setCat = cat;
@@ -9269,6 +9503,8 @@ function setAfficher(cat){
     b.hidden = index || b.dataset.cat !== cat;
   });
   $("#setPied").hidden = index || SET_SANS_PIED.includes(cat);
+  /* la corbeille se relit à chaque ouverture : son contenu vieillit et se purge tout seul */
+  if (cat === "corbeille") renderCorbeille();
   $("#setModal").scrollTop = 0;
 }
 function openSettings(){
@@ -9377,6 +9613,7 @@ async function main(){
   appliquerTheme();
   db = await openDB();
   await requestPersistence();
+  await purgerCorbeille();
   const projects = await migrateToProjects();
   const savedId = Number(localStorage.getItem("currentProjectId"));
   setCurrentProject(projects.find(p => p.id === savedId) || projects[0]);
@@ -9520,10 +9757,11 @@ async function main(){
     }));
   $("#btnDelPhoto").addEventListener("click", async () => {
     if (!curEdit) return;
-    if (!confirm(`Supprimer définitivement le cliché n°${curEdit.num} ?`)) return;
+    if (!confirm(`Supprimer le cliché n°${curEdit.num} ?\n\nIl restera ${CORBEILLE_JOURS} jours dans la corbeille.`)) return;
     await logAction("Constat", `n°${curEdit.num}`, "Supprimé",
-      [curEdit.statut || "sans statut", curEdit.titre || "sans titre"].join(" · "));
-    await tx("photos","readwrite", s => s.delete(curEdit.id));
+      [curEdit.statut || "sans statut", curEdit.titre || "sans titre", "mis à la corbeille"].join(" · "));
+    await jeter("cliché", `n°${curEdit.num} — ${curEdit.titre || curEdit.description || "sans titre"}`,
+      {photos:[curEdit]}, CUR ? CUR.id : null);
     /* le cliché n'existe plus : revenir au plan sur un repère disparu n'aurait pas de sens */
     editRetour = null;
     stopMic();
@@ -9539,10 +9777,11 @@ async function main(){
   $("#btnDelVisit").addEventListener("click", async () => {
     if (!curVisit) return;
     const photos = await idbAll("photos","visitId",curVisit.id);
-    if (!confirm(`Supprimer la visite du ${frDate(curVisit.date)} et ses ${photos.length} cliché(s) ? Cette action est définitive.`)) return;
-    for (const p of photos) await tx("photos","readwrite", s => s.delete(p.id));
-    await tx("visits","readwrite", s => s.delete(curVisit.id));
-    toast("Visite supprimée");
+    if (!confirm(`Supprimer la visite du ${frDate(curVisit.date)} et ses ${photos.length} cliché(s) ?\n\nElle restera ${CORBEILLE_JOURS} jours dans la corbeille.`)) return;
+    await jeter("visite", `${visitTitle(curVisit)} — ${frDate(curVisit.date)}`,
+      {visits:[curVisit], photos}, curVisit.projectId);
+    await logAction("Visite", frDate(curVisit.date), "Supprimée", `mise à la corbeille · ${photos.length} cliché(s)`);
+    toast("Visite mise à la corbeille");
     showHome();
   });
 
@@ -9585,6 +9824,13 @@ async function main(){
   $("#btnRapPilotage").addEventListener("click", exportDashboardPdf);
   document.querySelectorAll("[data-pv]").forEach(b =>
     b.addEventListener("click", () => exportPV(b.dataset.pv)));
+  /* feuille de saisie d'une ligne */
+  $("#btnAskOk").addEventListener("click", () =>
+    fermerAsk({texte: $("#askInput").value, option: $("#askOpt").checked}));
+  $("#btnAskCancel").addEventListener("click", () => fermerAsk(null));
+  $("#btnAskClose").addEventListener("click", () => fermerAsk(null));
+  $("#askInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("#btnAskOk").click(); } });
+
   /* réunions de chantier */
   $("#btnCrNew").addEventListener("click", async () => {
     try{ await nouvelleReunion(); }catch(e){ toast("Réunion indisponible : " + (e && e.message || e), true); }
