@@ -370,6 +370,53 @@
     font-size:22px; line-height:1; padding:4px 2px; margin-right:-4px;
   }
 
+  /* ---- compte rendu de réunion : feuille de présence et points suivis ---- */
+  .cr-p{
+    display:flex; align-items:center; gap:10px; margin-bottom:6px; padding:8px 10px;
+    border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);
+  }
+  .cr-p-txt{flex:1; min-width:0; display:block}
+  .cr-p-txt input{
+    display:block; width:100%; border:0; background:none; font:inherit; color:var(--ink);
+    padding:1px 0; outline:none;
+  }
+  .cr-in-nom{font-size:13.5px; font-weight:700}
+  .cr-in-org{font-size:11.5px; color:var(--ink2)}
+  .cr-p-txt input:focus{border-bottom:1.5px solid var(--blue)}
+  .cr-p-del{border:0; background:none; color:var(--ink2); font-size:20px; line-height:1; padding:4px 2px; cursor:pointer}
+  /* l'état se change au doigt, sans menu : présent → excusé → absent */
+  .cr-etat{
+    flex:none; min-width:74px; border:1px solid var(--line); border-radius:99px; cursor:pointer;
+    padding:5px 10px; font:inherit; font-size:11.5px; font-weight:700; background:var(--chip); color:var(--ink2);
+  }
+  .cr-etat.present{background:color-mix(in srgb, var(--c) 14%, var(--card));
+    border-color:color-mix(in srgb, var(--c) 40%, var(--line)); color:color-mix(in srgb, var(--c) 62%, var(--ink))}
+  .cr-etat.excuse{background:color-mix(in srgb, var(--pa) 14%, var(--card));
+    border-color:color-mix(in srgb, var(--pa) 40%, var(--line)); color:color-mix(in srgb, var(--pa) 62%, var(--ink))}
+  .cr-etat.absent{background:color-mix(in srgb, var(--nc) 12%, var(--card));
+    border-color:color-mix(in srgb, var(--nc) 38%, var(--line)); color:color-mix(in srgb, var(--nc) 62%, var(--ink))}
+
+  .cr-rub{
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:800;
+    color:var(--blue-deep); margin:14px 4px 6px;
+  }
+  .cr-pt{
+    display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:6px 10px 6px 6px;
+    border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);
+  }
+  .cr-pt.late{background:color-mix(in srgb, var(--nc) 8%, var(--card));
+    border-color:color-mix(in srgb, var(--nc) 34%, var(--line))}
+  .cr-pt-open{flex:1; min-width:0; display:flex; align-items:center; gap:9px;
+    border:0; background:none; font:inherit; text-align:left; padding:4px; cursor:pointer; color:inherit}
+  .cr-pt-n{
+    flex:none; min-width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid var(--line); border-radius:8px; font-size:12px; font-weight:800; color:var(--ink2);
+  }
+  .cr-pt.late .cr-pt-n{border-color:#9E2B20; background:#9E2B20; color:#fff}
+  .cr-pt .cc-txt b{display:block; font-size:13.5px; font-weight:700; line-height:1.25}
+  .cr-pt .cc-txt small{display:block; font-size:11.5px; color:var(--ink2); margin-top:1px}
+  .cr-pt .btn{flex:none; padding:6px 12px; font-size:12px}
+
   /* rappel de sauvegarde : information, pas alerte — sauf quand le délai devient long */
   .rappel-sauv{
     display:flex; align-items:center; gap:9px; width:100%; text-align:left; cursor:pointer;
@@ -787,7 +834,9 @@
   .modal-top b{flex:1; font-size:16px}
   .field{margin-bottom:13px}
   .field label{display:block; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); margin-bottom:5px}
-  .field input[type=text], .field input[type=password], .field input[type=date], .field textarea, .field select{
+  /* « time » manquait : les heures de réunion s'affichaient en champ minuscule, sans bordure */
+  .field input[type=text], .field input[type=password], .field input[type=date],
+  .field input[type=time], .field textarea, .field select{
     width:100%; font:inherit; color:var(--ink); background:var(--card);
     border:1.5px solid var(--line); border-radius:var(--r-md); padding:12px 14px;
     transition:border-color .15s ease, box-shadow .15s ease;
@@ -1046,6 +1095,17 @@
       <button class="btn primary block" id="btnRapPilotage"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-chart"/></svg> Rapport de pilotage (PDF)</button>
       <button class="btn blue block" id="btnRapExtract"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-share"/></svg> Extraire les réserves par entreprise</button>
       <div class="hint" id="rapAvenir" style="margin:-2px 4px 0"></div>
+    </div>
+    <div id="rapCR" hidden>
+      <div class="sect-label">Réunions de chantier</div>
+      <div id="crList"></div>
+      <div class="btnrow" style="margin-top:6px">
+        <button class="btn ghost block" id="btnCrNew"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-worker"/></svg> Nouvelle réunion de chantier</button>
+        <div class="hint" style="margin:-2px 4px 0">
+          Les points suivis reprennent la numérotation du registre et <b>se reportent d'un compte
+          rendu au suivant</b> jusqu'à leur solde.
+        </div>
+      </div>
     </div>
     <div id="rapOS" hidden>
       <div class="sect-label">Ordres de service</div>
@@ -1554,6 +1614,60 @@
   </div>
 </div>
 
+<!-- ================= COMPTE RENDU DE RÉUNION DE CHANTIER ================= -->
+<div class="modal" id="crModal">
+  <div class="wrap">
+    <div class="modal-top">
+      <button class="iconbtn" id="btnCrClose" aria-label="Fermer">←</button>
+      <b id="crTitle">Compte rendu de réunion</b>
+    </div>
+
+    <div class="field">
+      <label for="crDate">Date de la réunion</label>
+      <input type="date" id="crDate">
+    </div>
+    <div class="field">
+      <label for="crH1">Heure de début</label>
+      <input type="time" id="crH1">
+    </div>
+    <div class="field">
+      <label for="crH2">Heure de fin</label>
+      <input type="time" id="crH2">
+    </div>
+    <div class="field">
+      <label for="crLieu">Lieu</label>
+      <input type="text" id="crLieu" placeholder="Ex. : base de vie — RD120, PR 12+300">
+    </div>
+    <div class="field">
+      <label for="crNextDate">Prochaine réunion</label>
+      <input type="date" id="crNextDate">
+      <input type="time" id="crNextH" style="margin-top:8px">
+    </div>
+
+    <div class="sect-label">Présents</div>
+    <div id="crPresents"></div>
+    <button class="btn ghost block" id="btnCrPresentAdd" style="margin-top:6px">+ Ajouter un participant</button>
+    <div class="hint" style="margin:6px 4px 0">Pré-rempli depuis les contacts du chantier. Touchez un nom pour le passer de présent à excusé, puis à absent.</div>
+
+    <div class="sect-label" style="margin-top:18px">Points suivis<span id="crPtCount"></span></div>
+    <div id="crPoints"></div>
+    <div class="btnrow" style="margin-top:6px">
+      <button class="btn ghost block" id="btnCrPointNew"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-list"/></svg> Nouveau point de suivi</button>
+      <button class="btn ghost block" id="btnCrVerser"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-camera"/></svg> Verser les constats de la visite</button>
+      <div class="hint" style="margin:-2px 4px 0">
+        Les points reprennent la numérotation du registre et se reportent d'un compte rendu au
+        suivant jusqu'à leur solde. Un <b>point de suivi</b> n'apparaît jamais dans un procès-verbal
+        de réception — seuls les constats sur l'ouvrage y figurent.
+      </div>
+    </div>
+
+    <div class="btnrow" style="margin-top:14px">
+      <button class="btn primary block" id="btnCrSave">Enregistrer</button>
+      <button class="btn danger block" id="btnCrDelete" hidden>Supprimer ce compte rendu</button>
+    </div>
+  </div>
+</div>
+
 <!-- ================= RÉGLAGES ================= -->
 <div class="modal" id="setModal">
   <div class="wrap">
@@ -1570,6 +1684,8 @@
         <span><b>Saisie rapide</b><small>Zones et entreprises proposées</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="entete"><svg class="ico" viewBox="0 0 24 24"><use href="#i-clipboard"/></svg>
         <span><b>En-tête des rapports</b><small>Cartouche, contacts, logos</small></span><i class="set-chev">›</i></button>
+      <button class="set-cat" data-go="reunions"><svg class="ico" viewBox="0 0 24 24"><use href="#i-worker"/></svg>
+        <span><b>Réunions de chantier</b><small>Rubriques, lieu, délai de contestation</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="plans"><svg class="ico" viewBox="0 0 24 24"><use href="#i-map"/></svg>
         <span><b>Plans et vue aérienne</b><small>Application, page de garde, sections</small></span><i class="set-chev">›</i></button>
       <button class="set-cat" data-go="reperage"><svg class="ico" viewBox="0 0 24 24"><use href="#i-ruler"/></svg>
@@ -1641,6 +1757,26 @@
       <div class="field" style="margin-top:30px">
         <button class="btn danger block" id="btnDeleteProject">Supprimer le chantier courant</button>
         <div class="hint">Efface ce chantier et tout ce qu'il contient : visites, clichés, réserves, fiches de contrôle et journal. Sans retour possible — sauf restauration d'une sauvegarde.</div>
+      </div>
+    </div>
+
+    <div class="settings-block" data-cat="reunions">
+      <h3>Réunions de chantier</h3>
+      <p>Ce qui structure vos comptes rendus. Les participants, eux, sont pré-remplis depuis les contacts saisis dans « En-tête des rapports ».</p>
+      <div class="field">
+        <label for="sCrRubriques">Rubriques des points (une par ligne, dans l'ordre du document)</label>
+        <textarea id="sCrRubriques" style="min-height:110px"></textarea>
+        <div class="hint">Les constats sur l'ouvrage forment toujours une rubrique à part, en fin de document : ils viennent du registre, pas de la réunion.</div>
+      </div>
+      <div class="field">
+        <label for="sCrLieu">Lieu habituel de la réunion</label>
+        <input type="text" id="sCrLieu" placeholder="Ex. : base de vie — RD120, PR 12+300">
+        <div class="hint">Proposé à la création d'un compte rendu, modifiable à chaque fois.</div>
+      </div>
+      <div class="field">
+        <label for="sCrDelai">Délai de contestation (jours)</label>
+        <input type="text" id="sCrDelai" inputmode="numeric" placeholder="Ex. : 8">
+        <div class="hint"><b>Ce délai vient de votre CCAP</b>, pas de l'application. Laissez vide si vous préférez que le document renvoie au marché sans citer de durée.</div>
       </div>
     </div>
 
@@ -2099,6 +2235,10 @@ const EXAMPLE = {
 function blankSettings(){
   return { proj:DEFAULTS.proj, sub:DEFAULTS.sub, redac:"", zones:[], ents:[], cartouche:[], contacts:[], planZoom:"300", planMode:"auto" };
 }
+/* Rubriques d'un compte rendu de réunion de chantier. Modifiables par chantier, mais
+   l'ordre par défaut est celui de la pratique : ce qui engage avant ce qui exécute. */
+const CR_RUBRIQUES = ["Administratif", "Sécurité et hygiène", "Planning et avancement",
+                      "Travaux par lot", "Divers"];
 function normSettings(s){
   s = s || {};
   return {
@@ -2120,7 +2260,13 @@ function normSettings(s){
     /* phase de la mission : pilote le vocabulaire, les compteurs et les livrables */
     phase: s.phase === "AOR" ? "AOR" : "DET",
     dateReception: s.dateReception || "",
-    delaiLevee: s.delaiLevee || ""
+    delaiLevee: s.delaiLevee || "",
+    /* ---- comptes rendus de réunion de chantier ---- */
+    crRubriques: Array.isArray(s.crRubriques) && s.crRubriques.length ? s.crRubriques : CR_RUBRIQUES.slice(),
+    crLieu: s.crLieu || "",
+    /* délai de contestation : il vient du CCAP, jamais de l'application. 8 jours est l'usage
+       le plus répandu, ce n'est pas une règle — d'où l'avertissement porté sur le document. */
+    crDelai: s.crDelai || "8"
   };
 }
 
@@ -2345,11 +2491,15 @@ const DB_SCHEMA = {
   controls: ["projectId","visitId"],
   journal:  ["projectId"],
   os:       ["projectId"],
+  /* comptes rendus de réunion de chantier. Les POINTS n'y sont pas : ils vivent au registre
+     (magasin « reserves ») avec la numérotation continue du chantier, distingués par leur
+     nature. Un seul registre, une seule vérité sur ce qui reste ouvert. */
+  reunions: ["projectId"],
   /* tuiles IGN conservées : la clé est « z/x/y », donc partagée entre chantiers couvrant
      la même emprise. Index sur la date de dernier usage, pour purger les plus anciennes. */
   tiles:    ["vu"]
 };
-const DB_VERSION = 8;
+const DB_VERSION = 9;
 /* Ouvre la base puis vérifie magasins ET index. Une montée de version interrompue laissait
    l'application inutilisable ; on rouvre alors en version+1 pour compléter ce qui manque. */
 async function openDB(){
@@ -2920,8 +3070,11 @@ async function showReports(){
   /* à chaque phase ses livrables : ordres de service en exécution, procès-verbaux en réception */
   $("#rapPV").hidden = v.phase !== "AOR";
   $("#rapOS").hidden = v.phase !== "DET";
+  /* La réunion de chantier est l'instance de la phase d'exécution : elle disparaît en
+     réception, où le PV prend le relais. */
+  $("#rapCR").hidden = v.phase !== "DET";
   $("#rapAvenir").textContent = "";
-  if (v.phase === "DET") await renderOsList();
+  if (v.phase === "DET"){ await renderOsList(); await renderReunionsList(); }
   const pid = CUR ? CUR.id : null;
   const visits = (await idbAll("visits")).filter(v => v.projectId === pid)
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -3127,7 +3280,7 @@ async function deleteCurrentProject(){
   /* Tout ce qui porte projectId doit partir. Les fiches de contrôle, le journal, les ordres
      de service et les pièces annexes étaient oubliés : ils survivaient au chantier supprimé,
      invisibles mais bien présents dans la base et dans les sauvegardes. */
-  for (const st of ["reserves","controls","journal","os","annexes"]){
+  for (const st of ["reserves","controls","journal","os","reunions","annexes"]){
     const lignes = await idbAll(st, "projectId", CUR.id).catch(() => []);
     for (const l of lignes) await tx(st, "readwrite", s => s.delete(l.id));
   }
@@ -3556,12 +3709,25 @@ async function nextReserveNum(){
   const res = await idbAll("reserves","projectId",CUR.id);
   return res.reduce((m, r) => Math.max(m, r.num || 0), 0) + 1;
 }
-async function createReserve({objet, zone, statut, entreprise, action, dateLimite, date}){
+/* Nature d'une ligne du registre.
+   « constat » : un écart technique, relevé sur l'ouvrage — c'est tout ce qui existait, et
+   c'est ce que reprennent les procès-verbaux de réception.
+   « suivi » : un point de compte rendu — une transmission attendue, une décision, un sujet
+   de planning ou de sécurité. Il se suit comme un constat, mais **ne figure jamais dans un
+   PV de réception** : « transmettre le PPSPS » n'est pas une réserve sur l'ouvrage.
+   Les lignes antérieures à la mise en service des comptes rendus n'ont pas le champ : elles
+   sont des constats, ce qui est exact. */
+function reserveNature(r){ return r && r.nature === "suivi" ? "suivi" : "constat"; }
+function estConstat(r){ return reserveNature(r) === "constat"; }
+
+async function createReserve({objet, zone, statut, entreprise, action, dateLimite, date, nature, rubrique, crNum}){
   // « Origine » = la visite qui a relevé le constat, pas le jour de la saisie
   const rec = { projectId: CUR.id, num: await nextReserveNum(),
     date: date || (curVisit && curVisit.date) || todayIso(),
     zone: zone || "", objet: objet || "", entreprise: entreprise || "", action: action || "",
     dateLimite: dateLimite || "", statut: statut || "En cours", dateSolde: "",
+    nature: nature === "suivi" ? "suivi" : "constat",
+    rubrique: rubrique || "", crNum: crNum || null, crSolde: null,
     /* la phase d'origine reste attachée à la réserve : basculer le chantier en AOR ne
        requalifie pas rétroactivement ce qui a été relevé en cours d'exécution */
     phase: (getSettings() || {}).phase || "DET",
@@ -5054,7 +5220,26 @@ function openReserveForm(r){
   $("#resModal").classList.add("on");
   window.scrollTo(0,0);
 }
-function closeReserveForm(){ stopMic(); $("#resModal").classList.remove("on"); curRes = null; }
+function closeReserveForm(){
+  stopMic(); $("#resModal").classList.remove("on"); curRes = null;
+  /* point édité depuis un compte rendu : celui-ci est resté ouvert dessous, on rafraîchit
+     sa liste plutôt que de laisser l'utilisateur devant un état périmé */
+  if (retourApresReserve){
+    retourApresReserve = false;
+    crNettoyerPointVide().then(() => { if (curCr) renderCrPoints(); });
+  }
+}
+/* Un point neuf est inscrit au registre avant d'être rempli, pour lui donner son numéro.
+   Abandonné sans objet, il ne doit pas y rester : on le retire, et le numéro se libère. */
+let crPointNeuf = null;
+async function crNettoyerPointVide(){
+  if (crPointNeuf == null) return;
+  const id = crPointNeuf; crPointNeuf = null;
+  try{
+    const r = (await idbAll("reserves", "projectId", CUR.id)).find(x => x.id === id);
+    if (r && !(r.objet || "").trim()) await tx("reserves", "readwrite", s => s.delete(id));
+  }catch{}
+}
 async function saveReserveForm(){
   const objet = $("#rObjet").value.trim();
   if (!objet){ toast("Indiquez au moins l'objet de la réserve", true); $("#rObjet").focus(); return; }
@@ -6587,7 +6772,12 @@ const PV_TYPES = {
 async function pdfForPV(kind, settings){
   const T = PV_TYPES[kind];
   if (!T) throw new Error("type de procès-verbal inconnu");
-  const toutes = (await idbAll("reserves", "projectId", CUR.id)).sort((a, b) => a.num - b.num);
+  /* Un procès-verbal ne porte que sur l'OUVRAGE. Les points de suivi d'un compte rendu de
+     réunion — une transmission attendue, une décision, un sujet de planning — partagent le
+     registre et sa numérotation, mais n'ont rien à faire dans un PV de réception : ce ne sont
+     pas des réserves au sens du marché. */
+  const toutes = (await idbAll("reserves", "projectId", CUR.id))
+    .filter(estConstat).sort((a, b) => a.num - b.num);
   const liste = toutes.filter(T.filtre);
   const restantes = toutes.filter(r => reserveStatut(r) !== "Soldé").length;
   const dateRec = settings.dateReception || "";
@@ -6768,6 +6958,564 @@ const OS_TYPES = [
   "Autre"
 ];
 let curOs = null;
+
+/* =============== comptes rendus de réunion de chantier ===============
+   Un CR porte l'en-tête, les présents et la date de la réunion suivante. Les POINTS ne lui
+   appartiennent pas : ils vivent au registre du chantier, avec sa numérotation continue, et
+   se reportent d'un compte rendu au suivant tant qu'ils ne sont pas soldés. C'est ce report
+   qui distingue un compte rendu d'un rapport. */
+let curCr = null;
+let retourApresReserve = false;   // un point ouvert depuis le compte rendu y ramène
+const CR_ETATS = {present:"Présent", excuse:"Excusé", absent:"Absent"};
+function crEtatSuivant(e){ return e === "present" ? "excuse" : e === "excuse" ? "absent" : "present"; }
+
+async function nextReunionNum(){
+  const all = await idbAll("reunions", "projectId", CUR.id);
+  return all.reduce((m, x) => Math.max(m, x.num || 0), 0) + 1;
+}
+async function projectReunions(){
+  if (!CUR) return [];
+  return (await idbAll("reunions", "projectId", CUR.id)).sort((a, b) => (b.num || 0) - (a.num || 0));
+}
+/* La feuille de présence se pré-remplit depuis les contacts du chantier : ils sont déjà
+   saisis pour l'en-tête des rapports, les ressaisir serait une corvée de plus le matin. */
+function presentsDepuisContacts(settings){
+  return (settings.contacts || []).map(l => {
+    const p = String(l).split(";").map(x => x.trim());
+    return {organisme: p[0] || "", nom: p[1] || "", qualite: "", etat: "present"};
+  }).filter(p => p.organisme || p.nom);
+}
+
+async function renderReunionsList(){
+  const box = $("#crList");
+  if (!box) return;
+  const liste = await projectReunions();
+  if (!liste.length){
+    box.innerHTML = `<div class="hint" style="margin:0 4px 6px">Aucune réunion de chantier sur ce chantier.</div>`;
+    return;
+  }
+  box.innerHTML = liste.map(r => {
+    const n = (r.presents || []).filter(p => p.etat === "present").length;
+    const np = (r.points || []).length;
+    return `<div class="rap-visite">
+      <button class="rap-ouvre" data-cr="${r.id}">
+        <span class="cc-txt"><b>CR n°${r.num} — ${esc(frDate(r.date))}</b>
+        <small>${n} présent${n > 1 ? "s" : ""} · ${np} point${np > 1 ? "s" : ""}${r.prochaineDate ? " · suivante le " + esc(frDate(r.prochaineDate)) : ""}</small></span>
+      </button>
+      <div class="rap-actions">
+        <button class="btn primary" data-crpdf="${r.id}"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> PDF</button>
+        <button class="btn blue" data-crdocx="${r.id}"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-file"/></svg> Word</button>
+      </div>
+    </div>`;
+  }).join("");
+  const trouve = async id => (await projectReunions()).find(x => x.id === Number(id));
+  box.querySelectorAll("[data-cr]").forEach(b => b.addEventListener("click", async () => {
+    const r = await trouve(b.dataset.cr); if (r) openReunionForm(r);
+  }));
+  box.querySelectorAll("[data-crpdf]").forEach(b => b.addEventListener("click", async () => {
+    const r = await trouve(b.dataset.crpdf); if (r) exportCR(r, "pdf");
+  }));
+  box.querySelectorAll("[data-crdocx]").forEach(b => b.addEventListener("click", async () => {
+    const r = await trouve(b.dataset.crdocx); if (r) exportCR(r, "docx");
+  }));
+}
+
+async function nouvelleReunion(){
+  if (!CUR) return;
+  const s = getSettings();
+  openReunionForm({
+    projectId: CUR.id, num: await nextReunionNum(), date: todayIso(),
+    heureDebut: "", heureFin: "", lieu: s.crLieu || "",
+    prochaineDate: "", prochaineHeure: "",
+    presents: presentsDepuisContacts(s), createdAt: Date.now()
+  });
+}
+function openReunionForm(r){
+  curCr = r;
+  if (!Array.isArray(curCr.presents)) curCr.presents = [];
+  $("#crTitle").textContent = `Compte rendu n°${r.num}`;
+  $("#crDate").value = r.date || "";
+  $("#crH1").value = r.heureDebut || "";
+  $("#crH2").value = r.heureFin || "";
+  $("#crLieu").value = r.lieu || "";
+  $("#crNextDate").value = r.prochaineDate || "";
+  $("#crNextH").value = r.prochaineHeure || "";
+  $("#btnCrDelete").hidden = !r.id;
+  renderCrPresents();
+  renderCrPoints();
+  $("#crModal").classList.add("on");
+  $("#crModal").scrollTop = 0;
+}
+function closeReunionForm(){ $("#crModal").classList.remove("on"); curCr = null; }
+
+function renderCrPresents(){
+  const box = $("#crPresents");
+  const arr = curCr.presents;
+  if (!arr.length){
+    box.innerHTML = `<div class="hint" style="margin:0 4px">Aucun participant. Renseignez les contacts du chantier dans les réglages, ou ajoutez-les ici.</div>`;
+    return;
+  }
+  /* Les deux champs sont éditables sur place : un participant se corrige au moment de
+     l'appel, pas dans un écran séparé. */
+  box.innerHTML = arr.map((p, i) => `<div class="cr-p">
+      <button class="cr-etat ${p.etat}" data-etat="${i}">${CR_ETATS[p.etat]}</button>
+      <span class="cr-p-txt">
+        <input class="cr-in-nom" data-nom="${i}" value="${esc(p.nom || "")}" placeholder="Nom" autocomplete="off">
+        <input class="cr-in-org" data-org="${i}" value="${esc(p.organisme || "")}" placeholder="Organisme" autocomplete="off">
+      </span>
+      <button class="cr-p-del" data-delp="${i}" aria-label="Retirer ce participant">&times;</button>
+    </div>`).join("");
+  box.querySelectorAll("[data-etat]").forEach(b => b.addEventListener("click", () => {
+    const i = Number(b.dataset.etat);
+    curCr.presents[i].etat = crEtatSuivant(curCr.presents[i].etat);
+    /* on ne redessine que la pastille : un rendu complet ferait perdre le focus au clavier */
+    b.className = "cr-etat " + curCr.presents[i].etat;
+    b.textContent = CR_ETATS[curCr.presents[i].etat];
+  }));
+  box.querySelectorAll("[data-nom]").forEach(inp => inp.addEventListener("input", () => {
+    curCr.presents[Number(inp.dataset.nom)].nom = inp.value;
+  }));
+  box.querySelectorAll("[data-org]").forEach(inp => inp.addEventListener("input", () => {
+    curCr.presents[Number(inp.dataset.org)].organisme = inp.value;
+  }));
+  box.querySelectorAll("[data-delp]").forEach(b => b.addEventListener("click", () => {
+    curCr.presents.splice(Number(b.dataset.delp), 1);
+    renderCrPresents();
+  }));
+}
+
+/* Points ouverts du chantier, groupés comme ils le seront sur le document. */
+async function crGroupes(){
+  const ouverts = (await idbAll("reserves", "projectId", CUR.id))
+    .filter(r => reserveStatut(r) !== "Soldé")
+    .sort((a, b) => (a.num || 0) - (b.num || 0));
+  const rubs = getSettings().crRubriques;
+  const connues = new Set(rubs);
+  const groupes = [];
+  for (const rb of rubs){
+    const items = ouverts.filter(r => reserveNature(r) === "suivi" && (r.rubrique || "Divers") === rb);
+    if (items.length) groupes.push([rb, items]);
+  }
+  /* une rubrique retirée des réglages ne doit pas faire disparaître ses points du document */
+  const orphelins = ouverts.filter(r => reserveNature(r) === "suivi" && r.rubrique && !connues.has(r.rubrique));
+  if (orphelins.length) groupes.push(["Autres points", orphelins]);
+  const constats = ouverts.filter(estConstat);
+  if (constats.length) groupes.push(["Constats sur l'ouvrage", constats]);
+  return {groupes, total: ouverts.length};
+}
+async function renderCrPoints(){
+  const box = $("#crPoints");
+  const {groupes, total} = await crGroupes();
+  $("#crPtCount").textContent = total ? ` · ${total} ouvert${total > 1 ? "s" : ""}` : "";
+  if (!total){
+    box.innerHTML = `<div class="hint" style="margin:0 4px">Aucun point ouvert. Ajoutez un point de suivi, ou versez les constats de la visite.</div>`;
+    return;
+  }
+  const auj = todayIso();
+  box.innerHTML = groupes.map(([titre, items]) => `<div class="cr-rub">${esc(titre)}</div>` + items.map(r => {
+    const retard = r.dateLimite && r.dateLimite < auj;
+    return `<div class="cr-pt${retard ? " late" : ""}">
+      <button class="cr-pt-open" data-pt="${r.id}">
+        <span class="cr-pt-n">${r.num}</span>
+        <span class="cc-txt"><b>${esc(r.objet || "(sans objet)")}</b>
+        <small>${esc(r.entreprise || "—")}${r.dateLimite ? " · échéance " + esc(frDate(r.dateLimite)) : " · sans échéance"}</small></span>
+      </button>
+      <button class="btn" data-solde="${r.id}">Solder</button>
+    </div>`;
+  }).join("")).join("");
+  box.querySelectorAll("[data-pt]").forEach(b => b.addEventListener("click", async () => {
+    const r = (await idbAll("reserves", "projectId", CUR.id)).find(x => x.id === Number(b.dataset.pt));
+    if (r){ retourApresReserve = true; openReserveForm(r); }
+  }));
+  box.querySelectorAll("[data-solde]").forEach(b => b.addEventListener("click", async () => {
+    const id = Number(b.dataset.solde);
+    const r = (await idbAll("reserves", "projectId", CUR.id)).find(x => x.id === id);
+    if (!r) return;
+    r.statut = "Soldé"; r.dateSolde = todayIso(); r.crSolde = curCr ? curCr.num : null;
+    await tx("reserves", "readwrite", s => s.put(r));
+    await logAction("Point", `n°${r.num}`, "Soldé", curCr ? `compte rendu n°${curCr.num}` : "");
+    await renderCrPoints();
+    toast(`Point n°${r.num} soldé`);
+  }));
+}
+/* Le point est créé puis ouvert dans le formulaire du registre : c'est le même objet, il
+   mérite le même écran. Aucune boîte de dialogue du navigateur en chemin. */
+async function crNouveauPoint(){
+  if (!CUR || !curCr) return;
+  const rubs = getSettings().crRubriques;
+  const r = await createReserve({
+    objet: "", nature: "suivi",
+    rubrique: rubs.includes("Divers") ? "Divers" : rubs[rubs.length - 1],
+    date: curCr.date || todayIso(), crNum: curCr.num
+  });
+  await renderCrPoints();
+  retourApresReserve = true;
+  crPointNeuf = r.id;
+  openReserveForm(r);
+  $("#resTitle").textContent = `Point n°${r.num}`;
+  $("#rObjet").focus();
+}
+
+/* Verse au registre les constats de la visite du jour de la réunion : c'est le geste que
+   fait tout maître d'œuvre en rentrant, et il ne doit pas se faire deux fois. */
+async function crVerserConstats(){
+  if (!CUR || !curCr) return;
+  const visites = (await projectVisits()).filter(v => v.date === curCr.date);
+  if (!visites.length){ toast(`Aucune visite datée du ${frDate(curCr.date)} sur ce chantier.`, true); return; }
+  const ids = new Set(visites.map(v => v.id));
+  const cands = (await idbAll("photos")).filter(p => ids.has(p.visitId)
+    && ["NC","PA","AC"].includes(p.statut) && !p.reserveId);
+  if (!cands.length){ toast("Aucun constat à verser : ils sont déjà tous au registre.", true); return; }
+  cands.sort((a, b) => (a.num || 0) - (b.num || 0));
+  const liste = cands.slice(0, 12).map(p => `• ${p.statut} — ${p.titre || p.description || "cliché n°" + p.num}`).join("\n");
+  if (!confirm(`Verser ${cands.length} constat(s) au registre ?\n\n${liste}${cands.length > 12 ? "\n…" : ""}`)) return;
+  for (const p of cands){
+    const r = await createReserve({
+      objet: p.titre || p.description || `Constat cliché n°${p.num}`,
+      zone: p.zone || "", entreprise: p.entreprise || "", action: p.suite || "",
+      dateLimite: p.dateLimite || "", date: curCr.date, nature: "constat", crNum: curCr.num
+    });
+    p.reserveId = r.id; p.reserveNum = r.num;
+    await tx("photos", "readwrite", s => s.put(p));
+  }
+  await renderCrPoints();
+  toast(`${cands.length} constat(s) portés au registre ✔`, true);
+}
+
+function lireReunionForm(){
+  curCr.date = $("#crDate").value;
+  curCr.heureDebut = $("#crH1").value;
+  curCr.heureFin = $("#crH2").value;
+  curCr.lieu = $("#crLieu").value.trim();
+  curCr.prochaineDate = $("#crNextDate").value;
+  curCr.prochaineHeure = $("#crNextH").value;
+}
+async function saveReunionForm(){
+  if (!curCr) return false;
+  lireReunionForm();
+  if (!curCr.date){ toast("La date de la réunion est obligatoire.", true); $("#crDate").focus(); return false; }
+  /* les points sont figés ici : le document réédité plus tard restera celui qui a été diffusé */
+  await crFigerPoints(curCr);
+  const creation = !curCr.id;
+  if (curCr.id) await tx("reunions", "readwrite", s => s.put(curCr));
+  else curCr.id = await idbAdd("reunions", curCr);
+  await logAction("Réunion", `CR n°${curCr.num}`, creation ? "Créé" : "Modifié",
+    [frDate(curCr.date), curCr.lieu].filter(Boolean));
+  toast(`Compte rendu n°${curCr.num} enregistré`);
+  await renderReunionsList();
+  return true;
+}
+async function deleteReunionForm(){
+  if (!curCr || !curCr.id) return;
+  if (!confirm(`Supprimer le compte rendu n°${curCr.num} ?\n\nLes points du registre ne sont pas supprimés : ils restent suivis.`)) return;
+  await tx("reunions", "readwrite", s => s.delete(curCr.id));
+  await logAction("Réunion", `CR n°${curCr.num}`, "Supprimé", "");
+  closeReunionForm();
+  await renderReunionsList();
+  toast("Compte rendu supprimé");
+}
+
+/* ---- Figer les points au moment de l'enregistrement ----
+   Un compte rendu est une pièce de référence : réimprimé six mois plus tard, il doit redonner
+   le document diffusé, pas l'état courant du registre. On copie donc les points dans le CR à
+   chaque enregistrement. Tant qu'il se modifie, il se met à jour ; une fois diffusé, on n'y
+   touche plus et il est gelé. */
+function crCopiePoint(r){
+  return {num:r.num, objet:r.objet || "", action:r.action || "", entreprise:r.entreprise || "",
+          zone:r.zone || "", dateLimite:r.dateLimite || "", dateSolde:r.dateSolde || "",
+          statut:reserveStatut(r), nature:reserveNature(r),
+          rubrique:r.rubrique || "", crNum:r.crNum || null};
+}
+async function crFigerPoints(cr){
+  const toutes = await idbAll("reserves", "projectId", CUR.id);
+  const precedents = (await projectReunions()).filter(x => x.num < cr.num).map(x => x.date).sort();
+  const dernier = precedents.length ? precedents[precedents.length - 1] : "";
+  cr.points = toutes.filter(r => reserveStatut(r) !== "Soldé")
+    .sort((a, b) => (a.num || 0) - (b.num || 0)).map(crCopiePoint);
+  /* soldés depuis la réunion précédente : ceux soldés depuis ce CR, et ceux soldés entre-temps
+     par une photo de levée ou depuis le registre — le compte rendu doit en rendre compte. */
+  cr.soldes = toutes.filter(r => reserveStatut(r) === "Soldé"
+      && (r.crSolde === cr.num || (r.dateSolde && (!dernier || r.dateSolde > dernier) && r.dateSolde <= cr.date)))
+    .sort((a, b) => (a.num || 0) - (b.num || 0)).map(crCopiePoint);
+  return cr;
+}
+/* Groupes du document, à partir des points figés. */
+function crGroupesDoc(cr, settings){
+  const rubs = settings.crRubriques || CR_RUBRIQUES;
+  const connues = new Set(rubs);
+  const pts = cr.points || [];
+  const g = [];
+  for (const rb of rubs){
+    const items = pts.filter(p => p.nature === "suivi" && (p.rubrique || "Divers") === rb);
+    if (items.length) g.push([rb, items]);
+  }
+  const orph = pts.filter(p => p.nature === "suivi" && p.rubrique && !connues.has(p.rubrique));
+  if (orph.length) g.push(["Autres points", orph]);
+  const cons = pts.filter(p => p.nature !== "suivi");
+  if (cons.length) g.push(["Constats sur l'ouvrage", cons]);
+  return g;
+}
+function crLibelleDiffusion(settings){
+  return (settings.contacts || []).map(l => {
+    const p = String(l).split(";").map(x => x.trim());
+    return [p[1], p[0], p[3]].filter(Boolean).join(" — ");
+  }).filter(Boolean);
+}
+
+async function pdfForCR(cr, settings){
+  const pages = [];
+  let cur = null, y = 0;
+  const newPage = () => { cur = {images:[], rects:[], texts:[]}; pages.push(cur); y = 795; };
+  const ensure = h => { if (y - h < 56) newPage(); };
+  const band = (label, h, size) => {
+    ensure(h + 8);
+    cur.rects.push({x:40, y:y-h, w:515.28, h, grad:PDF_G_BAND});
+    cur.rects.push({x:40, y:y-h, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:48, y:y - h + (h - size) / 2 + 2.2, size, font:"F2", color:PDF_NAVY, text:label});
+    y -= h + 8;
+  };
+  newPage();
+
+  /* ---- en-tête ---- */
+  cur.rects.push({x:40, y:y-58, w:515.28, h:58, grad:PDF_G_TITLE});
+  cur.rects.push({x:40, y:y-58, w:515.28, h:2.4, grad:PDF_G_RULE, horiz:true});
+  cur.texts.push({x:52, y:y-26, size:FS.title, font:"F2", color:PDF_PEACH, text:`COMPTE RENDU DE RÉUNION N° ${cr.num}`});
+  cur.texts.push({x:52, y:y-46, size:FS.subtitle, font:"F1", color:"0.88 0.93 0.98", text:"Réunion de chantier"});
+  y -= 74;
+
+  cur.texts.push({x:40, y, size:FS.lead, font:"F2", color:PDF_NAVY, text:`Opération : ${settings.proj}`}); y -= 18;
+  const horaire = [cr.heureDebut, cr.heureFin].filter(Boolean).join(" – ");
+  cur.texts.push({x:40, y, size:10, font:"F2", text:`Réunion du ${frDate(cr.date)} (${frDayName(cr.date)})${horaire ? " · " + horaire : ""}`}); y -= 15;
+  if (cr.lieu){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Lieu : ${cr.lieu}`}); y -= 14; }
+  if (settings.redac){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Rédacteur : ${settings.redac}`}); y -= 14; }
+  y -= 6;
+
+  /* ---- participants ---- */
+  const pres = cr.presents || [];
+  if (pres.length){
+    band("PARTICIPANTS", 17, FS.bandSm);
+    const PC = [42, 210, 430];
+    ensure(15);
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
+    ["ORGANISME","NOM","PRÉSENCE"].forEach((h, k) =>
+      cur.texts.push({x:PC[k]+2, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 16;
+    for (const p of pres){
+      ensure(14);
+      cur.texts.push({x:PC[0]+2, y:y-8, size:FS.small, font:"F1", text:(p.organisme || "—").slice(0, 40)});
+      cur.texts.push({x:PC[1]+2, y:y-8, size:FS.small, font:"F2", text:(p.nom || "—").slice(0, 44)});
+      const g = p.etat === "present" ? PDF_G_STATUT.C : p.etat === "excuse" ? PDF_G_STATUT.PA : PDF_G_STATUT.NC;
+      cur.rects.push({x:PC[2], y:y-11, w:58, h:12, grad:g});
+      cur.texts.push({x:PC[2] + (58 - pdfTextWidth(CR_ETATS[p.etat], FS.badge, true))/2, y:y-7.6,
+        size:FS.badge, font:"F2", color:"1 1 1", text:CR_ETATS[p.etat]});
+      cur.rects.push({x:40, y:y-13.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= 14.5;
+    }
+    y -= 10;
+  }
+
+  /* ---- points, par rubrique ---- */
+  const groupes = crGroupesDoc(cr, settings);
+  const PX = [40, 72, 262, 396, 480];
+  const enTetePoints = () => {
+    ensure(15);
+    cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
+    ["N°","OBJET","ACTION ATTENDUE","RESPONSABLE","ÉCHÉANCE"].forEach((h, k) =>
+      cur.texts.push({x:PX[k]+2, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    y -= 16;
+  };
+  if (!groupes.length){
+    band("POINTS SUIVIS", 17, FS.bandSm);
+    cur.texts.push({x:44, y:y-8, size:FS.small, font:"F1", color:PDF_GREY, text:"Aucun point ouvert à la date de la réunion."});
+    y -= 20;
+  }
+  for (const [titre, items] of groupes){
+    band(titre.toUpperCase(), 17, FS.bandSm);
+    enTetePoints();
+    const auj = todayIso();
+    for (const p of items){
+      const ol = wrapText(p.objet || "(sans objet)", 44);
+      const al = wrapText(p.action || "—", 31);
+      const rowH = Math.max(15.5, Math.max(ol.length, al.length, 1) * 9.4 + 5);
+      ensure(rowH);
+      cur.texts.push({x:PX[0]+2, y:y-8, size:FS.body, font:"F2", text:String(p.num)});
+      /* un point reporté d'un compte rendu antérieur se signale : c'est l'objet même du CR */
+      if (p.crNum && p.crNum !== cr.num)
+        cur.texts.push({x:PX[0]+2, y:y-16.5, size:FS.micro, font:"F1", color:PDF_GREY, text:`CR ${p.crNum}`});
+      let oy = y-8; for (const l of ol){ cur.texts.push({x:PX[1]+2, y:oy, size:FS.small, font:"F1", text:l}); oy -= 9.4; }
+      let ay = y-8; for (const l of al){ cur.texts.push({x:PX[2]+2, y:ay, size:FS.small, font:"F1", color:PDF_GREY, text:l}); ay -= 9.4; }
+      cur.texts.push({x:PX[3]+2, y:y-8, size:FS.small, font:"F1", text:(p.entreprise || "—").slice(0, 18)});
+      const retard = p.dateLimite && p.dateLimite < auj;
+      cur.texts.push({x:PX[4]+2, y:y-8, size:FS.small, font:retard ? "F2" : "F1",
+        color:retard ? PDF_STATUT.NC : "0 0 0", text:p.dateLimite ? frDate(p.dateLimite) : "—"});
+      cur.rects.push({x:40, y:y-rowH+1, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
+      y -= rowH;
+    }
+    y -= 10;
+  }
+
+  /* ---- points soldés depuis la réunion précédente ---- */
+  const soldes = cr.soldes || [];
+  if (soldes.length){
+    band("POINTS SOLDÉS DEPUIS LA RÉUNION PRÉCÉDENTE", 17, FS.bandSm);
+    for (const p of soldes){
+      const ol = wrapText(`n°${p.num} — ${p.objet || "(sans objet)"}`, 78);
+      const rowH = Math.max(1, ol.length) * 9.4 + 4;
+      ensure(rowH);
+      let oy = y-8; for (const l of ol){ cur.texts.push({x:44, y:oy, size:FS.small, font:"F1", text:l}); oy -= 9.4; }
+      cur.texts.push({x:470, y:y-8, size:FS.mini, font:"F1", color:PDF_STATUT.C,
+        text:p.dateSolde ? "soldé le " + frDate(p.dateSolde) : "soldé"});
+      y -= rowH;
+    }
+    y -= 10;
+  }
+
+  /* ---- prochaine réunion ---- */
+  if (cr.prochaineDate){
+    ensure(34);
+    cur.rects.push({x:40, y:y-28, w:515.28, h:28, grad:PDF_G_LABEL});
+    cur.rects.push({x:40, y:y-28, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    cur.texts.push({x:48, y:y-12, size:FS.small, font:"F2", color:PDF_NAVY, text:"PROCHAINE RÉUNION"});
+    cur.texts.push({x:48, y:y-23, size:FS.body, font:"F1",
+      text:`${frDate(cr.prochaineDate)} (${frDayName(cr.prochaineDate)})${cr.prochaineHeure ? " à " + cr.prochaineHeure : ""}${cr.lieu ? " — " + cr.lieu : ""}`});
+    y -= 40;
+  }
+
+  /* ---- diffusion ---- */
+  const diff = crLibelleDiffusion(settings);
+  if (diff.length){
+    band("DIFFUSION", 17, FS.bandSm);
+    for (const d of diff){
+      ensure(12);
+      cur.texts.push({x:44, y:y-8, size:FS.small, font:"F1", text:d.slice(0, 96)});
+      y -= 11;
+    }
+    y -= 10;
+  }
+
+  /* ---- clause de contestation ---- */
+  const delai = String(settings.crDelai || "").trim();
+  ensure(46);
+  const clause = delai
+    ? `Le présent compte rendu est réputé accepté sans réserve par les destinataires qui n'auraient pas formulé d'observation écrite dans un délai de ${delai} jours à compter de sa diffusion.`
+    : "Le présent compte rendu est réputé accepté sans réserve par les destinataires qui n'auraient pas formulé d'observation écrite dans le délai fixé au CCAP.";
+  for (const l of wrapText(clause, 104)){ ensure(11); cur.texts.push({x:40, y:y-8, size:FS.caption, font:"F1", text:l}); y -= 10; }
+  y -= 4;
+  for (const l of wrapText("Vérifiez ce délai au regard du CCAP de votre marché : l'application ne le connaît pas.", 104)){
+    ensure(11); cur.texts.push({x:40, y:y-8, size:FS.caption, font:"F2", color:PDF_STATUT.PA, text:l}); y -= 10;
+  }
+
+  /* ---- en-tête et pied de page ---- */
+  const HDR = "0.34 0.55 0.72", MARGE_D = 555.28;
+  pages.forEach((pg, i) => {
+    pg.rects.push({x:40, y:812, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:816, size:FS.caption, font:"F2", color:HDR, text:settings.proj.toUpperCase().slice(0, 60)});
+    const th = `COMPTE RENDU N° ${cr.num}`;
+    pg.texts.push({x:pdfRightX(th, FS.caption, false, MARGE_D), y:816, size:FS.caption, font:"F1", color:HDR, text:th});
+    pg.rects.push({x:40, y:36, w:515.28, h:1.4, grad:PDF_G_RULE, horiz:true});
+    pg.texts.push({x:40, y:26, size:FS.caption, font:"F1", color:HDR, text:`${settings.sub} — ${settings.proj}`.slice(0, 88)});
+    const tp = `Page ${i + 1} / ${pages.length}`;
+    pg.texts.push({x:pdfRightX(tp, FS.caption, false, MARGE_D), y:26, size:FS.caption, font:"F1", color:HDR, text:tp});
+  });
+  return buildPdf(pages);
+}
+
+async function docxForCR(cr, settings){
+  const body = [];
+  const media = [], rels = [];
+  body.push(wP(wR(`COMPTE RENDU DE RÉUNION N° ${cr.num}`, `<w:b/><w:color w:val="${DOCX_PEACH}"/><w:sz w:val="40"/>`),
+    `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="120" w:after="0"/><w:ind w:left="113" w:right="113"/>`));
+  body.push(wP(wR("Réunion de chantier", `<w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`),
+    `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:after="240"/><w:ind w:left="113" w:right="113"/>`));
+  body.push(wP(wR(`Opération : ${settings.proj}`, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="26"/>`)));
+  const horaire = [cr.heureDebut, cr.heureFin].filter(Boolean).join(" – ");
+  body.push(wP(wR(`Réunion du ${frDate(cr.date)} (${frDayName(cr.date)})${horaire ? " · " + horaire : ""}`, `<w:b/><w:sz w:val="22"/>`)));
+  if (cr.lieu) body.push(wP(wR(`Lieu : ${cr.lieu}`, `<w:sz w:val="20"/>`)));
+  if (settings.redac) body.push(wP(wR(`Rédacteur : ${settings.redac}`, `<w:sz w:val="20"/>`), `<w:spacing w:after="200"/>`));
+
+  const CET = {present:DOCX_STATUT.C, excuse:DOCX_STATUT.PA, absent:DOCX_STATUT.NC};
+  if ((cr.presents || []).length){
+    const head = `<w:tr>${["Organisme","Nom","Présence"].map((h, k) =>
+      wTc([3400,4238,2000][k], wP(wR(h, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})).join("")}</w:tr>`;
+    const rows = cr.presents.map(p => `<w:tr>${
+      wTc(3400, wP(wR(p.organisme || "—", `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`))}${
+      wTc(4238, wP(wR(p.nom || "—", `<w:b/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`))}${
+      wTc(2000, `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:shd w:val="clear" w:fill="${CET[p.etat]}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> ${escXml(CR_ETATS[p.etat])} </w:t></w:r></w:p>`)}</w:tr>`).join("");
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="3400"/><w:gridCol w:w="4238"/><w:gridCol w:w="2000"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("PARTICIPANTS", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:3, fill:DOCX_BAND})}</w:tr>${head}${rows}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  const auj = todayIso();
+  for (const [titre, items] of crGroupesDoc(cr, settings)){
+    const cols = [640, 3400, 2600, 1600, 1398];
+    const head = `<w:tr>${["N°","Objet","Action attendue","Responsable","Échéance"].map((h, k) =>
+      wTc(cols[k], wP(wR(h, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})).join("")}</w:tr>`;
+    const rows = items.map(p => {
+      const retard = p.dateLimite && p.dateLimite < auj;
+      const report = p.crNum && p.crNum !== cr.num ? ` (CR ${p.crNum})` : "";
+      return `<w:tr>${
+        wTc(cols[0], wP(wR(String(p.num) + report, `<w:b/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${
+        wTc(cols[1], wP(wR(p.objet || "(sans objet)", `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${
+        wTc(cols[2], wP(wR(p.action || "—", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${
+        wTc(cols[3], wP(wR(p.entreprise || "—", `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${
+        wTc(cols[4], wP(wR(p.dateLimite ? frDate(p.dateLimite) : "—",
+          `${retard ? `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/>` : ""}<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}</w:tr>`;
+    }).join("");
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${cols.map(c => `<w:gridCol w:w="${c}"/>`).join("")}</w:tblGrid><w:tr>${wTc(9638, wP(wR(titre.toUpperCase(), `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:5, fill:DOCX_BAND})}</w:tr>${head}${rows}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  if ((cr.soldes || []).length){
+    body.push(wP(wR("POINTS SOLDÉS DEPUIS LA RÉUNION PRÉCÉDENTE", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
+      `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="80" w:after="80"/><w:ind w:left="113"/>`));
+    for (const p of cr.soldes)
+      body.push(wP(wR(`n°${p.num} — ${p.objet || "(sans objet)"}`, `<w:sz w:val="18"/>`)
+        + wR(p.dateSolde ? `   soldé le ${frDate(p.dateSolde)}` : "   soldé", `<w:b/><w:color w:val="${DOCX_STATUT.C}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`));
+    body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  if (cr.prochaineDate){
+    body.push(wP(wR("PROCHAINE RÉUNION", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
+      `<w:shd w:val="clear" w:fill="${DOCX_LABEL}"/><w:spacing w:before="80" w:after="40"/><w:ind w:left="113"/>`));
+    body.push(wP(wR(`${frDate(cr.prochaineDate)} (${frDayName(cr.prochaineDate)})${cr.prochaineHeure ? " à " + cr.prochaineHeure : ""}${cr.lieu ? " — " + cr.lieu : ""}`,
+      `<w:sz w:val="20"/>`), `<w:spacing w:after="200"/>`));
+  }
+
+  const diff = crLibelleDiffusion(settings);
+  if (diff.length){
+    body.push(wP(wR("DIFFUSION", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
+      `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="80" w:after="60"/><w:ind w:left="113"/>`));
+    for (const d of diff) body.push(wP(wR(d, `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`));
+    body.push(wP("", `<w:spacing w:after="160"/>`));
+  }
+
+  const delai = String(settings.crDelai || "").trim();
+  body.push(wP(wR(delai
+    ? `Le présent compte rendu est réputé accepté sans réserve par les destinataires qui n'auraient pas formulé d'observation écrite dans un délai de ${delai} jours à compter de sa diffusion.`
+    : "Le présent compte rendu est réputé accepté sans réserve par les destinataires qui n'auraient pas formulé d'observation écrite dans le délai fixé au CCAP.",
+    `<w:sz w:val="16"/>`), `<w:spacing w:before="120" w:after="60"/>`));
+  body.push(wP(wR("Vérifiez ce délai au regard du CCAP de votre marché : l'application ne le connaît pas.",
+    `<w:b/><w:color w:val="${DOCX_STATUT.PA}"/><w:sz w:val="16"/>`)));
+
+  return docxEnveloppe(body, media, rels, settings, `COMPTE RENDU N° ${cr.num}`);
+}
+
+async function exportCR(cr, format){
+  if (!CUR || !cr) return;
+  try{
+    toast(`Génération du compte rendu n°${cr.num}…`);
+    const settings = getSettings();
+    const pdf = format !== "docx";
+    const blob = pdf ? await pdfForCR(cr, settings) : await docxForCR(cr, settings);
+    const nom = `Compte rendu N°${cr.num} — ${sanitizeFilename(settings.proj)} — ${shortDate(cr.date)}.${pdf ? "pdf" : "docx"}`;
+    const type = pdf ? "application/pdf"
+      : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const r = await shareOrDownload([new File([blob], nom, {type})], nom);
+    await logAction("Réunion", `CR n°${cr.num}`, "Édité", pdf ? "PDF" : "Word");
+    toast(r === "shared" ? "Compte rendu partagé ✔"
+        : r === "downloaded" ? "Compte rendu enregistré dans Téléchargements ✔" : "Partage annulé");
+  }catch(err){ toast("Erreur compte rendu : " + (err && err.message || err), true); }
+}
 
 async function nextOsNum(){
   const all = await idbAll("os", "projectId", CUR.id);
@@ -8057,6 +8805,49 @@ async function docxForVisit(visit, photos, settings){
   ], "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 }
 
+/* Enveloppe d'un document Word : en-tête, pied paginé, relations, empaquetage.
+   Écrite à part plutôt qu'extraite de `docxForVisit` : ce générateur-là produit les rapports
+   remis au maître d'ouvrage, il est éprouvé, et le refactoriser pour un document neuf ferait
+   courir un risque sans contrepartie. La duplication est ici le choix prudent. */
+function docxEnveloppe(body, media, rels, settings, titreEntete){
+  const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="6" w:color="${DOCX_PEACH}"/></w:pBdr><w:jc w:val="right"/><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">${escXml(settings.proj.toUpperCase())} — </w:t></w:r><w:r><w:rPr><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t>${escXml(titreEntete)}</w:t></w:r></w:p></w:hdr>`;
+
+  const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="6" w:color="${DOCX_PEACH}"/></w:pBdr><w:jc w:val="center"/><w:spacing w:before="60" w:after="0"/></w:pPr><w:r><w:rPr><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">${escXml(settings.sub)} — ${escXml(settings.proj)}   ·   Page </w:t></w:r><w:fldSimple w:instr=" PAGE "><w:r><w:rPr><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple><w:r><w:rPr><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> / </w:t></w:r><w:fldSimple w:instr=" NUMPAGES "><w:r><w:rPr><w:color w:val="${DOCX_BAND}"/><w:sz w:val="16"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple></w:p></w:ftr>`;
+
+  const r2 = rels.slice();
+  r2.push(`<Relationship Id="rIdH1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>`);
+  r2.push(`<Relationship Id="rIdF1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>`);
+  r2.push(`<Relationship Id="rIdSet" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>`);
+
+  const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:updateFields w:val="true"/></w:settings>`;
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body.join("")}<w:sectPr><w:headerReference w:type="default" r:id="rIdH1"/><w:footerReference w:type="default" r:id="rIdF1"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>`;
+
+  const relsRoot = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+
+  const relsDoc = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${r2.join("")}</Relationships>`;
+
+  return makeZip([
+    {name:"[Content_Types].xml", data:contentTypes},
+    {name:"_rels/.rels", data:relsRoot},
+    {name:"word/document.xml", data:documentXml},
+    {name:"word/_rels/document.xml.rels", data:relsDoc},
+    {name:"word/header1.xml", data:headerXml},
+    {name:"word/footer1.xml", data:footerXml},
+    {name:"word/settings.xml", data:settingsXml},
+    ...media
+  ], "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+}
+
 /* =============== exports =============== */
 function photoFilename(p){
   const base = p.titre ? sanitizeFilename(p.titre) : `Cliche n°${p.num}`;
@@ -8147,7 +8938,7 @@ async function saveFileChooseLocation(blob, filename, shareTitle){
    (tableau base64, chaîne JSON, Blob), et surtout le plafond dur de 512 Mo par chaîne, qui
    faisait échouer la sauvegarde au bout d'une centaine de clichés — sans autre signe qu'un
    « Invalid string length ». Les anciennes sauvegardes restent restaurables. */
-const BACKUP_SCHEMA = 8;
+const BACKUP_SCHEMA = 9;
 async function fullBackup(){
   try{
     toast("Préparation de la sauvegarde complète…");
@@ -8159,6 +8950,7 @@ async function fullBackup(){
     const photos = await idbAll("photos");
     const annexesRaw = await idbAll("annexes");
     const os = await idbAll("os");
+    const reunions = await idbAll("reunions");
     /* Les Blobs sont transmis tels quels : ils ne sont lus qu'un par un par makeZip. */
     const pieces = [];
     const photoData = [];
@@ -8175,7 +8967,8 @@ async function fullBackup(){
     }
     const notes = { app:"notes-chantier", format:"zip", schema:BACKUP_SCHEMA, appVersion:APP_VERSION,
       exportedAt:new Date().toISOString(),
-      currentProjectId: CUR ? CUR.id : null, projects, visits, reserves, controls, journal, os, annexes, photos: photoData };
+      currentProjectId: CUR ? CUR.id : null,
+      projects, visits, reserves, controls, journal, os, reunions, annexes, photos: photoData };
     toast(`Assemblage de l'archive — ${photos.length} cliché${photos.length > 1 ? "s" : ""}…`);
     const blob = await makeZip([{name:"notes.json", data: JSON.stringify(notes)}, ...pieces], "application/zip");
     const d = todayIso();
@@ -8225,7 +9018,7 @@ async function restoreBackup(file){
     if (!confirm(`Restaurer cette sauvegarde ?\n\n${nP} chantier(s), ${nV} visite(s), ${nPh} photo(s).\n\nCela REMPLACE tout le contenu actuel de l'application sur ce téléphone.`)) return;
     toast("Restauration en cours…");
     // vider les stores
-    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal","os"]){
+    for (const st of ["photos","visits","reserves","projects","annexes","controls","journal","os","reunions"]){
       await new Promise((res, rej) => { const t = db.transaction(st,"readwrite"); t.objectStore(st).clear(); t.oncomplete = res; t.onerror = () => rej(t.error); });
     }
     // réinsérer avec les identifiants d'origine
@@ -8236,6 +9029,8 @@ async function restoreBackup(file){
     for (const j of (data.journal||[])) await tx("journal","readwrite", s => s.put(j));
     /* sauvegardes antérieures au schéma 7 : aucun ordre de service à restaurer */
     for (const o of (data.os||[])) await tx("os","readwrite", s => s.put(o));
+    /* idem au schéma 9 pour les comptes rendus de réunion */
+    for (const r of (data.reunions||[])) await tx("reunions","readwrite", s => s.put(r));
     for (const a of (data.annexes||[])){
       const {b64, f, ...rest} = a;
       const u8 = piecesOctets(a, bin);
@@ -8425,6 +9220,7 @@ function refreshPhaseUI(){
    bougé — seule leur visibilité change, ce qui laisse tous les branchements intacts. */
 const SET_TITRES = {
   identite:"Identité du chantier", saisie:"Saisie rapide", entete:"En-tête des rapports",
+  reunions:"Réunions de chantier",
   plans:"Plans et vue aérienne", reperage:"Repérage linéaire", annexes:"Documents annexes",
   journal:"Journal des modifications", sauvegarde:"Sauvegarde et stockage",
   affichage:"Affichage", securite:"Sécurité", ia:"Description par IA"
@@ -8456,6 +9252,9 @@ function openSettings(){
   $("#sRedac").value = s.redac;
   $("#sZones").value = s.zones.join("\n");
   $("#sEnts").value = s.ents.join("\n");
+  $("#sCrRubriques").value = (s.crRubriques || CR_RUBRIQUES).join("\n");
+  $("#sCrLieu").value = s.crLieu || "";
+  $("#sCrDelai").value = s.crDelai || "";
   $("#sCartouche").value = s.cartouche.join("\n");
   $("#sContacts").value = s.contacts.join("\n");
   $("#sPlanZoom").value = s.planZoom;
@@ -8491,7 +9290,12 @@ async function saveSettingsUI(){
     planSections: $("#sPlanSections").value === "1",
     phase: $("#sPhase").value === "AOR" ? "AOR" : "DET",
     dateReception: $("#sReception").value || "",
-    delaiLevee: $("#sDelai").value.replace(/\D/g, "")
+    delaiLevee: $("#sDelai").value.replace(/\D/g, ""),
+    /* sans ces trois lignes, les réglages du compte rendu seraient effacés à chaque
+       enregistrement : cette fonction reconstruit l'objet à plat, elle ne le complète pas */
+    crRubriques: $("#sCrRubriques").value.split("\n").map(x => x.trim()).filter(Boolean),
+    crLieu: $("#sCrLieu").value.trim(),
+    crDelai: $("#sCrDelai").value.replace(/\D/g, "")
   };
   const phaseAvant = (getSettings() || {}).phase || "DET";
   if (CUR){ CUR.settings = s; CUR.name = s.proj; await saveCurrentProject(); }
@@ -8751,6 +9555,23 @@ async function main(){
   $("#btnRapPilotage").addEventListener("click", exportDashboardPdf);
   document.querySelectorAll("[data-pv]").forEach(b =>
     b.addEventListener("click", () => exportPV(b.dataset.pv)));
+  /* réunions de chantier */
+  $("#btnCrNew").addEventListener("click", async () => {
+    try{ await nouvelleReunion(); }catch(e){ toast("Réunion indisponible : " + (e && e.message || e), true); }
+  });
+  $("#btnCrClose").addEventListener("click", closeReunionForm);
+  $("#btnCrSave").addEventListener("click", async () => { if (await saveReunionForm()) closeReunionForm(); });
+  $("#btnCrDelete").addEventListener("click", deleteReunionForm);
+  $("#btnCrPointNew").addEventListener("click", () => crNouveauPoint());
+  $("#btnCrVerser").addEventListener("click", () => crVerserConstats());
+  $("#btnCrPresentAdd").addEventListener("click", () => {
+    if (!curCr) return;
+    curCr.presents.push({organisme:"", nom:"", qualite:"", etat:"present"});
+    renderCrPresents();
+    const dernier = $("#crPresents").querySelector(".cr-p:last-child .cr-in-nom");
+    if (dernier) dernier.focus();
+  });
+
   /* ordres de service */
   $("#btnOsNew").addEventListener("click", async () => {
     try{ await openOsForm(null); }catch(e){ toast("Ouverture impossible : " + (e && e.message || e), true); }
