@@ -382,6 +382,13 @@
   }
   .cr-in-nom{font-size:13.5px; font-weight:700}
   .cr-in-org{font-size:11.5px; color:var(--ink2)}
+  /* marques C (convoqué) et D (diffusion) : deux colonnes du tableau, à l'écran comme au document */
+  .cr-marques{display:flex; gap:6px; margin-top:5px}
+  .cr-mq{
+    width:26px; height:24px; flex:none; cursor:pointer; font:inherit; font-size:11.5px; font-weight:800;
+    border:1px solid var(--line); border-radius:7px; background:var(--chip); color:var(--ink2);
+  }
+  .cr-mq.on{background:var(--blue-soft); border-color:var(--blue-line); color:var(--blue-deep)}
   .cr-p-txt input:focus{border-bottom:1.5px solid var(--blue)}
   .cr-p-del{border:0; background:none; color:var(--ink2); font-size:20px; line-height:1; padding:4px 2px; cursor:pointer}
   /* l'état se change au doigt, sans menu : présent → excusé → absent */
@@ -421,6 +428,16 @@
   .corb .cc-txt b{display:block; font-size:13px; font-weight:700; line-height:1.25}
   .corb .cc-txt small{display:block; font-size:11.5px; color:var(--ink2); margin-top:1px}
   .corb .btn{flex:none; padding:6px 12px; font-size:12px}
+
+  /* extraits de planning rattachés à un compte rendu */
+  .cr-piece{
+    display:flex; align-items:center; gap:10px; margin-bottom:6px; padding:8px 10px;
+    border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);
+  }
+  .cr-piece img{width:64px; height:44px; object-fit:cover; border-radius:6px; border:1px solid var(--line); flex:none}
+  .cr-piece .cc-txt{flex:1; min-width:0}
+  .cr-piece .cc-txt b{display:block; font-size:13px; font-weight:700; line-height:1.25; word-break:break-word}
+  .cr-piece .cc-txt small{display:block; font-size:11.5px; color:var(--ink2); margin-top:1px}
 
   .cr-rub{
     font-size:11px; letter-spacing:.08em; text-transform:uppercase; font-weight:800;
@@ -1702,7 +1719,13 @@
     <div class="sect-label">Présents</div>
     <div id="crPresents"></div>
     <button class="btn ghost block" id="btnCrPresentAdd" style="margin-top:6px">+ Ajouter un participant</button>
-    <div class="hint" style="margin:6px 4px 0">Pré-rempli depuis les contacts du chantier. Touchez un nom pour le passer de présent à excusé, puis à absent.</div>
+    <div class="hint" style="margin:6px 4px 0">Pré-rempli depuis les contacts du chantier. Touchez la pastille pour passer de présent à excusé, puis à absent. <b>C</b> : convoqué à la prochaine réunion. <b>D</b> : destinataire de la diffusion — c'est cette colonne qui fait foi, il n'y a plus de liste séparée.</div>
+
+    <div class="sect-label" style="margin-top:18px">Planning et phasage</div>
+    <div id="crPiecesList"></div>
+    <button class="btn ghost block" id="btnCrPiece" style="margin-top:6px"><svg class="ico sm" viewBox="0 0 24 24"><use href="#i-chart"/></svg> Ajouter un extrait</button>
+    <input type="file" id="fileCrPiece" accept="image/*" hidden>
+    <div class="hint" style="margin:6px 4px 0">Une capture de votre planning, un extrait de phasage, un plan de coupe. Ces images s'impriment dans le compte rendu, à la suite des points.</div>
 
     <div class="sect-label" style="margin-top:18px">Points suivis<span id="crPtCount"></span></div>
     <div id="crPoints"></div>
@@ -1831,6 +1854,37 @@
         <label for="sCrRubriques">Rubriques des points (une par ligne, dans l'ordre du document)</label>
         <textarea id="sCrRubriques" style="min-height:110px"></textarea>
         <div class="hint">Les constats sur l'ouvrage forment toujours une rubrique à part, en fin de document : ils viennent du registre, pas de la réunion.</div>
+      </div>
+      <div class="field">
+        <label for="sCrSynthese">Synthèse par intervenant</label>
+        <select id="sCrSynthese">
+          <option value="1">En tête du compte rendu — « qui doit quoi »</option>
+          <option value="0">Ne pas l'imprimer</option>
+        </select>
+        <div class="hint">Reprend les points ouverts groupés par entreprise, les retards d'abord. Le détail par rubrique suit ensuite, inchangé.</div>
+      </div>
+      <div class="field">
+        <label for="sCrPhases">Phases du chantier (une par ligne)</label>
+        <textarea id="sCrPhases" style="min-height:100px" placeholder="PHASE 1 ; 15/06/2026 ; 26/06/2026&#10;PHASE 2.1 ; 06/07/2026 ; 21/08/2026"></textarea>
+        <div class="hint">Format : <b>nom ; début ; fin</b>. Elles apparaissent en marge du calendrier, semaine par semaine.</div>
+      </div>
+      <div class="field">
+        <label for="sCrEvents">Événements et contraintes (une par ligne)</label>
+        <textarea id="sCrEvents" style="min-height:100px" placeholder="03/07/2026 ; 09/07/2026 ; Montage de l'Estival Club ; coactivité&#10;14/07/2026 ; Férié&#10;10/08/2026 ; 2e visite du référé préventif"></textarea>
+        <div class="hint">Format : <b>date ; [date de fin] ; libellé ; [coactivité]</b>. Le mot <b>coactivité</b> en fin de ligne signale la contrainte, mise en évidence sur le document. Vos réunions de chantier s'y placent toutes seules.</div>
+      </div>
+      <div class="field">
+        <label for="sDuree">Durée du chantier</label>
+        <input type="text" id="sDuree" placeholder="Ex. : 8 mois">
+      </div>
+      <div class="field">
+        <label for="sDemarrage">Démarrage prévisionnel des travaux</label>
+        <input type="text" id="sDemarrage" placeholder="Ex. : 06/2026">
+      </div>
+      <div class="field">
+        <label for="sFinPrevue">Fin prévisionnelle</label>
+        <input type="text" id="sFinPrevue" placeholder="Ex. : début 2027">
+        <div class="hint">Ces trois repères forment le bloc marché en tête de chaque compte rendu. Saisie libre : « 8 mois », « début 2027 » — c'est ce qui figure au marché, pas une date calculée.</div>
       </div>
       <div class="field">
         <label for="sCrLieu">Lieu habituel de la réunion</label>
@@ -2328,6 +2382,15 @@ function normSettings(s){
     /* ---- comptes rendus de réunion de chantier ---- */
     crRubriques: Array.isArray(s.crRubriques) && s.crRubriques.length ? s.crRubriques : CR_RUBRIQUES.slice(),
     crLieu: s.crLieu || "",
+    /* ---- repères du marché, portés en tête des comptes rendus ---- */
+    /* synthèse « qui doit quoi » en tête du compte rendu */
+    crSynthese: s.crSynthese === undefined ? true : !!s.crSynthese,
+    /* calendrier : phases et événements, une ligne chacun — même idiome que les contacts */
+    crPhases: Array.isArray(s.crPhases) ? s.crPhases : [],
+    crEvenements: Array.isArray(s.crEvenements) ? s.crEvenements : [],
+    dureeChantier: s.dureeChantier || "",
+    demarrage: s.demarrage || "",
+    finPrevue: s.finPrevue || "",
     /* délai de contestation : il vient du CCAP, jamais de l'application. 8 jours est l'usage
        le plus répandu, ce n'est pas une règle — d'où l'avertissement porté sur le document. */
     crDelai: s.crDelai || "8"
@@ -2521,7 +2584,31 @@ async function addAnnexe(file){
   rec.id = await idbAdd("annexes", rec);
   return rec;
 }
-async function listAnnexes(){ return CUR ? (await idbAll("annexes","projectId",CUR.id)).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)) : []; }
+/* Les pièces rattachées à un compte rendu partagent le magasin des annexes — même stockage,
+   même sauvegarde, même cascade de suppression — mais ne doivent pas remonter dans les annexes
+   du chantier ni dans les rapports de visite : elles appartiennent à une réunion précise. */
+async function listAnnexes(){
+  return CUR ? (await idbAll("annexes","projectId",CUR.id))
+    .filter(a => !a.reunionId).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)) : [];
+}
+async function crPieces(reunionId){
+  if (!CUR || !reunionId) return [];
+  return (await idbAll("annexes","projectId",CUR.id))
+    .filter(a => a.reunionId === reunionId && a.isImg && a.dataUrl)
+    .sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+}
+/* Un extrait de planning ou de phasage se lit : 2200 px au lieu des 1600 d'une pièce jointe
+   ordinaire, sinon les libellés d'un Gantt deviennent illisibles à l'impression. */
+async function addPieceCR(file, reunionId){
+  if (!CUR || !reunionId) return null;
+  if (!/^image\//.test(file.type || "")) throw new Error("seules les images sont acceptées ici — exportez votre planning en image");
+  const s = await imgToStored(file, 2200, 0.86);
+  const rec = { projectId: CUR.id, reunionId, name: file.name || "extrait", type: "image/jpeg",
+    size: file.size || 0, isImg: true, dataUrl: s.d, blob: null, w: s.w, h: s.h,
+    date: todayIso(), createdAt: Date.now() };
+  rec.id = await idbAdd("annexes", rec);
+  return rec;
+}
 function annexeIcon(a){
   const n = a.isImg ? "photo" : "file";
   return `<svg class="ico" viewBox="0 0 24 24"><use href="#i-${n}"/></svg>`;
@@ -7212,11 +7299,24 @@ async function projectReunions(){
 }
 /* La feuille de présence se pré-remplit depuis les contacts du chantier : ils sont déjà
    saisis pour l'en-tête des rapports, les ressaisir serait une corvée de plus le matin. */
+/* Chaque ligne porte l'état de présence ET deux marques indépendantes, comme sur un vrai
+   compte rendu de chantier : « convoqué à la prochaine réunion » et « diffusion ». La
+   diffusion n'est donc pas une liste à part — c'est une colonne du même tableau, ce qui évite
+   qu'elle diverge de la feuille de présence. Les deux sont vraies par défaut : le cas courant
+   est que tout le monde soit reconvoqué et destinataire. */
 function presentsDepuisContacts(settings){
   return (settings.contacts || []).map(l => {
     const p = String(l).split(";").map(x => x.trim());
-    return {organisme: p[0] || "", nom: p[1] || "", qualite: "", etat: "present"};
+    return {organisme: p[0] || "", nom: p[1] || "", tel: p[2] || "", email: p[3] || "",
+            etat: "present", convoque: true, diffusion: true};
   }).filter(p => p.organisme || p.nom);
+}
+/* Fiches créées avant l'ajout des deux colonnes : on ne veut ni case vide ni « undefined ». */
+function normPresent(p){
+  return {organisme:p.organisme||"", nom:p.nom||"", tel:p.tel||"", email:p.email||"",
+          etat: CR_ETATS[p.etat] ? p.etat : "present",
+          convoque: p.convoque === undefined ? true : !!p.convoque,
+          diffusion: p.diffusion === undefined ? true : !!p.diffusion};
 }
 
 async function renderReunionsList(){
@@ -7265,7 +7365,7 @@ async function nouvelleReunion(){
 }
 function openReunionForm(r){
   curCr = r;
-  if (!Array.isArray(curCr.presents)) curCr.presents = [];
+  curCr.presents = (Array.isArray(curCr.presents) ? curCr.presents : []).map(normPresent);
   $("#crTitle").textContent = `Compte rendu n°${r.num}`;
   $("#crDate").value = r.date || "";
   $("#crH1").value = r.heureDebut || "";
@@ -7275,6 +7375,7 @@ function openReunionForm(r){
   $("#crNextH").value = r.prochaineHeure || "";
   $("#btnCrDelete").hidden = !r.id;
   renderCrPresents();
+  renderCrPieces();
   renderCrPoints();
   $("#crModal").classList.add("on");
   $("#crModal").scrollTop = 0;
@@ -7295,9 +7396,20 @@ function renderCrPresents(){
       <span class="cr-p-txt">
         <input class="cr-in-nom" data-nom="${i}" value="${esc(p.nom || "")}" placeholder="Nom" autocomplete="off">
         <input class="cr-in-org" data-org="${i}" value="${esc(p.organisme || "")}" placeholder="Organisme" autocomplete="off">
+        <span class="cr-marques">
+          <button class="cr-mq${p.convoque ? " on" : ""}" data-conv="${i}" title="Convoqué à la prochaine réunion">C</button>
+          <button class="cr-mq${p.diffusion ? " on" : ""}" data-diff="${i}" title="Destinataire de la diffusion">D</button>
+        </span>
       </span>
       <button class="cr-p-del" data-delp="${i}" aria-label="Retirer ce participant">&times;</button>
     </div>`).join("");
+  const bascule = (sel, champ) => box.querySelectorAll(sel).forEach(b => b.addEventListener("click", () => {
+    const i = Number(b.dataset[champ === "convoque" ? "conv" : "diff"]);
+    curCr.presents[i][champ] = !curCr.presents[i][champ];
+    b.classList.toggle("on", curCr.presents[i][champ]);   // rendu ciblé : ne pas perdre le clavier
+  }));
+  bascule("[data-conv]", "convoque");
+  bascule("[data-diff]", "diffusion");
   box.querySelectorAll("[data-etat]").forEach(b => b.addEventListener("click", () => {
     const i = Number(b.dataset.etat);
     curCr.presents[i].etat = crEtatSuivant(curCr.presents[i].etat);
@@ -7314,6 +7426,139 @@ function renderCrPresents(){
   box.querySelectorAll("[data-delp]").forEach(b => b.addEventListener("click", () => {
     curCr.presents.splice(Number(b.dataset.delp), 1);
     renderCrPresents();
+  }));
+}
+
+/* Même registre, autre vue : « qui doit quoi ». Les rubriques répondent à « de quoi parle-t-on »,
+   cette synthèse répond à la question que se pose chaque entreprise en sortant de réunion.
+   Les retards passent devant — c'est l'ordre dans lequel on veut les lire. */
+function crParIntervenant(cr){
+  const auj = todayIso();
+  const rang = p => (p.dateLimite && p.dateLimite < auj) ? 0 : (p.dateLimite ? 1 : 2);
+  const par = new Map();
+  for (const p of (cr.points || [])){
+    const qui = (p.entreprise || "").trim() || "Non attribué";
+    if (!par.has(qui)) par.set(qui, []);
+    par.get(qui).push(p);
+  }
+  const groupes = [...par.entries()].map(([qui, pts]) => {
+    pts.sort((a, b) => rang(a) - rang(b)
+      || (a.dateLimite || "9999").localeCompare(b.dateLimite || "9999")
+      || (a.num || 0) - (b.num || 0));
+    return {qui, pts, retards: pts.filter(p => rang(p) === 0).length};
+  });
+  /* les intervenants les plus en retard d'abord, puis par volume : on lit le plus urgent en haut */
+  groupes.sort((a, b) => b.retards - a.retards || b.pts.length - a.pts.length || a.qui.localeCompare(b.qui));
+  return groupes;
+}
+
+/* =============== calendrier des phases et réunions ===============
+   Reproduit le tableau hebdomadaire d'un compte rendu de chantier : une ligne par semaine,
+   cinq colonnes du lundi au vendredi. Les phases s'inscrivent en marge, les événements dans
+   les cases, et les réunions s'y placent d'elles-mêmes — elles sont déjà dans la base. */
+const CAL_JOURS = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi"];
+const CAL_AVANT = 3, CAL_APRES = 5;   // fenêtre autour de la réunion : 9 semaines, une pleine page
+
+/* Accepte JJ/MM/AAAA comme AAAA-MM-JJ : on saisit au clavier du téléphone, pas en ISO. */
+function calDate(s){
+  const t = String(s || "").trim();
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return t;
+  m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${String(m[2]).padStart(2,"0")}-${String(m[1]).padStart(2,"0")}`;
+  return "";
+}
+function calLundi(iso){
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+function calPlus(iso, n){
+  const d = new Date(iso + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+/* Numéro de semaine ISO : le jeudi de la semaine décide de l'année, sinon les fins d'année
+   donnent des numéros incohérents. */
+function calSemaine(iso){
+  const d = new Date(iso + "T12:00:00");
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7) + 3);
+  const j1 = new Date(Date.UTC(t.getUTCFullYear(), 0, 4));
+  return 1 + Math.round(((t - j1) / 86400000 - 3 + ((j1.getUTCDay() + 6) % 7)) / 7);
+}
+function parsePhases(lignes){
+  return (lignes || []).map(l => {
+    const p = String(l).split(";").map(x => x.trim());
+    const dates = p.map(calDate).filter(Boolean);
+    const nom = p.find(x => !calDate(x)) || "";
+    return {nom, debut: dates[0] || "", fin: dates[1] || dates[0] || ""};
+  }).filter(p => p.nom && p.debut);
+}
+function parseEvenements(lignes){
+  return (lignes || []).map(l => {
+    const p = String(l).split(";").map(x => x.trim());
+    const dates = p.map(calDate).filter(Boolean);
+    const reste = p.filter(x => !calDate(x));
+    const coact = reste.some(x => /coactiv/i.test(x));
+    const lib = reste.filter(x => !/^coactiv/i.test(x)).join(" — ");
+    return {debut: dates[0] || "", fin: dates[1] || dates[0] || "", lib, coact};
+  }).filter(e => e.debut && e.lib);
+}
+
+/* Semaines à afficher, garnies de leurs phases, événements et réunions. */
+async function calendrierCR(cr, settings){
+  const phases = parsePhases(settings.crPhases);
+  const events = parseEvenements(settings.crEvenements);
+  const reunions = (await projectReunions()).filter(r => r.date);
+  const base = calLundi(cr.date);
+  const semaines = [];
+  for (let k = -CAL_AVANT; k <= CAL_APRES; k++){
+    const lundi = calPlus(base, k * 7);
+    const vendredi = calPlus(lundi, 4);
+    const actives = phases.filter(p => p.debut <= vendredi && p.fin >= lundi).map(p => p.nom);
+    const jours = [];
+    for (let j = 0; j < 5; j++){
+      const d = calPlus(lundi, j);
+      const items = [];
+      for (const e of events) if (e.debut <= d && e.fin >= d && e.debut === d) items.push({txt:e.lib, coact:e.coact});
+      for (const r of reunions) if (r.date === d)
+        items.push({txt:`Réunion de chantier ${r.num}`, reunion:true, courante: r.id === cr.id});
+      jours.push({date: d, items});
+    }
+    semaines.push({lundi, num: calSemaine(lundi), phases: actives, jours,
+                   garnie: actives.length > 0 || jours.some(x => x.items.length)});
+  }
+  /* on rogne les semaines vides aux extrémités : un calendrier ne doit pas commencer sur du blanc */
+  while (semaines.length && !semaines[0].garnie) semaines.shift();
+  while (semaines.length && !semaines[semaines.length - 1].garnie) semaines.pop();
+  return semaines;
+}
+
+async function renderCrPieces(){
+  const box = $("#crPiecesList");
+  if (!box || !curCr) return;
+  const liste = curCr.id ? await crPieces(curCr.id) : [];
+  $("#btnCrPiece").disabled = !curCr.id;
+  if (!liste.length){
+    box.innerHTML = `<div class="hint" style="margin:0 4px">${curCr.id
+      ? "Aucun extrait. Ajoutez une capture de planning ou de phasage."
+      : "Enregistrez d'abord le compte rendu : les extraits s'y rattachent."}</div>`;
+    return;
+  }
+  box.innerHTML = liste.map(a => `<div class="cr-piece">
+      <img src="${a.dataUrl}" alt="">
+      <span class="cc-txt"><b>${esc(a.name)}</b><small>${a.w} × ${a.h} px · ${fmtSize(Math.round(a.dataUrl.length * 0.75))}</small></span>
+      <button class="cr-p-del" data-delpiece="${a.id}" aria-label="Retirer cet extrait">&times;</button>
+    </div>`).join("");
+  box.querySelectorAll("[data-delpiece]").forEach(b => b.addEventListener("click", async () => {
+    const id = Number(b.dataset.delpiece);
+    const a = (await idbAll("annexes","projectId",CUR.id)).find(x => x.id === id);
+    if (!a) return;
+    if (!confirm(`Retirer « ${a.name} » du compte rendu ?`)) return;
+    await jeter("extrait de planning", a.name, {annexes:[a]}, CUR.id);
+    await renderCrPieces();
+    toast("Extrait mis à la corbeille");
   }));
 }
 
@@ -7489,11 +7734,36 @@ function crGroupesDoc(cr, settings){
   if (cons.length) g.push(["Constats sur l'ouvrage", cons]);
   return g;
 }
-function crLibelleDiffusion(settings){
-  return (settings.contacts || []).map(l => {
-    const p = String(l).split(";").map(x => x.trim());
-    return [p[1], p[0], p[3]].filter(Boolean).join(" — ");
-  }).filter(Boolean);
+/* `crLibelleDiffusion()` a été retirée : la diffusion est devenue la colonne D de la feuille
+   de présence, et une fonction sans appelant est un piège pour la relecture suivante. */
+
+/* Page de table des matières. `decalage` compense sa propre insertion : les sections ont été
+   relevées avant qu'elle n'existe, elles descendent donc toutes d'une page. */
+function pageSommaireCR(sommaire, decalage){
+  const p = {images:[], rects:[], texts:[]};
+  let yy = 795;
+  p.rects.push({x:40, y:yy-28, w:515.28, h:28, grad:PDF_G_BAND});
+  p.rects.push({x:40, y:yy-28, w:515.28, h:1.6, grad:PDF_G_RULE, horiz:true});
+  p.texts.push({x:48, y:yy-19, size:FS.band, font:"F2", color:PDF_NAVY, text:"TABLE DES MATIÈRES"});
+  yy -= 50;
+  const largePoint = pdfTextWidth(".", FS.body, false);
+  sommaire.forEach((s, i) => {
+    if (yy < 60) return;   // un sommaire qui déborderait vaut mieux tronqué qu'illisible
+    const num = `${i + 1}.`;
+    const titre = s.titre.charAt(0) + s.titre.slice(1).toLowerCase();
+    const page = String(s.page + decalage);
+    p.texts.push({x:44, y:yy, size:FS.body, font:"F2", color:PDF_NAVY, text:num});
+    p.texts.push({x:66, y:yy, size:FS.body, font:"F1", text:titre});
+    const xPage = 555.28 - pdfTextWidth(page, FS.body, true);
+    p.texts.push({x:xPage, y:yy, size:FS.body, font:"F2", text:page});
+    /* points de conduite : calculés, pas devinés — sinon ils chevauchent le numéro de page */
+    const debut = 66 + pdfTextWidth(titre, FS.body, false) + 5;
+    const fin = xPage - 5;
+    const n = Math.floor((fin - debut) / largePoint);
+    if (n > 1) p.texts.push({x:debut, y:yy, size:FS.body, font:"F1", color:PDF_GREY, text:".".repeat(n)});
+    yy -= 19;
+  });
+  return p;
 }
 
 async function pdfForCR(cr, settings){
@@ -7508,7 +7778,25 @@ async function pdfForCR(cr, settings){
     cur.texts.push({x:48, y:y - h + (h - size) / 2 + 2.2, size, font:"F2", color:PDF_NAVY, text:label});
     y -= h + 8;
   };
+  /* Sections mémorisées au fil de la composition : la table des matières ne peut être écrite
+     qu'une fois les pages connues. On relève donc la page de chaque section, puis on insère
+     la table après coup — d'où le décalage d'une page appliqué à tous les renvois. */
+  const sommaire = [];
+  const section = label => {
+    ensure(25);                                  // même garde que band : fixe la page avant de relever
+    sommaire.push({titre: label, page: pages.length});
+    band(label, 17, FS.bandSm);
+  };
+
   newPage();
+
+  /* ---- logos du chantier, comme en tête des rapports de visite ---- */
+  const L = getLogo("logoL"), Rs = getLogosR();
+  const logoH = 34;
+  if (L){ const dw = logoH * L.w / L.h; cur.images.push({bytes:logoBytes(L), w:L.w, h:L.h, x:40, y:y-logoH, dw, dh:logoH}); }
+  let rx = 555.28;
+  for (const R of Rs){ const dw = logoH * R.w / R.h; rx -= dw; cur.images.push({bytes:logoBytes(R), w:R.w, h:R.h, x:rx, y:y-logoH, dw, dh:logoH}); rx -= 10; }
+  y -= (L || Rs.length) ? 52 : 6;
 
   /* ---- en-tête ---- */
   cur.rects.push({x:40, y:y-58, w:515.28, h:58, grad:PDF_G_TITLE});
@@ -7522,30 +7810,163 @@ async function pdfForCR(cr, settings){
   cur.texts.push({x:40, y, size:10, font:"F2", text:`Réunion du ${frDate(cr.date)} (${frDayName(cr.date)})${horaire ? " · " + horaire : ""}`}); y -= 15;
   if (cr.lieu){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Lieu : ${cr.lieu}`}); y -= 14; }
   if (settings.redac){ cur.texts.push({x:40, y, size:9.5, font:"F1", text:`Rédacteur : ${settings.redac}`}); y -= 14; }
-  y -= 6;
+  y -= 8;
+
+  /* ---- bloc marché : les repères qui ne changent pas d'une réunion à l'autre ---- */
+  const marche = [["DURÉE DU CHANTIER", settings.dureeChantier], ["DÉMARRAGE PRÉVISIONNEL", settings.demarrage],
+                  ["FIN PRÉVISIONNELLE", settings.finPrevue]].filter(m => (m[1] || "").trim());
+  if (marche.length){
+    ensure(34);
+    const larg = (515.28 - (marche.length - 1) * 8) / marche.length;
+    marche.forEach(([lab, val], k) => {
+      const x = 40 + k * (larg + 8);
+      cur.rects.push({x, y:y-30, w:larg, h:30, grad:PDF_G_LABEL});
+      cur.rects.push({x, y:y-30, w:larg, h:1.4, grad:PDF_G_RULE, horiz:true});
+      cur.texts.push({x:x+7, y:y-12, size:FS.micro, font:"F2", color:PDF_NAVY, text:lab});
+      cur.texts.push({x:x+7, y:y-24, size:FS.body, font:"F2", text:String(val).slice(0, 26)});
+    });
+    y -= 42;
+  }
 
   /* ---- participants ---- */
-  const pres = cr.presents || [];
+  /* Feuille de présence en matrice, comme sur un compte rendu de chantier classique :
+     P présent · A absent · E excusé · C convoqué à la prochaine réunion · D diffusion.
+     La diffusion est une colonne de ce tableau et non une liste séparée — deux listes
+     finissent toujours par diverger. */
+  const pres = (cr.presents || []).map(normPresent);
   if (pres.length){
     band("PARTICIPANTS", 17, FS.bandSm);
-    const PC = [42, 210, 430];
+    cur.texts.push({x:44, y:y-7, size:FS.micro, font:"F1", color:PDF_GREY,
+      text:"P : présent  ·  A : absent  ·  E : absent excusé  ·  C : convoqué à la prochaine réunion  ·  D : diffusion"});
+    y -= 16;
+    const PC = [42, 168, 300];                 // organisme · représentant · e-mail
+    const MQ = [452, 473, 494, 515, 536];      // P A E C D
     ensure(15);
     cur.rects.push({x:40, y:y-11, w:515.28, h:14, grad:PDF_G_LABEL});
-    ["ORGANISME","NOM","PRÉSENCE"].forEach((h, k) =>
+    ["SOCIÉTÉ","REPRÉSENTANT","E-MAIL"].forEach((h, k) =>
       cur.texts.push({x:PC[k]+2, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
+    ["P","A","E","C","D"].forEach((h, k) =>
+      cur.texts.push({x:MQ[k] + (17 - pdfTextWidth(h, FS.mini, true))/2, y:y-7, size:FS.mini, font:"F2", color:PDF_NAVY, text:h}));
     y -= 16;
     for (const p of pres){
       ensure(14);
-      cur.texts.push({x:PC[0]+2, y:y-8, size:FS.small, font:"F1", text:(p.organisme || "—").slice(0, 40)});
-      cur.texts.push({x:PC[1]+2, y:y-8, size:FS.small, font:"F2", text:(p.nom || "—").slice(0, 44)});
-      const g = p.etat === "present" ? PDF_G_STATUT.C : p.etat === "excuse" ? PDF_G_STATUT.PA : PDF_G_STATUT.NC;
-      cur.rects.push({x:PC[2], y:y-11, w:58, h:12, grad:g});
-      cur.texts.push({x:PC[2] + (58 - pdfTextWidth(CR_ETATS[p.etat], FS.badge, true))/2, y:y-7.6,
-        size:FS.badge, font:"F2", color:"1 1 1", text:CR_ETATS[p.etat]});
+      cur.texts.push({x:PC[0]+2, y:y-8, size:FS.small, font:"F1", text:(p.organisme || "—").slice(0, 30)});
+      cur.texts.push({x:PC[1]+2, y:y-8, size:FS.small, font:"F2", text:(p.nom || "—").slice(0, 31)});
+      cur.texts.push({x:PC[2]+2, y:y-8, size:FS.micro, font:"F1", color:PDF_GREY, text:(p.email || "").slice(0, 36)});
+      const croix = [p.etat === "present", p.etat === "absent", p.etat === "excuse", p.convoque, p.diffusion];
+      croix.forEach((v, k) => { if (v)
+        cur.texts.push({x:MQ[k] + (17 - pdfTextWidth("X", FS.small, true))/2, y:y-8, size:FS.small, font:"F2", color:PDF_NAVY, text:"X"}); });
       cur.rects.push({x:40, y:y-13.5, w:515.28, h:0.5, color:"0.88 0.9 0.93"});
       y -= 14.5;
     }
     y -= 10;
+  }
+
+  /* La table des matières s'insérera ici : page propre après la feuille de présence, comme
+     sur un compte rendu de chantier classique. On note la position avant d'ouvrir le corps. */
+  const posSommaire = pages.length;
+  newPage();
+
+  /* ---- synthèse par intervenant : « qui doit quoi », avant tout le reste ---- */
+  const parQui = settings.crSynthese === false ? [] : crParIntervenant(cr);
+  if (parQui.length){
+    section("POINTS DE PRIORITÉ");
+    cur.texts.push({x:40, y:y-8, size:FS.small, font:"F1", color:PDF_GREY,
+      text:"En priorité, chaque intervenant traite les points suivants. Le détail figure aux rubriques."});
+    y -= 18;
+    const auj = todayIso();
+    for (const g of parQui){
+      ensure(26);
+      cur.rects.push({x:40, y:y-13, w:515.28, h:15, color:PDF_LABEL});
+      cur.texts.push({x:44, y:y-9, size:FS.small, font:"F2", color:PDF_NAVY, text:g.qui.slice(0, 52)});
+      if (g.retards){
+        const et = `${g.retards} en retard`;
+        cur.texts.push({x:555.28 - pdfTextWidth(et, FS.mini, true) - 4, y:y-9, size:FS.mini, font:"F2", color:PDF_STATUT.NC, text:et});
+      }
+      y -= 17;
+      for (const p of g.pts){
+        const retard = p.dateLimite && p.dateLimite < auj;
+        const ech = p.dateLimite ? frDate(p.dateLimite) : "—";
+        const lignes = wrapText(p.objet || "(sans objet)", 78);
+        const rowH = Math.max(1, lignes.length) * 9.4 + 3;
+        ensure(rowH);
+        cur.texts.push({x:44, y:y-8, size:FS.body, font:"F2", color:retard ? PDF_STATUT.NC : PDF_NAVY, text:String(p.num)});
+        let ly = y-8;
+        for (const l of lignes){ cur.texts.push({x:66, y:ly, size:FS.small, font:"F1", text:l}); ly -= 9.4; }
+        cur.texts.push({x:555.28 - pdfTextWidth(ech, FS.small, retard) - 2, y:y-8, size:FS.small,
+          font:retard ? "F2" : "F1", color:retard ? PDF_STATUT.NC : PDF_GREY, text:ech});
+        y -= rowH;
+      }
+      y -= 8;
+    }
+    y -= 4;
+  }
+
+  /* ---- calendrier hebdomadaire ---- */
+  const semaines = await calendrierCR(cr, settings);
+  if (semaines.length){
+    section("CALENDRIER");
+    const CW = 62, JW = (515.28 - CW) / 5;
+    const XJ = k => 40 + CW + k * JW;
+    const enTeteCal = () => {
+      ensure(16);
+      cur.rects.push({x:40, y:y-12, w:515.28, h:14, grad:PDF_G_LABEL});
+      cur.texts.push({x:44, y:y-8, size:FS.micro, font:"F2", color:PDF_NAVY, text:"SEMAINE"});
+      CAL_JOURS.forEach((j, k) =>
+        cur.texts.push({x:XJ(k) + (JW - pdfTextWidth(j, FS.mini, true))/2, y:y-8, size:FS.mini, font:"F2", color:PDF_NAVY, text:j}));
+      y -= 15;
+    };
+    enTeteCal();
+    for (const sem of semaines){
+      /* hauteur dictée par la journée la plus chargée */
+      const cells = sem.jours.map(d => d.items.flatMap(it => wrapText(it.txt, 23).map(l => ({l, it}))));
+      const hCell = Math.max(...cells.map(c => c.length), 0);
+      const rowH = Math.max(24, 13 + hCell * 7.8 + 4);
+      if (y - rowH < 56){ newPage(); enTeteCal(); }
+      cur.rects.push({x:40, y:y-rowH, w:CW, h:rowH, grad:PDF_G_LABEL});
+      cur.texts.push({x:44, y:y-11, size:FS.mini, font:"F2", color:PDF_NAVY, text:"S" + sem.num});
+      let py = y - 21;
+      for (const p of sem.phases.slice(0, 3)){
+        for (const l of wrapText(p, 13)){ cur.texts.push({x:44, y:py, size:FS.micro, font:"F2", color:PDF_PEACH, text:l}); py -= 7.4; }
+      }
+      sem.jours.forEach((d, k) => {
+        cur.texts.push({x:XJ(k)+3, y:y-11, size:FS.micro, font:"F2", text:frDate(d.date).slice(0, 5)});
+        let iy = y - 20;
+        for (const {l, it} of cells[k]){
+          const coul = it.coact ? PDF_STATUT.C : it.reunion ? (it.courante ? PDF_PEACH : PDF_NAVY) : "0 0 0";
+          cur.texts.push({x:XJ(k)+3, y:iy, size:FS.micro, font:it.reunion ? "F2" : "F1", color:coul, text:l});
+          iy -= 7.8;
+        }
+        cur.rects.push({x:XJ(k)-0.3, y:y-rowH, w:0.5, h:rowH, color:"0.85 0.87 0.9"});
+      });
+      cur.rects.push({x:40, y:y-rowH, w:515.28, h:0.5, color:"0.82 0.85 0.89"});
+      y -= rowH;
+    }
+    y -= 6;
+    ensure(12);
+    cur.texts.push({x:40, y:y-8, size:FS.micro, font:"F1", color:PDF_GREY,
+      text:"Les contraintes de coactivité sur site figurent en vert. La réunion objet du présent compte rendu est signalée en orange."});
+    y -= 18;
+  }
+
+  /* ---- planning et phasage : en tête du corps, comme sur un compte rendu classique ----
+     Le contexte visuel se pose avant la liste des points, pas après. */
+  const pieces = await crPieces(cr.id);
+  if (pieces.length){
+    section("PLANNING ET PHASAGE");
+    for (const a of pieces){
+      const sc = Math.min(515.28 / a.w, 620 / a.h);
+      const dw = a.w * sc, dh = a.h * sc;
+      ensure(dh + 22);
+      if (y - dh - 22 < 56){ newPage(); }
+      cur.texts.push({x:40, y:y-9, size:FS.mini, font:"F2", color:PDF_NAVY, text:(a.name || "extrait").slice(0, 90)});
+      y -= 14;
+      const bx = 40 + (515.28 - dw) / 2;
+      cur.images.push({bytes: Uint8Array.from(atob(a.dataUrl.split(",")[1]), c => c.charCodeAt(0)),
+        w:a.w, h:a.h, x:bx, y:y-dh, dw, dh});
+      y -= dh + 12;
+    }
+    y -= 6;
   }
 
   /* ---- points, par rubrique ---- */
@@ -7559,12 +7980,12 @@ async function pdfForCR(cr, settings){
     y -= 16;
   };
   if (!groupes.length){
-    band("POINTS SUIVIS", 17, FS.bandSm);
+    section("POINTS SUIVIS");
     cur.texts.push({x:44, y:y-8, size:FS.small, font:"F1", color:PDF_GREY, text:"Aucun point ouvert à la date de la réunion."});
     y -= 20;
   }
   for (const [titre, items] of groupes){
-    band(titre.toUpperCase(), 17, FS.bandSm);
+    section(titre.toUpperCase());
     enTetePoints();
     const auj = todayIso();
     for (const p of items){
@@ -7591,7 +8012,7 @@ async function pdfForCR(cr, settings){
   /* ---- points soldés depuis la réunion précédente ---- */
   const soldes = cr.soldes || [];
   if (soldes.length){
-    band("POINTS SOLDÉS DEPUIS LA RÉUNION PRÉCÉDENTE", 17, FS.bandSm);
+    section("POINTS SOLDÉS DEPUIS LA RÉUNION PRÉCÉDENTE");
     for (const p of soldes){
       const ol = wrapText(`n°${p.num} — ${p.objet || "(sans objet)"}`, 78);
       const rowH = Math.max(1, ol.length) * 9.4 + 4;
@@ -7615,17 +8036,8 @@ async function pdfForCR(cr, settings){
     y -= 40;
   }
 
-  /* ---- diffusion ---- */
-  const diff = crLibelleDiffusion(settings);
-  if (diff.length){
-    band("DIFFUSION", 17, FS.bandSm);
-    for (const d of diff){
-      ensure(12);
-      cur.texts.push({x:44, y:y-8, size:FS.small, font:"F1", text:d.slice(0, 96)});
-      y -= 11;
-    }
-    y -= 10;
-  }
+  /* Plus de section « Diffusion » : elle est devenue la colonne D de la feuille de présence.
+     Deux endroits où lire la même chose finissaient par ne plus dire la même chose. */
 
   /* ---- clause de contestation ---- */
   const delai = String(settings.crDelai || "").trim();
@@ -7638,6 +8050,10 @@ async function pdfForCR(cr, settings){
   for (const l of wrapText("Vérifiez ce délai au regard du CCAP de votre marché : l'application ne le connaît pas.", 104)){
     ensure(11); cur.texts.push({x:40, y:y-8, size:FS.caption, font:"F2", color:PDF_STATUT.PA, text:l}); y -= 10;
   }
+
+  /* ---- table des matières, insérée une fois les pages connues ----
+     Sous trois sections elle n'apporte rien : un document de deux pages se parcourt à l'œil. */
+  if (sommaire.length >= 3) pages.splice(posSommaire, 0, pageSommaireCR(sommaire, 1));
 
   /* ---- en-tête et pied de page ---- */
   const HDR = "0.34 0.55 0.72", MARGE_D = 555.28;
@@ -7657,6 +8073,22 @@ async function pdfForCR(cr, settings){
 async function docxForCR(cr, settings){
   const body = [];
   const media = [], rels = [];
+  /* logos du chantier, même disposition que sur les rapports de visite */
+  const L = getLogo("logoL"), Rs = getLogosR();
+  if (L || Rs.length){
+    const maxCy = 457200;
+    const logoImg = (l, rid, id) => {
+      media.push({name:`word/media/${rid}.jpg`, data:logoBytes(l)});
+      rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${rid}.jpg"/>`);
+      const cy = maxCy, cx = Math.round(l.w * maxCy / l.h);
+      return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Logo${id}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="Logo${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+    };
+    const gap = `<w:r><w:rPr/><w:t xml:space="preserve">   </w:t></w:r>`;
+    const g = wTc(4819, `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="left"/></w:pPr>${L ? logoImg(L, "rIdCL", 951) : ""}</w:p>`);
+    const d = wTc(4819, `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="right"/></w:pPr>${Rs.map((l,i)=>logoImg(l,"rIdCR"+i,952+i)).join(gap)}</w:p>`);
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="4819"/><w:gridCol w:w="4819"/></w:tblGrid><w:tr>${g}${d}</w:tr></w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="120"/>`));
+  }
   body.push(wP(wR(`COMPTE RENDU DE RÉUNION N° ${cr.num}`, `<w:b/><w:color w:val="${DOCX_PEACH}"/><w:sz w:val="40"/>`),
     `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="120" w:after="0"/><w:ind w:left="113" w:right="113"/>`));
   body.push(wP(wR("Réunion de chantier", `<w:color w:val="${DOCX_NAVY}"/><w:sz w:val="22"/>`),
@@ -7667,16 +8099,100 @@ async function docxForCR(cr, settings){
   if (cr.lieu) body.push(wP(wR(`Lieu : ${cr.lieu}`, `<w:sz w:val="20"/>`)));
   if (settings.redac) body.push(wP(wR(`Rédacteur : ${settings.redac}`, `<w:sz w:val="20"/>`), `<w:spacing w:after="200"/>`));
 
-  const CET = {present:DOCX_STATUT.C, excuse:DOCX_STATUT.PA, absent:DOCX_STATUT.NC};
-  if ((cr.presents || []).length){
-    const head = `<w:tr>${["Organisme","Nom","Présence"].map((h, k) =>
-      wTc([3400,4238,2000][k], wP(wR(h, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})).join("")}</w:tr>`;
-    const rows = cr.presents.map(p => `<w:tr>${
-      wTc(3400, wP(wR(p.organisme || "—", `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`))}${
-      wTc(4238, wP(wR(p.nom || "—", `<w:b/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`))}${
-      wTc(2000, `<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:shd w:val="clear" w:fill="${CET[p.etat]}"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve"> ${escXml(CR_ETATS[p.etat])} </w:t></w:r></w:p>`)}</w:tr>`).join("");
-    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="3400"/><w:gridCol w:w="4238"/><w:gridCol w:w="2000"/></w:tblGrid><w:tr>${wTc(9638, wP(wR("PARTICIPANTS", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:3, fill:DOCX_BAND})}</w:tr>${head}${rows}</w:tbl>`);
-    body.push(wP("", `<w:spacing w:after="160"/>`));
+  /* bloc marché : les repères qui ne changent pas d'une réunion à l'autre */
+  const marche = [["Durée du chantier", settings.dureeChantier], ["Démarrage prévisionnel", settings.demarrage],
+                  ["Fin prévisionnelle", settings.finPrevue]].filter(m => (m[1] || "").trim());
+  if (marche.length){
+    const larg = Math.floor(9638 / marche.length);
+    const tete = `<w:tr>${marche.map(m => wTc(larg, wP(wR(m[0].toUpperCase(), `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})).join("")}</w:tr>`;
+    const vals = `<w:tr>${marche.map(m => wTc(larg, wP(wR(String(m[1]), `<w:b/><w:sz w:val="19"/>`), `<w:spacing w:after="0"/>`))).join("")}</w:tr>`;
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${marche.map(()=>`<w:gridCol w:w="${larg}"/>`).join("")}</w:tblGrid>${tete}${vals}</w:tbl>`);
+    body.push(wP("", `<w:spacing w:after="200"/>`));
+  }
+
+  const presW = (cr.presents || []).map(normPresent);
+  if (presW.length){
+    const C = [2500, 2500, 2738, 380, 380, 380, 380, 380];   // société · représentant · e-mail · P A E C D
+    const tetes = ["Société","Représentant","E-mail","P","A","E","C","D"];
+    const head = `<w:tr>${tetes.map((h, k) =>
+      wTc(C[k], wP(wR(h, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/>${k >= 3 ? '<w:jc w:val="center"/>' : ""}`), {fill:DOCX_LABEL})).join("")}</w:tr>`;
+    const croixW = v => `<w:p><w:pPr><w:spacing w:after="0"/><w:jc w:val="center"/></w:pPr>${v ? wR("X", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="17"/>`) : ""}</w:p>`;
+    const rows = presW.map(p => `<w:tr>${
+      wTc(C[0], wP(wR(p.organisme || "—", `<w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}${
+      wTc(C[1], wP(wR(p.nom || "—", `<w:b/><w:sz w:val="16"/>`), `<w:spacing w:after="0"/>`))}${
+      wTc(C[2], wP(wR(p.email || "", `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/>`))}${
+      wTc(C[3], croixW(p.etat === "present"))}${
+      wTc(C[4], croixW(p.etat === "absent"))}${
+      wTc(C[5], croixW(p.etat === "excuse"))}${
+      wTc(C[6], croixW(p.convoque))}${
+      wTc(C[7], croixW(p.diffusion))}</w:tr>`).join("");
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${C.map(c=>`<w:gridCol w:w="${c}"/>`).join("")}</w:tblGrid><w:tr>${wTc(9638, wP(wR("PARTICIPANTS", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`), {span:8, fill:DOCX_BAND})}</w:tr>${head}${rows}</w:tbl>`);
+    body.push(wP(wR("P : présent · A : absent · E : absent excusé · C : convoqué à la prochaine réunion · D : diffusion",
+      `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:before="60" w:after="160"/>`));
+  }
+
+  /* synthèse par intervenant, en tête */
+  const parQuiW = settings.crSynthese === false ? [] : crParIntervenant(cr);
+  if (parQuiW.length){
+    const aujW = todayIso();
+    body.push(wP(wR("POINTS DE PRIORITÉ", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
+      `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="80" w:after="60"/><w:ind w:left="113"/>`));
+    body.push(wP(wR("En priorité, chaque intervenant traite les points suivants. Le détail figure aux rubriques.",
+      `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="16"/>`), `<w:spacing w:after="120"/>`));
+    for (const g of parQuiW){
+      const tete = `<w:tr>${wTc(7600, wP(wR(g.qui, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})}${
+        wTc(2038, wP(wR(g.retards ? `${g.retards} en retard` : "", `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/><w:sz w:val="15"/>`), `<w:spacing w:after="0"/><w:jc w:val="right"/>`), {fill:DOCX_LABEL})}</w:tr>`;
+      const lignes = g.pts.map(p => {
+        const retard = p.dateLimite && p.dateLimite < aujW;
+        return `<w:tr>${wTc(7600, wP(wR(`${p.num} — ${p.objet || "(sans objet)"}`, `<w:sz w:val="17"/>`), `<w:spacing w:after="0"/>`))}${
+          wTc(2038, wP(wR(p.dateLimite ? frDate(p.dateLimite) : "—",
+            `${retard ? `<w:b/><w:color w:val="${DOCX_STATUT.NC}"/>` : `<w:color w:val="${DOCX_GREY}"/>`}<w:sz w:val="16"/>`), `<w:spacing w:after="0"/><w:jc w:val="right"/>`))}</w:tr>`;
+      }).join("");
+      body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="7600"/><w:gridCol w:w="2038"/></w:tblGrid>${tete}${lignes}</w:tbl>`);
+      body.push(wP("", `<w:spacing w:after="120"/>`));
+    }
+  }
+
+  /* calendrier hebdomadaire */
+  const semW = await calendrierCR(cr, settings);
+  if (semW.length){
+    const CW = 1100, JW = Math.floor((9638 - CW) / 5);
+    const tete = `<w:tr>${[wTc(CW, wP(wR("Semaine", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/>`), {fill:DOCX_LABEL})]
+      .concat(CAL_JOURS.map(j => wTc(JW, wP(wR(j, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/><w:jc w:val="center"/>`), {fill:DOCX_LABEL}))).join("")}</w:tr>`;
+    const lignes = semW.map(sem => {
+      const marge = wTc(CW, wP(wR("S" + sem.num, `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="14"/>`), `<w:spacing w:after="0"/>`)
+        + sem.phases.slice(0,3).map(p => wP(wR(p, `<w:b/><w:color w:val="${DOCX_PEACH}"/><w:sz w:val="12"/>`), `<w:spacing w:after="0"/>`)).join(""), {fill:DOCX_LABEL});
+      const jours = sem.jours.map(d => {
+        const items = d.items.map(it => {
+          const coul = it.coact ? DOCX_STATUT.C : it.reunion ? (it.courante ? DOCX_PEACH : DOCX_NAVY) : "000000";
+          return wP(wR(it.txt, `${it.reunion ? "<w:b/>" : ""}<w:color w:val="${coul}"/><w:sz w:val="12"/>`), `<w:spacing w:after="0"/>`);
+        }).join("");
+        return wTc(JW, wP(wR(frDate(d.date).slice(0,5), `<w:b/><w:sz w:val="13"/>`), `<w:spacing w:after="0"/>`) + items);
+      }).join("");
+      return `<w:tr>${marge}${jours}</w:tr>`;
+    }).join("");
+    body.push(wP(wR("CALENDRIER", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
+      `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="80" w:after="80"/><w:ind w:left="113"/>`));
+    body.push(`<w:tbl><w:tblPr><w:tblW w:w="9638" w:type="dxa"/>${TBL_BORDERS}<w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${CW}"/>${CAL_JOURS.map(()=>`<w:gridCol w:w="${JW}"/>`).join("")}</w:tblGrid>${tete}${lignes}</w:tbl>`);
+    body.push(wP(wR("Les contraintes de coactivité sur site figurent en vert. La réunion objet du présent compte rendu est signalée en orange.",
+      `<w:color w:val="${DOCX_GREY}"/><w:sz w:val="14"/>`), `<w:spacing w:before="60" w:after="160"/>`));
+  }
+
+  /* planning et phasage, en tête du corps */
+  const piecesW = await crPieces(cr.id);
+  if (piecesW.length){
+    body.push(wP(wR("PLANNING ET PHASAGE", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
+      `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="80" w:after="80"/><w:ind w:left="113"/>`));
+    let pid = 700;
+    for (const a of piecesW){
+      const rid = "rIdCP" + pid;
+      media.push({name:`word/media/${rid}.jpg`, data: Uint8Array.from(atob(a.dataUrl.split(",")[1]), c => c.charCodeAt(0))});
+      rels.push(`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${rid}.jpg"/>`);
+      const cx = 5486400, cy = Math.round(a.h * cx / a.w);   // pleine largeur utile ≈ 15,2 cm
+      body.push(wP(wR(a.name || "extrait", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="15"/>`), `<w:spacing w:after="40"/>`));
+      body.push(`<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="160"/></w:pPr>${wImg(rid, cx, cy, pid)}</w:p>`);
+      pid++;
+    }
   }
 
   const auj = todayIso();
@@ -7715,14 +8231,7 @@ async function docxForCR(cr, settings){
       `<w:sz w:val="20"/>`), `<w:spacing w:after="200"/>`));
   }
 
-  const diff = crLibelleDiffusion(settings);
-  if (diff.length){
-    body.push(wP(wR("DIFFUSION", `<w:b/><w:color w:val="${DOCX_NAVY}"/><w:sz w:val="18"/>`),
-      `<w:shd w:val="clear" w:fill="${DOCX_BAND}"/><w:spacing w:before="80" w:after="60"/><w:ind w:left="113"/>`));
-    for (const d of diff) body.push(wP(wR(d, `<w:sz w:val="18"/>`), `<w:spacing w:after="0"/>`));
-    body.push(wP("", `<w:spacing w:after="160"/>`));
-  }
-
+  /* la diffusion est la colonne D de la feuille de présence — pas de section séparée */
   const delai = String(settings.crDelai || "").trim();
   body.push(wP(wR(delai
     ? `Le présent compte rendu est réputé accepté sans réserve par les destinataires qui n'auraient pas formulé d'observation écrite dans un délai de ${delai} jours à compter de sa diffusion.`
@@ -9521,6 +10030,12 @@ function openSettings(){
   $("#sCrRubriques").value = (s.crRubriques || CR_RUBRIQUES).join("\n");
   $("#sCrLieu").value = s.crLieu || "";
   $("#sCrDelai").value = s.crDelai || "";
+  $("#sCrSynthese").value = s.crSynthese === false ? "0" : "1";
+  $("#sCrPhases").value = (s.crPhases || []).join("\n");
+  $("#sCrEvents").value = (s.crEvenements || []).join("\n");
+  $("#sDuree").value = s.dureeChantier || "";
+  $("#sDemarrage").value = s.demarrage || "";
+  $("#sFinPrevue").value = s.finPrevue || "";
   $("#sCartouche").value = s.cartouche.join("\n");
   $("#sContacts").value = s.contacts.join("\n");
   $("#sPlanZoom").value = s.planZoom;
@@ -9561,7 +10076,13 @@ async function saveSettingsUI(){
        enregistrement : cette fonction reconstruit l'objet à plat, elle ne le complète pas */
     crRubriques: $("#sCrRubriques").value.split("\n").map(x => x.trim()).filter(Boolean),
     crLieu: $("#sCrLieu").value.trim(),
-    crDelai: $("#sCrDelai").value.replace(/\D/g, "")
+    crDelai: $("#sCrDelai").value.replace(/\D/g, ""),
+    crSynthese: $("#sCrSynthese").value === "1",
+    crPhases: $("#sCrPhases").value.split("\n").map(x => x.trim()).filter(Boolean),
+    crEvenements: $("#sCrEvents").value.split("\n").map(x => x.trim()).filter(Boolean),
+    dureeChantier: $("#sDuree").value.trim(),
+    demarrage: $("#sDemarrage").value.trim(),
+    finPrevue: $("#sFinPrevue").value.trim()
   };
   const phaseAvant = (getSettings() || {}).phase || "DET";
   if (CUR){ CUR.settings = s; CUR.name = s.proj; await saveCurrentProject(); }
@@ -9838,11 +10359,22 @@ async function main(){
   $("#btnCrClose").addEventListener("click", closeReunionForm);
   $("#btnCrSave").addEventListener("click", async () => { if (await saveReunionForm()) closeReunionForm(); });
   $("#btnCrDelete").addEventListener("click", deleteReunionForm);
+  $("#btnCrPiece").addEventListener("click", () => $("#fileCrPiece").click());
+  $("#fileCrPiece").addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f || !curCr) return;
+    try{
+      toast("Traitement de l'extrait…");
+      await addPieceCR(f, curCr.id);
+      await renderCrPieces();
+      toast("Extrait ajouté au compte rendu");
+    }catch(err){ toast("Extrait refusé : " + (err && err.message || err), true); }
+  });
   $("#btnCrPointNew").addEventListener("click", () => crNouveauPoint());
   $("#btnCrVerser").addEventListener("click", () => crVerserConstats());
   $("#btnCrPresentAdd").addEventListener("click", () => {
     if (!curCr) return;
-    curCr.presents.push({organisme:"", nom:"", qualite:"", etat:"present"});
+    curCr.presents.push(normPresent({}));
     renderCrPresents();
     const dernier = $("#crPresents").querySelector(".cr-p:last-child .cr-in-nom");
     if (dernier) dernier.focus();
